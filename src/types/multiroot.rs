@@ -58,7 +58,7 @@ The algorithms estimate the matrix J or J^{-1} by approximate methods.
 
 use crate::ffi::FFI;
 use crate::{Error, MatrixF64, VectorF64, View};
-use sys::libc::{c_int, c_void};
+use std::ffi::{c_int, c_void};
 
 ffi_wrapper!(
     MultiRootFSolverType,

@@ -491,14 +491,18 @@ pub enum ODEiv {
     Dec,
 }
 
+const GSL_ODEIV_HADJ_INC: c_int = sys::GSL_ODEIV_HADJ_INC as _;
+const GSL_ODEIV_HADJ_NIL: c_int = sys::GSL_ODEIV_HADJ_NIL as _;
+const GSL_ODEIV_HADJ_DEC: c_int = sys::GSL_ODEIV_HADJ_DEC as _;
+
 #[doc(hidden)]
 #[allow(clippy::from_over_into)]
 impl Into<c_int> for ODEiv {
     fn into(self) -> c_int {
         match self {
-            Self::Inc => sys::GSL_ODEIV_HADJ_INC,
-            Self::Nil => sys::GSL_ODEIV_HADJ_NIL,
-            Self::Dec => sys::GSL_ODEIV_HADJ_DEC,
+            Self::Inc => GSL_ODEIV_HADJ_INC,
+            Self::Nil => GSL_ODEIV_HADJ_NIL,
+            Self::Dec => GSL_ODEIV_HADJ_DEC,
         }
     }
 }
@@ -507,9 +511,9 @@ impl Into<c_int> for ODEiv {
 impl From<c_int> for ODEiv {
     fn from(v: c_int) -> ODEiv {
         match v {
-            sys::GSL_ODEIV_HADJ_INC => Self::Inc,
-            sys::GSL_ODEIV_HADJ_NIL => Self::Nil,
-            sys::GSL_ODEIV_HADJ_DEC => Self::Dec,
+            GSL_ODEIV_HADJ_INC => Self::Inc,
+            GSL_ODEIV_HADJ_NIL => Self::Nil,
+            GSL_ODEIV_HADJ_DEC => Self::Dec,
             _ => panic!("Unknown ODEiv value"),
         }
     }

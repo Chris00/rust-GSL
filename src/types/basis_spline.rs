@@ -108,32 +108,6 @@ impl BSpLineWorkspace {
         Error::handle(ret, ())
     }
 
-    /// This function evaluates all potentially nonzero B-spline basis functions at the position x
-    /// and stores them in the vector Bk, so that the i-th element is B_(istart+i)(x).
-    ///
-    /// The last element of Bk is B_(iend)(x). The vector Bk must be of length k.
-    /// By returning only the nonzero basis functions, this function allows quantities involving
-    /// linear combinations of the B_i(x) to be computed without unnecessary terms (such linear
-    /// combinations occur, for example, when evaluating an interpolated function).
-    ///
-    /// Returns `(Value, istart, iend)`.
-    // checker:ignore
-    #[doc(alias = "gsl_bspline_eval_nonzero")]
-    pub fn eval_non_zero(&mut self, x: f64, Bk: &mut VectorF64) -> Result<(usize, usize), Error> {
-        let mut istart = 0;
-        let mut iend = 0;
-        let ret = unsafe {
-            sys::gsl_bspline_eval_nonzero(
-                x,
-                Bk.unwrap_unique(),
-                &mut istart,
-                &mut iend,
-                self.unwrap_unique(),
-            )
-        };
-        Error::handle(ret, (istart, iend))
-    }
-
     /// This function returns the number of B-spline coefficients given by n = nbreak + k - 2.
     #[doc(alias = "gsl_bspline_ncoeffs")]
     pub fn ncoeffs(&mut self) -> usize {

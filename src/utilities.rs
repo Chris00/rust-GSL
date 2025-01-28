@@ -7,7 +7,7 @@ use std::io;
 use std::os::raw::c_char;
 use std::path::Path;
 
-use sys::libc::{fclose, fopen, FILE};
+use libc::{fclose, fopen, FILE};
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -2,7 +2,7 @@
 name = "GSL"
 version = "8.0.0"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>",
-	   "Christophe Troestler <Christophe.Troestler@umons.ac.be>"]
+	       "Christophe Troestler <Christophe.Troestler@umons.ac.be>"]
 description = "A rust binding for the GSL (the GNU scientific library)"
 repository = "https://github.com/GuillaumeGomez/rust-GSL"
 documentation = "https://docs.rs/crate/GSL/"
@@ -12,9 +12,10 @@ license = "GPL-3.0-or-later"
 edition = "2021"
 
 [dependencies]
-sys = { path = "gsl-sys", package = "GSL-sys", version = "3.0.0" }
+sys = { path = "gsl-sys", package = "GSL-sys", version = "4.0.0" }
 paste = "1.0"
 num-complex = { version = "0.4.6", optional = true }
+libc = "0.2.169"
 
 [features]
 default = ["complex"]

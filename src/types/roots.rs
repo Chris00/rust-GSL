@@ -43,7 +43,7 @@ its derivative (hence the name fdf) to be supplied by the user.
 
 use crate::ffi::FFI;
 use crate::Error;
-use sys::libc::{c_double, c_void};
+use std::ffi::{c_double, c_void};
 
 ffi_wrapper!(
     RootFSolverType,
