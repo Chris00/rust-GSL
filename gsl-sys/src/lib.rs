@@ -10,8 +10,10 @@
 #![allow(clippy::redundant_static_lifetimes)]
 #![allow(clippy::upper_case_acronyms)]
 
-pub extern crate libc;
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-mod auto;
+pub use libc::FILE;
 
-pub use auto::*;
+// mod auto;
+
+// pub use auto::*;
