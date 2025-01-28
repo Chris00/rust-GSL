@@ -15,9 +15,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_family = "windows")]
     {
         if libs.is_empty() {
-            let vcpkg = vcpkg::Config::new()
+            let mut vcpkg = vcpkg::Config::new()
                 .emit_includes(false)
-                .find_package("gsl");
+                .find_package("gsl")?;
+            inc_dirs.append(&mut vcpkg.include_paths);
+            link_paths.append(&mut vcpkg.link_paths);
+            for dll in vcpkg.found_dlls {
+                libs.push(dll.display().to_string());
+            }
         }
     }
     if libs.is_empty() {

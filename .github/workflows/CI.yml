@@ -65,6 +65,37 @@ jobs:
         working-directory: examples
         run: cargo check --features v2_7
 
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - nightly
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg
+          & .\vcpkg\bootstrap-vcpkg.bat
+          & .\vcpkg\vcpkg integrate install
+          & .\vcpkg\vcpkg install gsl --triplet=x64-windows-static-md
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - run: cargo check
+      - run: cargo check --features v2_1
+      - run: cargo check --features v2_2
+      - run: cargo check --features v2_3
+      - run: cargo check --features v2_4
+      - run: cargo check --features v2_5
+      - run: cargo check --features v2_6
+      - run: cargo check --features v2_7
+      - name: check examples
+        working-directory: examples
+        run: cargo check --features v2_7
+
   fmt:
     name: rust fmt
     runs-on: ubuntu-latest
