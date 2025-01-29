@@ -57,6 +57,7 @@ pub mod multilinear;
 pub mod multimin;
 pub mod multiroot;
 pub mod numerical_differentiation;
+pub mod ordinary_differential_equations;
 pub mod physical_constant;
 pub mod polynomials;
 pub mod pow;

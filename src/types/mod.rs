@@ -46,9 +46,6 @@ pub use self::multifit_solver::{
 pub use self::multilarge_linear::{MultilargeLinearType, MultilargeLinearWorkspace};
 pub use self::multiset::MultiSet;
 pub use self::n_tuples::{ReadNTuples, WriteNTuples};
-pub use self::ordinary_differential_equations::{
-    ODEiv2Control, ODEiv2Driver, ODEiv2Evolve, ODEiv2Step, ODEiv2StepType, ODEiv2System,
-};
 pub use self::permutation::Permutation;
 pub use self::polynomial::PolyComplexWorkspace;
 pub use self::qrng::{QRng, QRngType};
@@ -94,7 +91,6 @@ pub mod multimin;
 pub mod multiroot;
 pub mod multiset;
 pub mod n_tuples;
-pub mod ordinary_differential_equations;
 pub mod permutation;
 pub mod polynomial;
 pub mod qrng;
