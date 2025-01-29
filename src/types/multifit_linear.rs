@@ -47,7 +47,7 @@ impl MultifitLinearWorkspace {
 
     /// Returns `(chisq, rank)`.
     #[cfg(feature = "v2_3")]
-    #[cfg_attr(feature = "dox", doc(cfg(feature = "v2_3")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "v2_3")))]
     #[doc(alias = "gsl_multifit_linear_tsvd")]
     pub fn linear_tsvd(
         &mut self,
@@ -87,7 +87,7 @@ impl MultifitLinearWorkspace {
     }
 
     #[cfg(feature = "v2_3")]
-    #[cfg_attr(feature = "dox", doc(cfg(feature = "v2_3")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "v2_3")))]
     #[doc(alias = "gsl_multifit_linear_rank")]
     pub fn linear_rank(&self, tol: f64) -> usize {
         unsafe { sys::gsl_multifit_linear_rank(tol, self.unwrap_shared()) }
@@ -357,7 +357,7 @@ impl MultifitLinearWorkspace {
 
     /// Returns `(chisq, rank)`.
     #[cfg(feature = "v2_3")]
-    #[cfg_attr(feature = "dox", doc(cfg(feature = "v2_3")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "v2_3")))]
     #[doc(alias = "gsl_multifit_wlinear_tsvd")]
     pub fn wlinear_tsvd(
         &mut self,
@@ -445,7 +445,7 @@ impl MultifitLinearWorkspace {
     }
 
     #[cfg(feature = "v2_1")]
-    #[cfg_attr(feature = "dox", doc(cfg(feature = "v2_1")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "v2_1")))]
     #[doc(alias = "gsl_multifit_linear_rcond")]
     pub fn linear_rcond(&mut self) -> f64 {
         unsafe { sys::gsl_multifit_linear_rcond(self.unwrap_unique()) }

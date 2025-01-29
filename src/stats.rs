@@ -471,7 +471,7 @@ where
 }
 
 #[cfg(feature = "v2_5")]
-#[cfg_attr(feature = "dox", doc(cfg(feature = "v2_5")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "v2_5")))]
 #[doc(alias = "gsl_stats_select")]
 pub fn select<T>(data: &mut T, k: usize) -> f64
 where
@@ -481,7 +481,7 @@ where
 }
 
 #[cfg(feature = "v2_5")]
-#[cfg_attr(feature = "dox", doc(cfg(feature = "v2_5")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "v2_5")))]
 #[doc(alias = "gsl_stats_median")]
 pub fn median<T>(data: &mut T) -> f64
 where

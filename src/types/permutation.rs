@@ -218,7 +218,7 @@ impl Permutation {
     }
 
     #[cfg(feature = "v2_2")]
-    #[cfg_attr(feature = "dox", doc(cfg(feature = "v2_2")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "v2_2")))]
     #[doc(alias = "gsl_permute_matrix")]
     pub fn permute_matrix(&self, A: &mut MatrixF64) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_permute_matrix(self.unwrap_shared(), A.unwrap_unique()) };

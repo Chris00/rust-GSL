@@ -3,6 +3,7 @@
 //
 
 #![crate_name = "rgsl"]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
@@ -41,7 +42,7 @@ pub mod eigen;
 pub mod elementary;
 pub mod fft;
 #[cfg(feature = "v2_5")]
-#[cfg_attr(feature = "dox", doc(cfg(feature = "v2_5")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "v2_5")))]
 pub mod filter;
 pub mod fit;
 pub mod integration;
@@ -50,7 +51,7 @@ pub mod linear_algebra;
 pub mod minimizer;
 pub mod multifit;
 #[cfg(feature = "v2_1")]
-#[cfg_attr(feature = "dox", doc(cfg(feature = "v2_1")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "v2_1")))]
 pub mod multilarge;
 pub mod multilinear;
 pub mod multimin;
