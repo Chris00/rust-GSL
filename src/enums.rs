@@ -59,7 +59,7 @@ pub enum Error {
     Sanity,
     /// malloc failed
     NoMemory,
-    /// problem with user-supplied function
+    /// Problem with user-supplied function
     BadFunction,
     /// iterative process is out of control
     RunAway,
@@ -475,46 +475,6 @@ impl From<std::os::raw::c_int> for VegasMode {
             sys::GSL_VEGAS_MODE_IMPORTANCE_ONLY => Self::ImportanceOnly,
             sys::GSL_VEGAS_MODE_STRATIFIED => Self::Stratified,
             _ => panic!("Unknown VegasMode value"),
-        }
-    }
-}
-
-/// Possible return values for an hadjust() evolution method for ordinary differential equations
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
-pub enum ODEiv {
-    /// step was increased
-    Inc,
-    /// step unchanged
-    Nil,
-    /// step decreased
-    Dec,
-}
-
-const GSL_ODEIV_HADJ_INC: c_int = sys::GSL_ODEIV_HADJ_INC as _;
-const GSL_ODEIV_HADJ_NIL: c_int = sys::GSL_ODEIV_HADJ_NIL as _;
-const GSL_ODEIV_HADJ_DEC: c_int = sys::GSL_ODEIV_HADJ_DEC as _;
-
-#[doc(hidden)]
-#[allow(clippy::from_over_into)]
-impl Into<c_int> for ODEiv {
-    fn into(self) -> c_int {
-        match self {
-            Self::Inc => GSL_ODEIV_HADJ_INC,
-            Self::Nil => GSL_ODEIV_HADJ_NIL,
-            Self::Dec => GSL_ODEIV_HADJ_DEC,
-        }
-    }
-}
-
-#[doc(hidden)]
-impl From<c_int> for ODEiv {
-    fn from(v: c_int) -> ODEiv {
-        match v {
-            GSL_ODEIV_HADJ_INC => Self::Inc,
-            GSL_ODEIV_HADJ_NIL => Self::Nil,
-            GSL_ODEIV_HADJ_DEC => Self::Dec,
-            _ => panic!("Unknown ODEiv value"),
         }
     }
 }

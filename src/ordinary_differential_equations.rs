@@ -6,58 +6,83 @@
 
 # Ordinary Differential Equations
 
-This chapter describes functions for solving ordinary differential equation (ODE) initial value problems. The library provides a variety of
-low-level methods, such as Runge-Kutta and Bulirsch-Stoer routines, and higher-level components for adaptive step-size control. The
-components can be combined by the user to achieve the desired solution, with full access to any intermediate steps. A driver object can be
-used as a high level wrapper for easy use of low level functions.
+This chapter describes functions for solving ordinary differential
+equation (ODE) initial value problems. The library provides a variety
+of low-level methods, such as Runge-Kutta and Bulirsch-Stoer routines,
+and higher-level components for adaptive step-size control.  The
+components can be combined by the user to achieve the desired
+solution, with full access to any intermediate steps. A driver object
+can be used as a high level wrapper for easy use of low level
+functions.
 
 ## Defining the ODE System
 
 The routines solve the general n-dimensional first-order system,
 
-dy_i(t)/dt = f_i(t, y_1(t), ..., y_n(t))
-for i = 1, \dots, n. The stepping functions rely on the vector of derivatives f_i and the Jacobian matrix, J_{ij} = df_i(t,y(t)) / dy_j. A
-system of equations is defined using the gsl_odeiv2_system datatype.
+$$dy_i(t)/dt = f_i(t, y_1(t), ..., y_n(t))$$
+
+for $i = 1, \dots, n$.  The stepping functions rely on the vector of
+derivatives $f_i$ and the Jacobian matrix, $J_{ij} =
+∂f_i/∂y_j(t,y(t))$.  A system of equations is defined using the
+[`ODEiv2System::new`].
 
 ## Stepping Functions
 
-The lowest level components are the stepping functions which advance a solution from time t to t+h for a fixed step-size h and estimate
-the resulting local error.
+The lowest level components are the stepping functions which advance a
+solution from time t to t+h for a fixed step-size h and estimate the
+resulting local error.
 
 ## Adaptive Step-size Control
 
-The control function examines the proposed change to the solution produced by a stepping function and attempts to determine the optimal
+The control function examines the proposed change to the solution
+produced by a stepping function and attempts to determine the optimal
 step-size for a user-specified level of error.
 
 ## Evolution
 
-The evolution function combines the results of a stepping function and control function to reliably advance the solution forward one
-step using an acceptable step-size.
+The evolution function combines the results of a stepping function and
+control function to reliably advance the solution forward one step
+using an acceptable step-size.
 
 ## Driver
 
-The driver object is a high level wrapper that combines the evolution, control and stepper objects for easy use.
+The driver object is a high level wrapper that combines the evolution,
+control and stepper objects for easy use.
 
 ## References and Further Reading
 
-Ascher, U.M., Petzold, L.R., Computer Methods for Ordinary Differential and Differential-Algebraic Equations, SIAM, Philadelphia, 1998.
-Hairer, E., Norsett, S. P., Wanner, G., Solving Ordinary Differential Equations I: Nonstiff Problems, Springer, Berlin, 1993.
-Hairer, E., Wanner, G., Solving Ordinary Differential Equations II: Stiff and Differential-Algebraic Problems, Springer, Berlin, 1996.
-Many of the basic Runge-Kutta formulas can be found in the Handbook of Mathematical Functions,
+- Ascher, U.M., Petzold, L.R., Computer Methods for Ordinary
+  Differential and Differential-Algebraic Equations, SIAM,
+  Philadelphia, 1998.
+- Hairer, E., Norsett, S. P., Wanner, G., Solving Ordinary
+  Differential Equations I: Nonstiff Problems, Springer, Berlin, 1993.
+- Hairer, E., Wanner, G., Solving Ordinary Differential Equations II:
+  Stiff and Differential-Algebraic Problems, Springer, Berlin, 1996.
+- Many of the basic Runge-Kutta formulas can be found in the Handbook of
+  Mathematical Functions,
 
-Abramowitz & Stegun (eds.), Handbook of Mathematical Functions, Section 25.5.
-The implicit Bulirsch-Stoer algorithm bsimp is described in the following paper,
+Abramowitz & Stegun (eds.), Handbook of Mathematical Functions,
+Section 25.5.  The implicit Bulirsch-Stoer algorithm bsimp is
+described in the following paper,
 
-G. Bader and P. Deuflhard, “A Semi-Implicit Mid-Point Rule for Stiff Systems of Ordinary Differential Equations.”, Numer. Math. 41,
-373–398, 1983.
-The Adams and BDF multistep methods msadams and msbdf are based on the following articles,
+- G. Bader and P. Deuflhard, “A Semi-Implicit Mid-Point Rule for Stiff
+  Systems of Ordinary Differential Equations.”, Numer. Math. 41,
+  373–398, 1983.
 
-G. D. Byrne and A. C. Hindmarsh, “A Polyalgorithm for the Numerical Solution of Ordinary Differential Equations.”, ACM Trans. Math.
-Software, 1, 71–96, 1975.
-P. N. Brown, G. D. Byrne and A. C. Hindmarsh, “VODE: A Variable-coefficient ODE Solver.”, SIAM J. Sci. Stat. Comput. 10, 1038–1051, 1989.
-A. C. Hindmarsh, P. N. Brown, K. E. Grant, S. L. Lee, R. Serban, D. E. Shumaker and C. S. Woodward, “SUNDIALS: Suite of Nonlinear and
-Differential/Algebraic Equation Solvers.”, ACM Trans. Math. Software 31, 363–396, 2005.
-!*/
+The Adams and BDF multistep methods msadams and msbdf are based on the
+following articles,
+
+- G. D. Byrne and A. C. Hindmarsh, “A Polyalgorithm for the Numerical
+  Solution of Ordinary Differential Equations.”, ACM Trans. Math.
+  Software, 1, 71–96, 1975.
+- P. N. Brown, G. D. Byrne and A. C. Hindmarsh, “VODE: A
+  Variable-coefficient ODE Solver.”, SIAM J. Sci. Stat. Comput. 10,
+  1038–1051, 1989.
+- A. C. Hindmarsh, P. N. Brown, K. E. Grant, S. L. Lee, R. Serban,
+  D. E. Shumaker and C. S. Woodward, “SUNDIALS: Suite of Nonlinear and
+- Differential/Algebraic Equation Solvers.”, ACM Trans. Math. Software
+  31, 363–396, 2005.
+*/
 
 #![allow(clippy::upper_case_acronyms)]
 
@@ -66,14 +91,58 @@ use crate::Error;
 use std::ffi::CStr;
 use std::os::raw::{c_int, c_void};
 
+/// Possible return values for an hadjust() evolution method for
+/// ordinary differential equations
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
+pub enum ODEiv {
+    /// step was increased
+    Inc,
+    /// step unchanged
+    Nil,
+    /// step decreased
+    Dec,
+}
+
+const GSL_ODEIV_HADJ_INC: c_int = sys::GSL_ODEIV_HADJ_INC as _;
+const GSL_ODEIV_HADJ_NIL: c_int = sys::GSL_ODEIV_HADJ_NIL as _;
+const GSL_ODEIV_HADJ_DEC: c_int = sys::GSL_ODEIV_HADJ_DEC as _;
+
+#[doc(hidden)]
+#[allow(clippy::from_over_into)]
+impl Into<c_int> for ODEiv {
+    fn into(self) -> c_int {
+        match self {
+            Self::Inc => GSL_ODEIV_HADJ_INC,
+            Self::Nil => GSL_ODEIV_HADJ_NIL,
+            Self::Dec => GSL_ODEIV_HADJ_DEC,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl From<c_int> for ODEiv {
+    fn from(v: c_int) -> ODEiv {
+        match v {
+            GSL_ODEIV_HADJ_INC => Self::Inc,
+            GSL_ODEIV_HADJ_NIL => Self::Nil,
+            GSL_ODEIV_HADJ_DEC => Self::Dec,
+            _ => panic!("Unknown ODEiv value"),
+        }
+    }
+}
+
 /// Description of a system of ODEs.
 ///
-/// `y' = f(t,y) = dydt(t, y)`
+/// $$\frac{dy}{dt}(t, y) = f(t,y)$$
 ///
-/// The system is specified by giving the right-hand-side of the equation and possibly a jacobian function.
+/// The system is specified by giving the right-hand-side of the
+/// equation and possibly a jacobian function.
 ///
-/// Some methods require the jacobian function, which calculates the matrix dfdy and the vector dfdt. The matrix dfdy conforms
-/// to the GSL standard, being a continuous range of floating point values, in row-order.
+/// Some methods require the jacobian function, which calculates the
+/// matrix dfdy and the vector dfdt. The matrix dfdy conforms to the
+/// GSL standard, being a continuous range of floating point values,
+/// in row-order.
 pub struct ODEiv2System<'a> {
     function: &'a mut dyn FnMut(f64, &[f64], &mut [f64]) -> Result<(), Error>,
     jacobian: Option<&'a mut dyn FnMut(f64, &[f64], &mut [f64], &mut [f64]) -> Result<(), Error>>,
@@ -160,9 +229,12 @@ extern "C" fn jacobian_handler(
 ffi_wrapper!(ODEiv2Step, *mut sys::gsl_odeiv2_step, gsl_odeiv2_step_free);
 
 impl ODEiv2Step {
-    /// This function returns a pointer to a newly allocated instance of a stepping function of type T for a system of dim dimensions.
-    /// Please note that if you use a stepper method that requires access to a driver object, it is advisable to use a driver allocation
-    /// method, which automatically allocates a stepper, too.
+    /// This function returns a pointer to a newly allocated instance
+    /// of a stepping function of type T for a system of dim
+    /// dimensions.  Please note that if you use a stepper method that
+    /// requires access to a driver object, it is advisable to use a
+    /// driver allocation method, which automatically allocates a
+    /// stepper, too.
     #[doc(alias = "gsl_odeiv2_step_alloc")]
     pub fn new(t: ODEiv2StepType, dim: usize) -> Option<ODEiv2Step> {
         let tmp = unsafe { sys::gsl_odeiv2_step_alloc(t.unwrap_shared(), dim) };
@@ -174,19 +246,22 @@ impl ODEiv2Step {
         }
     }
 
-    /// This function resets the stepping function s. It should be used whenever the next use of s will not be a continuation of a previous
-    /// step.
+    /// This function resets the stepping function s.  It should be
+    /// used whenever the next use of s will not be a continuation of
+    /// a previous step.
     #[doc(alias = "gsl_odeiv2_step_reset")]
     pub fn reset(&mut self) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_odeiv2_step_reset(self.unwrap_unique()) };
         Error::handle(ret, ())
     }
 
-    /// This function returns a pointer to the name of the stepping function. For example,
+    /// This function returns a pointer to the name of the stepping
+    /// function. For example,
     ///
     /// ```Rust
     /// println!("step method is '{}'", s.name().unwrap());
     /// ```
+    ///
     /// would print something like step method is 'rkf45'.
     #[doc(alias = "gsl_odeiv2_step_name")]
     pub fn name(&self) -> Option<String> {
@@ -199,37 +274,56 @@ impl ODEiv2Step {
         }
     }
 
-    /// This function returns the order of the stepping function on the previous step. The order can vary if the stepping function itself is
-    /// adaptive.
+    /// This function returns the order of the stepping function on
+    /// the previous step.  The order can vary if the stepping function
+    /// itself is adaptive.
     #[doc(alias = "gsl_odeiv2_step_order")]
     pub fn order(&self) -> u32 {
         unsafe { sys::gsl_odeiv2_step_order(self.unwrap_shared()) }
     }
 
-    /// This function sets a pointer of the driver object d for stepper s, to allow the stepper to access control (and evolve) object through
-    /// the driver object. This is a requirement for some steppers, to get the desired error level for internal iteration of stepper.
-    /// Allocation of a driver object calls this function automatically.
+    /// This function sets a pointer of the driver object d for
+    /// stepper s, to allow the stepper to access control (and evolve)
+    /// object through the driver object.  This is a requirement for
+    /// some steppers, to get the desired error level for internal
+    /// iteration of stepper.  Allocation of a driver object calls
+    /// this function automatically.
     #[doc(alias = "gsl_odeiv2_step_set_driver")]
     pub fn set_driver(&mut self, d: &ODEiv2Driver) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_odeiv2_step_set_driver(self.unwrap_unique(), d.d) };
         Error::handle(ret, ())
     }
 
-    /// This function applies the stepping function s to the system of equations defined by sys, using the step-size h to advance the system
-    /// from time t and state y to time t+h. The new state of the system is stored in y on output, with an estimate of the absolute error
-    /// in each component stored in yerr. If the argument dydt_in is not null it should point an array containing the derivatives for the
-    /// system at time t on input. This is optional as the derivatives will be computed internally if they are not provided, but allows
-    /// the reuse of existing derivative information. On output the new derivatives of the system at time t+h will be stored in dydt_out
-    /// if it is not null.
+    /// This function applies the stepping function s to the system of
+    /// equations defined by sys, using the step-size h to advance the
+    /// system from time t and state y to time t+h. The new state of
+    /// the system is stored in y on output, with an estimate of the
+    /// absolute error in each component stored in yerr. If the
+    /// argument dydt_in is not null it should point an array
+    /// containing the derivatives for the system at time t on
+    /// input. This is optional as the derivatives will be computed
+    /// internally if they are not provided, but allows the reuse of
+    /// existing derivative information. On output the new derivatives
+    /// of the system at time t+h will be stored in dydt_out if it is
+    /// not null.
     ///
-    /// The stepping function returns Error::Failure if it is unable to compute the requested step. Also, if the user-supplied functions defined
-    /// in the system sys return a status other than crate::Error::Success the step will be aborted. In that case, the elements of y will be restored
-    /// to their pre-step values and the error code from the user-supplied function will be returned. Failure may be due to a singularity in
-    /// the system or too large step-size h. In that case the step should be attempted again with a smaller step-size, e.g. h/2.
+    /// The stepping function returns [`Error::Failure`] if it is
+    /// unable to compute the requested step.  Also, if the
+    /// user-supplied functions defined in the system `sys` return a
+    /// status other than `Ok(())` the step will be aborted.  In that
+    /// case, the elements of y will be restored to their pre-step
+    /// values and the error code from the user-supplied function will
+    /// be returned. Failure may be due to a singularity in the system
+    /// or too large step-size h. In that case the step should be
+    /// attempted again with a smaller step-size, e.g. h/2.
     ///
-    /// If the driver object is not appropriately set via gsl_odeiv2_step_set_driver for those steppers that need it, the stepping function
-    /// returns crate::Fault. If the user-supplied functions defined in the system sys returns Error::BadFunc, the function returns
-    /// immediately with the same return code. In this case the user must call gsl_odeiv2_step_reset before calling this function again.
+    /// If the driver object is not appropriately set via
+    /// [`ODEiv2Step::set_driver`] for those steppers that need it,
+    /// the stepping function returns [`Error::Fault`].  If the
+    /// user-supplied functions defined in the system `sys` returns
+    /// [`Error::BadFunction`], the function returns immediately with
+    /// the same return code.  In this case the user must call
+    /// [`ODEiv2Step::reset`] before calling this function again.
     // checker:ignore
     #[doc(alias = "gsl_odeiv2_step_apply")]
     pub fn apply(
@@ -269,14 +363,17 @@ impl ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rk2)
     }
 
-    /// Explicit 4th order (classical) Runge-Kutta. Error estimation is carried out by the step doubling method. For more efficient
-    /// estimate of the error, use the embedded methods described below.
+    /// Explicit 4th order (classical) Runge-Kutta. Error estimation
+    /// is carried out by the step doubling method. For more efficient
+    /// estimate of the error, use the embedded methods described
+    /// below.
     #[doc(alias = "gsl_odeiv2_step_rk4")]
     pub fn rk4() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rk4)
     }
 
-    /// Explicit embedded Runge-Kutta-Fehlberg (4, 5) method. This method is a good general-purpose integrator.
+    /// Explicit embedded Runge-Kutta-Fehlberg (4, 5) method. This
+    /// method is a good general-purpose integrator.
     #[doc(alias = "gsl_odeiv2_step_rkf45")]
     pub fn rkf45() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rkf45)
@@ -294,46 +391,63 @@ impl ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rk8pd)
     }
 
-    /// Implicit Gaussian first order Runge-Kutta. Also known as implicit Euler or backward Euler method. Error estimation is carried out by
-    /// the step doubling method. This algorithm requires the Jacobian and access to the driver object via gsl_odeiv2_step_set_driver.
+    /// Implicit Gaussian first order Runge-Kutta. Also known as
+    /// implicit Euler or backward Euler method. Error estimation is
+    /// carried out by the step doubling method. This algorithm
+    /// requires the Jacobian and access to the driver object via
+    /// [`ODEiv2Step::set_driver`].
     #[doc(alias = "gsl_odeiv2_step_rk1imp")]
     pub fn rk1imp() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rk1imp)
     }
 
-    /// Implicit Gaussian second order Runge-Kutta. Also known as implicit mid-point rule. Error estimation is carried out by the step doubling
-    /// method. This stepper requires the Jacobian and access to the driver object via gsl_odeiv2_step_set_driver.
+    /// Implicit Gaussian second order Runge-Kutta. Also known as
+    /// implicit mid-point rule. Error estimation is carried out by
+    /// the step doubling method. This stepper requires the Jacobian
+    /// and access to the driver object via
+    /// [`ODEiv2Step::set_driver`].
     #[doc(alias = "gsl_odeiv2_step_rk2imp")]
     pub fn rk2imp() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rk2imp)
     }
 
-    /// Implicit Gaussian 4th order Runge-Kutta. Error estimation is carried out by the step doubling method. This algorithm requires the
-    /// Jacobian and access to the driver object via gsl_odeiv2_step_set_driver.
+    /// Implicit Gaussian 4th order Runge-Kutta. Error estimation is
+    /// carried out by the step doubling method. This algorithm
+    /// requires the Jacobian and access to the driver object via
+    /// [`ODEiv2Step::set_driver`].
     #[doc(alias = "gsl_odeiv2_step_rk4imp")]
     pub fn rk4imp() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_rk4imp)
     }
 
-    /// Implicit Bulirsch-Stoer method of Bader and Deuflhard. The method is generally suitable for stiff problems. This stepper requires
-    /// the Jacobian.
+    /// Implicit Bulirsch-Stoer method of Bader and Deuflhard. The
+    /// method is generally suitable for stiff problems. This stepper
+    /// requires the Jacobian.
     #[doc(alias = "gsl_odeiv2_step_bsimp")]
     pub fn bsimp() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_bsimp)
     }
 
-    /// A variable-coefficient linear multistep Adams method in Nordsieck form. This stepper uses explicit Adams-Bashforth (predictor) and
-    /// implicit Adams-Moulton (corrector) methods in P(EC)^m functional iteration mode. Method order varies dynamically between 1 and 12.
-    /// This stepper requires the access to the driver object via gsl_odeiv2_step_set_driver.
+    /// A variable-coefficient linear multistep Adams method in
+    /// Nordsieck form. This stepper uses explicit Adams-Bashforth
+    /// (predictor) and implicit Adams-Moulton (corrector) methods in
+    /// P(EC)^m functional iteration mode. Method order varies
+    /// dynamically between 1 and 12.  This stepper requires the
+    /// access to the driver object via [`ODEiv2Step::set_driver`].
     #[doc(alias = "gsl_odeiv2_step_msadams")]
     pub fn msadams() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_msadams)
     }
 
-    /// A variable-coefficient linear multistep backward differentiation formula (BDF) method in Nordsieck form. This stepper uses the explicit
-    /// BDF formula as predictor and implicit BDF formula as corrector. A modified Newton iteration method is used to solve the system of
-    /// non-linear equations. Method order varies dynamically between 1 and 5. The method is generally suitable for stiff problems. This
-    /// stepper requires the Jacobian and the access to the driver object via gsl_odeiv2_step_set_driver.
+    /// A variable-coefficient linear multistep backward
+    /// differentiation formula (BDF) method in Nordsieck form. This
+    /// stepper uses the explicit BDF formula as predictor and
+    /// implicit BDF formula as corrector. A modified Newton iteration
+    /// method is used to solve the system of non-linear
+    /// equations. Method order varies dynamically between 1 and 5.
+    /// The method is generally suitable for stiff problems. This
+    /// stepper requires the Jacobian and the access to the driver
+    /// object via [`ODEiv2Step::set_driver`].
     #[doc(alias = "gsl_odeiv2_step_msbdf")]
     pub fn msbdf() -> ODEiv2StepType {
         ffi_wrap!(gsl_odeiv2_step_msbdf)
@@ -347,34 +461,40 @@ ffi_wrapper!(
 );
 
 impl ODEiv2Control {
-    /// The standard control object is a four parameter heuristic based on absolute and relative errors eps_abs and eps_rel, and scaling
-    /// factors a_y and a_dydt for the system state y(t) and derivatives y'(t) respectively.
+    /// The standard control object is a four parameter heuristic
+    /// based on absolute and relative errors `epsabs` and `epsrel`,
+    /// and scaling factors `a_y` and `a_dydt` for the system state
+    /// $y(t)$ and derivatives $y'(t)$ respectively.
     ///
-    /// The step-size adjustment procedure for this method begins by computing the desired error level D_i for each component,
+    /// The step-size adjustment procedure for this method begins by
+    /// computing the desired error level `D_i` for each component,
     ///
-    /// D_i = eps_abs + eps_rel * (a_y |y_i| + a_dydt h |y\prime_i|)
-    /// and comparing it with the observed error E_i = |yerr_i|. If the observed error E exceeds the desired error level D by more than
-    /// 10% for any component then the method reduces the step-size by an appropriate factor,
+    /// $$D_i = \epsabs + \epsrel · (a_y |y_i| + a_dydt h |y'_i|)$$
     ///
-    /// h_new = h_old * S * (E/D)^(-1/q)
-    /// where q is the consistency order of the method (e.g. q=4 for 4(5) embedded RK), and S is a safety factor of 0.9. The ratio E/D is
-    /// taken to be the maximum of the ratios E_i/D_i.
+    /// and comparing it with the observed error $E_i = |yerr_i|$.  If
+    /// the observed error E exceeds the desired error level D by more
+    /// than 10% for any component then the method reduces the
+    /// step-size by an appropriate factor,
     ///
-    /// If the observed error E is less than 50% of the desired error level D for the maximum ratio E_i/D_i then the algorithm takes the
-    /// opportunity to increase the step-size to bring the error in line with the desired level,
+    /// $$h_{new} = h_{old} · S · (E/D)^{-1/q}$$
     ///
-    /// h_new = h_old * S * (E/D)^(-1/(q+1))
+    /// where $q$ is the consistency order of the method (e.g. $q=4$
+    /// for 4(5) embedded RK), and $S$ is a safety factor of 0.9.  The
+    /// ratio $E/D$ is taken to be the maximum of the ratios $E_i/D_i$.
     ///
-    /// This encompasses all the standard error scaling methods. To avoid uncontrolled changes in the stepsize, the overall scaling factor
-    /// is limited to the range 1/5 to 5.
+    /// If the observed error E is less than 50% of the desired error
+    /// level $D$ for the maximum ratio $E_i/D_i$ then the algorithm
+    /// takes the opportunity to increase the step-size to bring the
+    /// error in line with the desired level,
+    ///
+    /// $$h_{new} = h_{old} · S · (E/D)^{-1/(q+1)} .$$
+    ///
+    /// This encompasses all the standard error scaling methods. To
+    /// avoid uncontrolled changes in the stepsize, the overall
+    /// scaling factor is limited to the range 1/5 to 5.
     #[doc(alias = "gsl_odeiv2_control_standard_new")]
-    pub fn standard_new(
-        eps_abs: f64,
-        eps_rel: f64,
-        a_y: f64,
-        a_dydt: f64,
-    ) -> Option<ODEiv2Control> {
-        let tmp = unsafe { sys::gsl_odeiv2_control_standard_new(eps_abs, eps_rel, a_y, a_dydt) };
+    pub fn standard_new(epsabs: f64, epsrel: f64, a_y: f64, a_dydt: f64) -> Option<ODEiv2Control> {
+        let tmp = unsafe { sys::gsl_odeiv2_control_standard_new(epsabs, epsrel, a_y, a_dydt) };
 
         if tmp.is_null() {
             None
@@ -383,11 +503,14 @@ impl ODEiv2Control {
         }
     }
 
-    /// This function creates a new control object which will keep the local error on each step within an absolute error of eps_abs and relative
-    /// error of eps_rel with respect to the solution y_i(t). This is equivalent to the standard control object with a_y=1 and a_dydt=0.
+    /// This function creates a new control object which will keep the
+    /// local error on each step within an absolute error of `epsabs`
+    /// and relative error of `epsrel` with respect to the solution
+    /// $y_i(t)$.  This is equivalent to the standard control object with
+    /// `a_y=1` and `a_dydt=0`.
     #[doc(alias = "gsl_odeiv2_control_y_new")]
-    pub fn y_new(eps_abs: f64, eps_rel: f64) -> Option<ODEiv2Control> {
-        let tmp = unsafe { sys::gsl_odeiv2_control_y_new(eps_abs, eps_rel) };
+    pub fn y_new(epsabs: f64, epsrel: f64) -> Option<ODEiv2Control> {
+        let tmp = unsafe { sys::gsl_odeiv2_control_y_new(epsabs, epsrel) };
 
         if tmp.is_null() {
             None
@@ -396,12 +519,14 @@ impl ODEiv2Control {
         }
     }
 
-    /// This function creates a new control object which will keep the local error on each step within an absolute error of eps_abs and relative
-    /// error of eps_rel with respect to the derivatives of the solution y'_i(t). This is equivalent to the standard control object with
-    /// a_y=0 and a_dydt=1.
+    /// This function creates a new control object which will keep the
+    /// local error on each step within an absolute error of `epsabs`
+    /// and relative error of `epsrel` with respect to the derivatives
+    /// of the solution $y'_i(t)$.  This is equivalent to the standard
+    /// control object with `a_y=0` and `a_dydt=1`.
     #[doc(alias = "gsl_odeiv2_control_yp_new")]
-    pub fn yp_new(eps_abs: f64, eps_rel: f64) -> Option<ODEiv2Control> {
-        let tmp = unsafe { sys::gsl_odeiv2_control_yp_new(eps_abs, eps_rel) };
+    pub fn yp_new(epsabs: f64, epsrel: f64) -> Option<ODEiv2Control> {
+        let tmp = unsafe { sys::gsl_odeiv2_control_yp_new(epsabs, epsrel) };
 
         if tmp.is_null() {
             None
@@ -410,24 +535,28 @@ impl ODEiv2Control {
         }
     }
 
-    /// This function creates a new control object which uses the same algorithm as gsl_odeiv2_control_standard_new but with an absolute error
-    /// which is scaled for each component by the array scale_abs. The formula for D_i for this control object is,
+    /// This function creates a new control object which uses the same
+    /// algorithm as [`ODEiv2Control::standard_new`] but with an
+    /// absolute error which is scaled for each component by the array
+    /// scale_abs. The formula for $D_i$ for this control object is,
     ///
-    /// D_i = eps_abs * s_i + eps_rel * (a_y |y_i| + a_dydt h |y\prime_i|)
+    /// $$D_i = \epsabs · s_i + \epsrel · (a_y |y_i| + a_dydt h |y'_i|)$$
     ///
-    /// where s_i is the i-th component of the array scale_abs. The same error control heuristic is used by the Matlab ODE suite.
+    /// where $s_i$ is the $i$-th component of the array `scale_abs`.
+    /// The same error control heuristic is used by the Matlab ODE
+    /// suite.
     #[doc(alias = "gsl_odeiv2_control_scaled_new")]
     pub fn scaled_new(
-        eps_abs: f64,
-        eps_rel: f64,
+        epsabs: f64,
+        epsrel: f64,
         a_y: f64,
         a_dydt: f64,
         scale_abs: &[f64],
     ) -> Option<ODEiv2Control> {
         let tmp = unsafe {
             sys::gsl_odeiv2_control_scaled_new(
-                eps_abs,
-                eps_rel,
+                epsabs,
+                epsrel,
                 a_y,
                 a_dydt,
                 scale_abs.as_ptr(),
@@ -442,8 +571,11 @@ impl ODEiv2Control {
         }
     }
 
-    /// This function returns a pointer to a newly allocated instance of a control function of type T. This function is only needed for
-    /// defining new types of control functions. For most purposes the standard control functions described above should be sufficient.
+    /// This function returns a pointer to a newly allocated instance
+    /// of a control function of type T. This function is only needed
+    /// for defining new types of control functions. For most purposes
+    /// the standard control functions described above should be
+    /// sufficient.
     #[doc(alias = "gsl_odeiv2_control_alloc")]
     pub fn new(t: ODEiv2ControlType) -> Option<ODEiv2Control> {
         let tmp = unsafe { sys::gsl_odeiv2_control_alloc(t.unwrap_shared()) };
@@ -455,21 +587,29 @@ impl ODEiv2Control {
         }
     }
 
-    /// This function initializes the control function c with the parameters eps_abs (absolute error), eps_rel (relative error), a_y
-    /// (scaling factor for y) and a_dydt (scaling factor for derivatives).
+    /// This function initializes the control function c with the
+    /// parameters `epsabs` (absolute error), `epsrel` (relative
+    /// error), `a_y` (scaling factor for y) and `a_dydt` (scaling
+    /// factor for derivatives).
     #[doc(alias = "gsl_odeiv2_control_init")]
-    pub fn init(&mut self, eps_abs: f64, eps_rel: f64, a_y: f64, a_dydt: f64) -> Result<(), Error> {
+    pub fn init(&mut self, epsabs: f64, epsrel: f64, a_y: f64, a_dydt: f64) -> Result<(), Error> {
         let ret = unsafe {
-            sys::gsl_odeiv2_control_init(self.unwrap_unique(), eps_abs, eps_rel, a_y, a_dydt)
+            sys::gsl_odeiv2_control_init(self.unwrap_unique(), epsabs, epsrel, a_y, a_dydt)
         };
         Error::handle(ret, ())
     }
 
-    /// This function adjusts the step-size h using the control function c, and the current values of y, yerr and dydt. The stepping function
-    /// step is also needed to determine the order of the method. If the error in the y-values yerr is found to be too large then the step-size
-    /// h is reduced and the function returns ODEiv::Dec. If the error is sufficiently small then h may be increased and
-    /// ODEiv::Inc is returned. The function returns ODEiv::Nil if the step-size is unchanged. The goal of the function is to estimate
-    /// the largest step-size which satisfies the user-specified accuracy requirements for the current point.
+    /// This function adjusts the step-size h using the control
+    /// function c, and the current values of `y`, `yerr` and `dydt`.
+    /// The stepping function step is also needed to determine the
+    /// order of the method. If the error in the y-values yerr is
+    /// found to be too large then the step-size `h` is reduced and
+    /// the function returns [`ODEiv::Dec`].  If the error is
+    /// sufficiently small then h may be increased and [`ODEiv::Inc`]
+    /// is returned.  The function returns [`ODEiv::Nil`] if the
+    /// step-size is unchanged.  The goal of the function is to
+    /// estimate the largest step-size which satisfies the
+    /// user-specified accuracy requirements for the current point.
     #[doc(alias = "gsl_odeiv2_control_hadjust")]
     pub fn hadjust(
         &mut self,
@@ -478,8 +618,8 @@ impl ODEiv2Control {
         yerr: &[f64],
         dydt: &[f64],
         h: &mut f64,
-    ) -> crate::ODEiv {
-        crate::ODEiv::from(unsafe {
+    ) -> ODEiv {
+        ODEiv::from(unsafe {
             sys::gsl_odeiv2_control_hadjust(
                 self.unwrap_unique(),
                 s.unwrap_unique(),
@@ -491,11 +631,13 @@ impl ODEiv2Control {
         })
     }
 
-    /// This function returns a pointer to the name of the control function. For example,
+    /// This function returns a pointer to the name of the control
+    /// function. For example,
     ///
     /// ```Rust
     /// println!("control method is '{}'", c.name());
     /// ```
+    ///
     /// would print something like control method is 'standard'
     #[doc(alias = "gsl_odeiv2_control_name")]
     pub fn name(&self) -> Option<String> {
@@ -508,9 +650,10 @@ impl ODEiv2Control {
         }
     }
 
-    /// This function calculates the desired error level of the ind-th component to errlev. It
-    /// requires the value (y) and value of the derivative (dydt) of the component, and the current
-    /// step size h.
+    /// This function calculates the desired error level of the ind-th
+    /// component to errlev. It requires the value (y) and value of
+    /// the derivative (dydt) of the component, and the current step
+    /// size h.
     ///
     /// Returns `(Value, errlev)`.
     #[doc(alias = "gsl_odeiv2_control_errlevel")]
@@ -522,7 +665,8 @@ impl ODEiv2Control {
         Error::handle(ret, errlev)
     }
 
-    /// This function sets a pointer of the driver object d for control object c.
+    /// This function sets a pointer of the driver object d for
+    /// control object c.
     #[doc(alias = "gsl_odeiv2_control_set_driver")]
     pub fn set_driver(&mut self, d: &ODEiv2Driver) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_odeiv2_control_set_driver(self.unwrap_unique(), d.d) };
@@ -558,7 +702,8 @@ ffi_wrapper!(
 );
 
 impl ODEiv2Evolve {
-    /// This function returns a pointer to a newly allocated instance of an evolution function for a system of dim dimensions.
+    /// This function returns a pointer to a newly allocated instance
+    /// of an evolution function for a system of dim dimensions.
     #[doc(alias = "gsl_odeiv2_evolve_alloc")]
     pub fn new(dim: usize) -> Option<ODEiv2Evolve> {
         let tmp = unsafe { sys::gsl_odeiv2_evolve_alloc(dim) };
