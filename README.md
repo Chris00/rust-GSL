@@ -37,7 +37,11 @@ before `cargo run`, `cargo build`, etc., to tell the compiler where `gsl` is loc
 
 ### Windows
 
-Instructions are available there: <https://www.gnu.org/software/gsl/extras/native_win_builds.html>.
+Install [vcpkg](https://vcpkg.io/) and then the GSL:
+
+```bash
+vcpkg install gsl --triplet=x64-windows-static-md
+```
 
 ## Usage
 
