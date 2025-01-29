@@ -3,7 +3,6 @@
 //
 
 #![crate_name = "rgsl"]
-#![cfg_attr(feature = "dox", feature(doc_cfg))]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
