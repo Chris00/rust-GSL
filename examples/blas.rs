@@ -4,7 +4,10 @@
 
 extern crate rgsl;
 
-use rgsl::{blas, CblasTranspose, MatrixF64View};
+use rgsl::{
+    blas::{self, Transpose},
+    MatrixF64View,
+};
 
 fn main() {
     let a = &mut [0.11, 0.12, 0.13, 0.21, 0.22, 0.23];
@@ -18,9 +21,9 @@ fn main() {
     view_a.matrix_mut(|mat_a| {
         view_b.matrix_mut(|mat_b| {
             view_c.matrix_mut(|mat_c| {
-                blas::level3::dgemm(
-                    CblasTranspose::NoTranspose,
-                    CblasTranspose::NoTranspose,
+                blas::d::gemm(
+                    Transpose::NoTranspose,
+                    Transpose::NoTranspose,
                     1.,
                     mat_a.expect("Failed to get matrix"),
                     mat_b.expect("Failed to get matrix"),

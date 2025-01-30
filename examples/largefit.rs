@@ -164,8 +164,8 @@ mod example {
             let f_exact = func(t);
             build_row(t, &mut v);
 
-            let f_tsqr = blas::level1::ddot(&v, &c_tsqr).unwrap();
-            let f_normal = blas::level1::ddot(&v, &c_normal).unwrap();
+            let f_tsqr = blas::d::dot(&v, &c_tsqr).unwrap();
+            let f_normal = blas::d::dot(&v, &c_normal).unwrap();
 
             println!("{} {:.6} {:.6} {:.6}", t, f_exact, f_tsqr, f_normal);
 

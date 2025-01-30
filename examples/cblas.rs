@@ -4,7 +4,7 @@
 
 extern crate rgsl;
 
-use rgsl::{cblas, CblasOrder, CblasTranspose};
+use rgsl::cblas::{self, Order, Transpose};
 
 fn main() {
     let lda = 3;
@@ -17,10 +17,10 @@ fn main() {
     let c = &mut [0., 0., 0., 0.];
 
     // Compute C = A B
-    cblas::level3::sgemm(
-        CblasOrder::RowMajor,
-        CblasTranspose::NoTranspose,
-        CblasTranspose::NoTranspose,
+    cblas::s::gemm(
+        Order::RowMajor,
+        Transpose::NoTranspose,
+        Transpose::NoTranspose,
         2,
         2,
         3,
