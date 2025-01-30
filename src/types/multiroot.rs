@@ -448,7 +448,7 @@ impl MultiRootFdfSolver {
     ///   point where the function or its derivative evaluated to Inf or NaN.
     ///
     /// * `crate::Error::NoProgress` the iteration is not making any progress,
-    ///    preventing the algorithm from continuing.
+    ///   preventing the algorithm from continuing.
     ///
     /// The solver maintains a current best estimate of the root and
     /// its function value at all times.  This information can be

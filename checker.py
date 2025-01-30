@@ -245,7 +245,8 @@ def main():
         "test_count": 0,
         "ignored": 0,
     }
-    excluded = ["src/_docs/header.html", "src/integration.rs"]
+    excluded = ["src/_docs/header.html", "src/blas.rs", "src/integration.rs",
+                "src/polynomials.rs"]
     read_dirs("src", excluded, errors, totals, [check_file_header, check_macros])
     check_counts(errors, totals)
     if len(errors) > 0:

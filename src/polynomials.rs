@@ -34,13 +34,17 @@ use num_complex::Complex;
 
 pub struct Poly<'a, T>(&'a [T]);
 
-impl<'a, T> Poly<'a, T> {
+impl<T> Poly<'_, T> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
-impl<'a> Poly<'a, f64> {
+impl Poly<'_, f64> {
     /// Return the value of the polynomial $P(x) = c_0 + c_1 x + c_2
     /// x^2 + \dots + c_{n-1} x^{n-1}$ where $n$ = `self.len()`, using
     /// Horner’s method.
@@ -77,7 +81,7 @@ impl<'a> Poly<'a, f64> {
 }
 
 #[cfg(feature = "complex")]
-impl<'a> Poly<'a, Complex<f64>> {
+impl Poly<'_, Complex<f64>> {
     /// This function evaluates a polynomial with complex coefficients
     /// for the complex variable z.
     #[doc(alias = "gsl_complex_poly_complex_eval")]
@@ -113,6 +117,10 @@ pub struct PolyDD<'a> {
 impl<'a> PolyDD<'a> {
     pub fn len(&self) -> usize {
         self.dd.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.dd.is_empty()
     }
 
     pub fn new(x: &[f64], y: &[f64]) -> Result<PolyDD<'static>, Error> {

@@ -468,12 +468,12 @@ pub mod s {
         };
         Error::handle(ret, ())
     }
-    /// This function computes the matrix-matrix product and sum C =
-    /// \alpha A B + \beta C for Side is CblasLeft and C = \alpha B A
-    /// + \beta C for Side is CblasRight, where the matrix A is
-    /// symmetric.  When Uplo is CblasUpper then the upper triangle
-    /// and diagonal of A are used, and when Uplo is CblasLower then
-    /// the lower triangle and diagonal of A are used.
+    /// This function computes the matrix-matrix product and sum $C =
+    /// α A B + β C$ for Side is CblasLeft and $C = α B A + β C$ for
+    /// Side is CblasRight, where the matrix A is symmetric.  When
+    /// Uplo is CblasUpper then the upper triangle and diagonal of A
+    /// are used, and when Uplo is CblasLower then the lower triangle
+    /// and diagonal of A are used.
     #[doc(alias = "gsl_blas_ssymm")]
     pub fn symm(
         side: Side,
@@ -926,12 +926,12 @@ pub mod d {
         };
         Error::handle(ret, ())
     }
-    /// This function computes the matrix-matrix product and sum C =
-    /// \alpha A B + \beta C for Side is CblasLeft and C = \alpha B A
-    /// + \beta C for Side is CblasRight, where the matrix A is
-    /// symmetric.  When Uplo is CblasUpper then the upper triangle
-    /// and diagonal of A are used, and when Uplo is CblasLower then
-    /// the lower triangle and diagonal of A are used.
+    /// This function computes the matrix-matrix product and sum $C =
+    /// α A B + β C$ for Side is `CblasLeft` and $C = α B A + β C$ for
+    /// Side is `CblasRight`, where the matrix $A$ is symmetric.  When
+    /// Uplo is CblasUpper then the upper triangle and diagonal of A
+    /// are used, and when Uplo is CblasLower then the lower triangle
+    /// and diagonal of A are used.
     #[doc(alias = "gsl_blas_dsymm")]
     pub fn symm(
         side: Side,
@@ -1399,12 +1399,12 @@ pub mod c {
         };
         Error::handle(ret, ())
     }
-    /// This function computes the matrix-matrix product and sum C =
-    /// \alpha A B + \beta C for Side is CblasLeft and C = \alpha B A
-    /// + \beta C for Side is CblasRight, where the matrix A is
-    /// symmetric.  When Uplo is CblasUpper then the upper triangle
-    /// and diagonal of A are used, and when Uplo is CblasLower then
-    /// the lower triangle and diagonal of A are used.
+    /// This function computes the matrix-matrix product and sum $C =
+    /// α A B + β C$ for Side is `CblasLeft` and $C = α B A + beta C$
+    /// for Side is `CblasRight`, where the matrix $A$ is symmetric.
+    /// When Uplo is CblasUpper then the upper triangle and diagonal
+    /// of A are used, and when Uplo is CblasLower then the lower
+    /// triangle and diagonal of A are used.
     #[doc(alias = "gsl_blas_csymm")]
     pub fn symm(
         side: Side,
@@ -1967,12 +1967,12 @@ pub mod z {
         };
         Error::handle(ret, ())
     }
-    /// This function computes the matrix-matrix product and sum C =
-    /// \alpha A B + \beta C for Side is CblasLeft and C = \alpha B A
-    /// + \beta C for Side is CblasRight, where the matrix A is
-    /// symmetric.  When Uplo is CblasUpper then the upper triangle
-    /// and diagonal of A are used, and when Uplo is CblasLower then
-    /// the lower triangle and diagonal of A are used.
+    /// This function computes the matrix-matrix product and sum $C =
+    /// α A B + β C$ for Side is `CblasLeft` and `C = α B A + β C$ for
+    /// Side is `CblasRight`, where the matrix $A$ is symmetric.  When
+    /// Uplo is CblasUpper then the upper triangle and diagonal of A
+    /// are used, and when Uplo is CblasLower then the lower triangle
+    /// and diagonal of A are used.
     #[doc(alias = "gsl_blas_zsymm")]
     pub fn symm(
         side: Side,
@@ -1996,13 +1996,13 @@ pub mod z {
         };
         Error::handle(ret, ())
     }
-    /// This function computes the matrix-matrix product and sum C =
-    /// \alpha A B + \beta C for Side is CblasLeft and C = \alpha B A
-    /// + \beta C for Side is CblasRight, where the matrix A is
-    /// hermitian.  When Uplo is CblasUpper then the upper triangle
-    /// and diagonal of A are used, and when Uplo is CblasLower then
-    /// the lower triangle and diagonal of A are used.  The imaginary
-    /// elements of the diagonal are automatically set to zero.
+    /// This function computes the matrix-matrix product and sum $C =
+    /// α A B + β C$ for Side is `CblasLeft` and $C = α B A + β C$ for
+    /// Side is `CblasRight`, where the matrix $A$ is hermitian.  When
+    /// Uplo is CblasUpper then the upper triangle and diagonal of A
+    /// are used, and when Uplo is CblasLower then the lower triangle
+    /// and diagonal of A are used.  The imaginary elements of the
+    /// diagonal are automatically set to zero.
     #[doc(alias = "gsl_blas_zhemm")]
     pub fn hemm(
         side: Side,
