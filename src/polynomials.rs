@@ -5,9 +5,11 @@
 /*!
 # Polynomials
 
-This chapter describes functions for evaluating and solving polynomials. There are routines for finding real and complex roots of quadratic
-and cubic equations using analytic methods. An iterative polynomial solver is also available for finding the roots of general polynomials
-with real coefficients (of any order).
+This module functions for evaluating and solving polynomials. There
+are routines for finding real and complex roots of quadratic and cubic
+equations using analytic methods. An iterative polynomial solver is
+also available for finding the roots of general polynomials with real
+coefficients (of any order).
 
 ## References and Further Reading
 
@@ -20,48 +22,47 @@ The formulas for divided differences are given in the following texts,
 
 Abramowitz and Stegun, Handbook of Mathematical Functions, Sections 25.1.4 and 25.2.26.
 R. L. Burden and J. D. Faires, Numerical Analysis, 9th edition, ISBN 0-538-73351-9, 2011.
-!*/
+*/
 
-/// The functions described here evaluate the polynomial
-/// `P(x) = c[0] + c[1] x + c[2] x^2 + \dots + c[len-1] x^{len-1}` using Horner’s method for
-/// stability.
-pub mod evaluation {
-    use crate::{
-        types::complex::{FromC, ToC},
-        Error,
-    };
-    use num_complex::Complex;
+use std::borrow::Cow;
 
-    /// This function evaluates a polynomial with real coefficients for the real variable x.
+#[cfg(feature = "complex")]
+use crate::complex::{FromC, ToC};
+use crate::Error;
+#[cfg(feature = "complex")]
+use num_complex::Complex;
+
+pub struct Poly<'a, T>(&'a [T]);
+
+impl<'a, T> Poly<'a, T> {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl<'a> Poly<'a, f64> {
+    /// Return the value of the polynomial $P(x) = c_0 + c_1 x + c_2
+    /// x^2 + \dots + c_{n-1} x^{n-1}$ where $n$ = `self.len()`, using
+    /// Horner’s method.
     #[doc(alias = "gsl_poly_eval")]
-    pub fn poly_eval(c: &[f64], x: f64) -> f64 {
-        unsafe { sys::gsl_poly_eval(c.as_ptr(), c.len() as i32, x) }
+    pub fn eval(&self, x: f64) -> f64 {
+        unsafe { sys::gsl_poly_eval(self.0.as_ptr(), self.len() as i32, x) }
     }
 
-    /// This function evaluates a polynomial with real coefficients for the complex variable z.
+    /// Return the value of the polynomial with real coefficients
+    /// for the complex variable `z`.
     #[doc(alias = "gsl_poly_complex_eval")]
-    pub fn poly_complex_eval(c: &[f64], z: &Complex<f64>) -> Complex<f64> {
-        unsafe { sys::gsl_poly_complex_eval(c.as_ptr(), c.len() as i32, z.unwrap()).wrap() }
+    #[cfg(feature = "complex")]
+    pub fn complex_eval(&self, z: &Complex<f64>) -> Complex<f64> {
+        unsafe { sys::gsl_poly_complex_eval(self.0.as_ptr(), self.len() as i32, z.unwrap()).wrap() }
     }
 
-    /// This function evaluates a polynomial with complex coefficients for the complex variable z.
-    #[doc(alias = "gsl_complex_poly_complex_eval")]
-    pub fn complex_poly_complex_eval(c: &[Complex<f64>], z: &Complex<f64>) -> Complex<f64> {
-        // FIXME: Making a copy should be unnecessary.
-        let mut tmp = Vec::new();
-
-        for it in c.iter() {
-            tmp.push(it.unwrap())
-        }
-        unsafe {
-            sys::gsl_complex_poly_complex_eval(tmp.as_ptr(), tmp.len() as i32, z.unwrap()).wrap()
-        }
-    }
-
-    /// This function evaluates a polynomial and its derivatives storing the results in the array res of size lenres. The output array contains
-    /// the values of d^k P/d x^k for the specified value of x starting with k = 0.
+    /// This function evaluates a polynomial and its derivatives
+    /// storing the results in the array `res`.  The output array
+    /// contains the values of $d^k P/d x^k$ for the specified value
+    /// of `x` starting with $k = 0$.
     #[doc(alias = "gsl_poly_eval_derivs")]
-    pub fn poly_eval_derivs(c: &[f64], x: f64, res: &mut [f64]) -> Result<(), Error> {
+    pub fn eval_derivs(c: &[f64], x: f64, res: &mut [f64]) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_poly_eval_derivs(
                 c.as_ptr(),
@@ -72,6 +73,19 @@ pub mod evaluation {
             )
         };
         Error::handle(ret, ())
+    }
+}
+
+#[cfg(feature = "complex")]
+impl<'a> Poly<'a, Complex<f64>> {
+    /// This function evaluates a polynomial with complex coefficients
+    /// for the complex variable z.
+    #[doc(alias = "gsl_complex_poly_complex_eval")]
+    pub fn eval(&self, z: &Complex<f64>) -> Complex<f64> {
+        let c: *const Complex<f64> = self.0.as_ptr();
+        unsafe {
+            sys::gsl_complex_poly_complex_eval(c as *const _, self.len() as i32, z.unwrap()).wrap()
+        }
     }
 }
 
@@ -91,178 +105,292 @@ pub mod evaluation {
 ///
 /// where the elements of z = \{x_0,x_0,x_1,x_1,...,x_n,x_n\} are defined by z_{2k} = z_{2k+1} = x_k. The divided-differences [z_0,z_1,...,z_k]
 /// are discussed in Burden and Faires, section 3.4.
-pub mod divided_difference_representation {
-    use crate::Error;
+pub struct PolyDD<'a> {
+    dd: Cow<'a, [f64]>,
+    x: Cow<'a, [f64]>,
+}
 
-    /// This function computes a divided-difference representation of the interpolating polynomial for the points (x, y) stored in the arrays
-    /// xa and ya of length size. On output the divided-differences of (xa,ya) are stored in the array dd, also of length size. Using the
-    /// notation above, `dd[k] = [x_0,x_1,...,x_k]`.
-    #[doc(alias = "gsl_poly_dd_init")]
-    pub fn poly_dd_init(dd: &mut [f64], xa: &[f64], ya: &[f64]) -> Result<(), Error> {
+impl<'a> PolyDD<'a> {
+    pub fn len(&self) -> usize {
+        self.dd.len()
+    }
+
+    pub fn new(x: &[f64], y: &[f64]) -> Result<PolyDD<'static>, Error> {
+        if x.len() != y.len() {
+            panic!(
+                "rgsl::polynomial::PolyDD::new: \
+                x.len() = {} ≠ y.len() = {}",
+                x.len(),
+                y.len()
+            );
+        }
+        let mut dd = x.to_owned();
         let ret = unsafe {
-            sys::gsl_poly_dd_init(dd.as_mut_ptr(), xa.as_ptr(), ya.as_ptr(), dd.len() as _)
+            sys::gsl_poly_dd_init(dd.as_mut_ptr(), x.as_ptr(), y.as_ptr(), dd.len() as _)
         };
-        Error::handle(ret, ())
+        let dd = PolyDD {
+            dd: Cow::Owned(dd),
+            x: Cow::Owned(x.to_owned()),
+        };
+        Error::handle(ret, dd)
     }
 
-    /// This function evaluates the polynomial stored in divided-difference form in the arrays dd and xa of length size at the point x.
+    /// This function computes a divided-difference representation of
+    /// the interpolating polynomial for the points $(x_i, y_i)$
+    /// stored in the arrays `x` and `ya`.  On output the
+    /// divided-differences of $(x_i, y_i)$ are stored in the array
+    /// `dd`, of the same length as `x` and `y`.  Using the notation
+    /// above, `dd[k] = [x_0,x_1,...,x_k]`.
+    #[doc(alias = "gsl_poly_dd_init")]
+    pub fn init(dd: &'a mut [f64], x: &'a [f64], y: &[f64]) -> Result<Self, Error> {
+        assert_eq!(dd.len(), x.len());
+        assert_eq!(x.len(), y.len());
+        let ret = unsafe {
+            sys::gsl_poly_dd_init(dd.as_mut_ptr(), x.as_ptr(), y.as_ptr(), dd.len() as _)
+        };
+        let dd = PolyDD {
+            dd: Cow::Borrowed(dd),
+            x: Cow::Borrowed(x),
+        };
+        Error::handle(ret, dd)
+    }
+
+    /// This function evaluates the polynomial stored
+    /// divided-difference form in `self` at the point `x`.
     #[doc(alias = "gsl_poly_dd_eval")]
-    pub fn poly_dd_eval(dd: &[f64], xa: &[f64], x: f64) -> f64 {
-        unsafe { sys::gsl_poly_dd_eval(dd.as_ptr(), xa.as_ptr(), dd.len() as _, x) }
+    pub fn eval(&self, x: f64) -> f64 {
+        unsafe { sys::gsl_poly_dd_eval(self.dd.as_ptr(), self.x.as_ptr(), self.len() as _, x) }
     }
 
-    /// This function converts the divided-difference representation of a polynomial to a Taylor expansion. The divided-difference representation
-    /// is supplied in the arrays dd and xa of length size. On output the Taylor coefficients of the polynomial expanded about the point xp are
-    /// stored in the array c also of length size. A workspace of length size must be provided in the array w.
+    /// This function converts the divided-difference representation
+    /// of a polynomial to a Taylor expansion.  On output the Taylor
+    /// coefficients of the polynomial expanded about the point `xp`
+    /// are stored in the array `c` of length `self.len()`.  A
+    /// workspace of the same length must be provided in the array
+    /// `w`.
     #[doc(alias = "gsl_poly_dd_taylor")]
-    pub fn poly_dd_taylor(
+    pub fn taylor(
+        &self,
         c: &mut [f64],
         xp: f64,
-        dd: &[f64],
-        xa: &[f64],
-        w: &mut [f64],
+        w: &mut [f64], // TODO: make it optional
     ) -> Result<(), Error> {
+        assert_eq!(self.len(), c.len());
+        assert_eq!(self.len(), w.len());
         let ret = unsafe {
             sys::gsl_poly_dd_taylor(
                 c.as_mut_ptr(),
                 xp,
-                dd.as_ptr(),
-                xa.as_ptr(),
-                dd.len() as _,
+                self.dd.as_ptr(),
+                self.x.as_ptr(),
+                self.len() as _,
                 w.as_mut_ptr(),
             )
         };
         Error::handle(ret, ())
     }
 
-    /// This function computes a divided-difference representation of the interpolating Hermite polynomial for the points (x, y) stored in the
-    /// arrays xa and ya of length size. Hermite interpolation constructs polynomials which also match first derivatives dy/dx which are provided
-    /// in the array dya also of length size. The first derivatives can be incorported into the usual divided-difference algorithm by forming a
-    /// new dataset z = \{x_0,x_0,x_1,x_1,...\}, which is stored in the array za of length 2*size on output. On output the divided-differences
-    /// of the Hermite representation are stored in the array dd, also of length 2*size. Using the notation above, `dd[k] = [z_0,z_1,...,z_k]`.
-    /// The resulting Hermite polynomial can be evaluated by calling gsl_poly_dd_eval and using za for the input argument xa.
+    /// This function computes a divided-difference representation of
+    /// the interpolating Hermite polynomial for the points $(x_i,
+    /// y_i)$ stored in the arrays `x` and `y`.  Hermite interpolation
+    /// constructs polynomials which also match first derivatives
+    /// $dy/dx$ which are provided in the array `dy` of the same
+    /// length.  The first derivatives can be incorported into the
+    /// usual divided-difference algorithm by forming a new dataset $z
+    /// = \{x_0,x_0,x_1,x_1,...\}$, which is stored in the array `z`
+    /// of length `2 * x.len()` on output.  On output the
+    /// divided-differences of the Hermite representation are stored
+    /// in the array `dd`, also of length `2 * x.len()`.  Using the
+    /// notation above, `dd[k] = [z_0,z_1,...,z_k]`.  The resulting
+    /// Hermite polynomial can be evaluated by calling
+    /// [`PolyDD::eval`] on the returned [`PolyDD`].
     #[doc(alias = "gsl_poly_dd_hermite_init")]
     pub fn poly_dd_hermite_init(
-        dd: &mut [f64],
-        za: &mut [f64],
-        xa: &[f64],
-        ya: &[f64],
-        dya: &[f64],
-    ) -> Result<(), Error> {
+        dd: &'a mut [f64],
+        z: &'a mut [f64],
+        x: &[f64],
+        y: &[f64],
+        dy: &[f64],
+    ) -> Result<Self, Error> {
+        assert_eq!(x.len(), y.len());
+        assert_eq!(y.len(), dy.len());
         let ret = unsafe {
             sys::gsl_poly_dd_hermite_init(
                 dd.as_mut_ptr(),
-                za.as_mut_ptr(),
-                xa.as_ptr(),
-                ya.as_ptr(),
-                dya.as_ptr(),
+                z.as_mut_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                dy.as_ptr(),
                 dd.len() as _,
             )
         };
-        Error::handle(ret, ())
+        let dd = PolyDD {
+            dd: Cow::Borrowed(dd),
+            x: Cow::Borrowed(z),
+        };
+        Error::handle(ret, dd)
     }
 }
 
-pub mod quadratic_equations {
-    use crate::Error;
-    use num_complex::Complex;
-    use std::mem::transmute;
+/// Represent $a x^2 + b x + c$.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Quadratic {
+    pub a: f64,
+    pub b: f64,
+    pub c: f64,
+}
 
-    /// This function finds the real roots of the quadratic equation,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuadraticRoots<T> {
+    None,
+    One(T),
+    Two(T, T),
+}
+
+impl Quadratic {
+    /// Return the real roots of the quadratic equation,
     ///
-    /// a x^2 + b x + c = 0
+    /// $$a x^2 + b x + c = 0.$$
     ///
-    /// The number of real roots (either zero, one or two) is returned, and their locations are
-    /// stored in x0 and x1. If no real roots are found then x0 and x1 are not modified. If one real
-    /// root is found (i.e. if a=0) then it is stored in x0. When two real roots are found they
-    /// are stored in x0 and x1 in ascending order. The case of coincident roots is not considered
-    /// special. For example (x-1)^2=0 will have two roots, which happen to have exactly equal
-    /// values.
+    /// When two real roots are found they are returned in ascending
+    /// order.  A single root is returned if `a` = 0.  The case of
+    /// coincident roots is not considered special.  For example
+    /// $(x-1)^2=0$ will have two roots, which happen to have exactly
+    /// equal values.
     ///
-    /// The number of roots found depends on the sign of the discriminant b^2 - 4 a c. This will be
-    /// subject to rounding and cancellation errors when computed in double precision, and will also
-    /// be subject to errors if the coefficients of the polynomial are inexact. These errors
-    /// may cause a discrete change in the number of roots. However, for polynomials with small
-    /// integer coefficients the discriminant can always be computed exactly.
+    /// The number of roots found depends on the sign of the discriminant
+    /// $b^2 - 4 a c$.  This will be subject to rounding and cancellation
+    /// errors when computed in double precision, and will also be subject
+    /// to errors if the coefficients of the polynomial are inexact. These
+    /// errors may cause a discrete change in the number of
+    /// roots. However, for polynomials with small integer coefficients
+    /// the discriminant can always be computed exactly.
     ///
-    /// Returns `(x0, x1)`.
+    /// # Example
+    ///
+    /// ```
+    /// use rgsl::polynomials::{Quadratic, QuadraticRoots};
+    /// let r = Quadratic { a: 1., b: -2., c: 1. }.real_roots();
+    /// assert_eq!(r, QuadraticRoots::Two(1., 1.));
+    /// let r = Quadratic { a: 0., b: 0., c: 0. }.real_roots();
+    /// assert_eq!(r, QuadraticRoots::None);
+    /// ```
     #[doc(alias = "gsl_poly_solve_quadratic")]
-    pub fn poly_solve_quadratic(a: f64, b: f64, c: f64) -> Result<(f64, f64), Error> {
+    pub fn real_roots(&self) -> QuadraticRoots<f64> {
         let mut x0 = 0.;
         let mut x1 = 0.;
-        let ret = unsafe { sys::gsl_poly_solve_quadratic(a, b, c, &mut x0, &mut x1) };
-        Error::handle(ret, (x0, x1))
+        let n = unsafe { sys::gsl_poly_solve_quadratic(self.a, self.b, self.c, &mut x0, &mut x1) };
+        match n {
+            0 => QuadraticRoots::None,
+            1 => QuadraticRoots::One(x0),
+            2 => QuadraticRoots::Two(x0, x1),
+            _ => unreachable!(),
+        }
     }
 
-    /// This function finds the complex roots of the quadratic equation,
+    /// Return the complex roots of the quadratic equation
+    /// $a z^2 + b z + c = 0$.
     ///
-    /// a z^2 + b z + c = 0
+    /// The roots are returned in ascending order, sorted first by
+    /// their real components and then by their imaginary components.
     ///
-    /// The number of complex roots is returned (either one or two) and the locations of the roots are stored in z0 and z1. The roots are returned
-    /// in ascending order, sorted first by their real components and then by their imaginary components. If only one real root is found (i.e. if
-    /// a=0) then it is stored in z0.
+    /// # Example
+    ///
+    /// ```
+    /// use rgsl::polynomials::{Quadratic, QuadraticRoots};
+    /// use num_complex::Complex;
+    /// let r = Quadratic { a: 1., b: -2., c: 1. }.roots();
+    /// let one = Complex::new(1., 0.);
+    /// assert_eq!(r, QuadraticRoots::Two(one, one));
+    /// let r = Quadratic { a: 0., b: 0., c: 0. }.roots();
+    /// assert_eq!(r, QuadraticRoots::None);
+    /// ```
     #[doc(alias = "gsl_poly_complex_solve_quadratic")]
-    #[allow(unknown_lints, clippy::useless_transmute)]
-    pub fn poly_complex_solve_quadratic(
-        a: f64,
-        b: f64,
-        c: f64,
-        z0: &mut Complex<f64>,
-        z1: &mut Complex<f64>,
-    ) -> Result<(), Error> {
-        let ret =
-            unsafe { sys::gsl_poly_complex_solve_quadratic(a, b, c, transmute(z0), transmute(z1)) };
-        Error::handle(ret, ())
+    #[cfg(feature = "complex")]
+    pub fn roots(&self) -> QuadraticRoots<Complex<f64>> {
+        let mut z0 = Complex::new(0., 0.);
+        let mut z1 = Complex::new(0., 0.);
+        let n = unsafe {
+            sys::gsl_poly_complex_solve_quadratic(
+                self.a,
+                self.b,
+                self.c,
+                (&mut z0).unwrap(),
+                (&mut z1).unwrap(),
+            )
+        };
+        match n {
+            0 => QuadraticRoots::None,
+            1 => QuadraticRoots::One(z0),
+            2 => QuadraticRoots::Two(z0, z1),
+            _ => unreachable!(),
+        }
     }
 }
 
-pub mod cubic_equations {
-    use crate::Error;
-    use num_complex::Complex;
-    use std::mem::transmute;
+/// Represent $x^3 + a x^2 + b x + c$.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Cubic {
+    pub a: f64,
+    pub b: f64,
+    pub c: f64,
+}
 
-    /// This function finds the real roots of the cubic equation,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CubicRoots<T> {
+    One(T),
+    Three(T, T, T),
+}
+
+impl Cubic {
+    /// Return the real roots of the cubic equation,
+    /// $x^3 + a x^2 + b x + c = 0$.
     ///
-    /// x^3 + a x^2 + b x + c = 0
-    ///
-    /// with a leading coefficient of unity. The number of real roots (either one or three) is
-    /// returned, and their locations are stored in x0, x1 and x2. If one real root is found then
-    /// only x0 is modified. When three real roots are found they are stored in x0, x1 and x2 in
-    /// ascending order. The case of coincident roots is not considered special. For example, the
-    /// equation (x-1)^3=0 will have three roots with exactly equal values. As in the quadratic
-    /// case, finite precision may cause equal or closely-spaced real roots to move off the
-    /// real axis into the complex plane, leading to a discrete change in the number of real roots.
-    ///
-    /// Returns `(x0, x1, x2)`.
+    /// with a leading coefficient of unity.  The real roots returned
+    /// in ascending order.  The case of coincident roots is not
+    /// considered special.  For example, the equation $(x-1)^3=0$
+    /// will have three roots with exactly equal values.  As in the
+    /// quadratic case, finite precision may cause equal or
+    /// closely-spaced real roots to move off the real axis into the
+    /// complex plane, leading to a discrete change in the number of
+    /// real roots.
     #[doc(alias = "gsl_poly_solve_cubic")]
-    pub fn poly_solve_cubic(a: f64, b: f64, c: f64) -> Result<(f64, f64, f64), Error> {
+    pub fn real_roots(&self) -> CubicRoots<f64> {
         let mut x0 = 0.;
         let mut x1 = 0.;
         let mut x2 = 0.;
-        let ret = unsafe { sys::gsl_poly_solve_cubic(a, b, c, &mut x0, &mut x1, &mut x2) };
-        Error::handle(ret, (x0, x1, x2))
+        let n =
+            unsafe { sys::gsl_poly_solve_cubic(self.a, self.b, self.c, &mut x0, &mut x1, &mut x2) };
+        match n {
+            1 => CubicRoots::One(x0),
+            3 => CubicRoots::Three(x0, x1, x2),
+            _ => unreachable!(),
+        }
     }
 
-    /// This function finds the complex roots of the cubic equation,
+    /// Return the complex roots of the cubic equation
+    /// ^z^3 + a z^2 + b z + c = 0$.
     ///
-    /// z^3 + a z^2 + b z + c = 0
-    ///
-    /// The number of complex roots is returned (always three) and the locations of the roots are
-    /// stored in z0, z1 and z2. The roots are returned in ascending order, sorted first by their
-    /// real components and then by their imaginary components.
+    /// The complex roots are returned in ascending order, sorted
+    /// first by their real components and then by their imaginary
+    /// components.
     #[doc(alias = "gsl_poly_complex_solve_cubic")]
     #[allow(unknown_lints, clippy::useless_transmute)]
-    pub fn poly_complex_solve_cubic(
-        a: f64,
-        b: f64,
-        c: f64,
-        z0: &mut Complex<f64>,
-        z1: &mut Complex<f64>,
-        z2: &mut Complex<f64>,
-    ) -> Result<(), Error> {
-        let ret = unsafe {
-            sys::gsl_poly_complex_solve_cubic(a, b, c, transmute(z0), transmute(z1), transmute(z2))
+    #[cfg(feature = "complex")]
+    pub fn roots(&self) -> (Complex<f64>, Complex<f64>, Complex<f64>) {
+        let mut z0 = Complex::new(0., 0.);
+        let mut z1 = Complex::new(0., 0.);
+        let mut z2 = Complex::new(0., 0.);
+        let _n = unsafe {
+            sys::gsl_poly_complex_solve_cubic(
+                self.a,
+                self.b,
+                self.c,
+                (&mut z0).unwrap(),
+                (&mut z1).unwrap(),
+                (&mut z2).unwrap(),
+            )
         };
-        Error::handle(ret, ())
+        (z0, z1, z2)
     }
 }

@@ -2,6 +2,9 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
+#![cfg(feature = "complex")]
+#![cfg_attr(docsrs, doc(cfg(feature = "complex")))]
+
 use num_complex::Complex;
 
 #[deprecated(since = "8.0.0", note = "use `Complex<f64>` instead")]
@@ -19,6 +22,13 @@ pub(crate) trait FromC<T> {
 
 impl ToC<sys::gsl_complex> for Complex<f64> {
     fn unwrap(self) -> sys::gsl_complex {
+        // Complex<T> is memory layout compatible with [T; 2]
+        unsafe { std::mem::transmute(self) }
+    }
+}
+
+impl<'a> ToC<&'a mut sys::gsl_complex> for &'a mut Complex<f64> {
+    fn unwrap(self) -> &'a mut sys::gsl_complex {
         // Complex<T> is memory layout compatible with [T; 2]
         unsafe { std::mem::transmute(self) }
     }
