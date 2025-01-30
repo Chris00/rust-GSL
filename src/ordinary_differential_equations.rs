@@ -2,11 +2,9 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-/*! Numerical ODE solvers.
+/*! # Numerical Ordinary Differential Equations solvers
 
-# Ordinary Differential Equations
-
-This chapter describes functions for solving ordinary differential
+This module possesses functions for solving ordinary differential
 equation (ODE) initial value problems. The library provides a variety
 of low-level methods, such as Runge-Kutta and Bulirsch-Stoer routines,
 and higher-level components for adaptive step-size control.  The
