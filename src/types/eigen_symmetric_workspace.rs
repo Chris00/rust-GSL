@@ -96,7 +96,9 @@ used is the QZ method due to Moler and Stewart (see references).
 !*/
 
 use crate::ffi::FFI;
-use crate::types::{MatrixComplexF64, MatrixF64, VectorComplexF64, VectorF64};
+#[cfg(feature = "complex")]
+use crate::types::{MatrixComplexF64, VectorComplexF64};
+use crate::types::{MatrixF64, VectorF64};
 use crate::Error;
 
 ffi_wrapper!(
@@ -208,6 +210,7 @@ impl EigenHermitianWorkspace {
     /// part is not referenced. The imaginary parts of the diagonal are assumed to be zero and are
     /// not referenced. The eigenvalues are stored in the vector `eval` and are unordered.
     #[doc(alias = "gsl_eigen_herm")]
+    #[cfg(feature = "complex")]
     pub fn herm(&mut self, A: &mut MatrixComplexF64, eval: &mut VectorF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_herm(
@@ -250,6 +253,7 @@ impl EigenHermitianVWorkspace {
     /// eigenvalue. The eigenvectors are guaranteed to be mutually orthogonal and normalised to unit
     /// magnitude.
     #[doc(alias = "gsl_eigen_hermv")]
+    #[cfg(feature = "complex")]
     pub fn hermv(
         &mut self,
         A: &mut MatrixComplexF64,
@@ -327,6 +331,7 @@ impl EigenNonSymmetricWorkspace {
     /// returned and the number of converged eigenvalues is stored in w->n_evals. The converged
     /// eigenvalues are stored in the beginning of `eval`.
     #[doc(alias = "gsl_eigen_nonsymm")]
+    #[cfg(feature = "complex")]
     pub fn nonsymm(&mut self, A: &mut MatrixF64, eval: &mut VectorComplexF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_nonsymm(
@@ -341,6 +346,7 @@ impl EigenNonSymmetricWorkspace {
     /// This function is identical to gsl_eigen_nonsymm except that it also computes the Schur
     /// vectors and stores them into `Z`.
     #[doc(alias = "gsl_eigen_nonsymm_Z")]
+    #[cfg(feature = "complex")]
     pub fn nonsymm_Z(
         &mut self,
         A: &mut MatrixF64,
@@ -400,6 +406,7 @@ impl EigenNonSymmetricVWorkspace {
     /// output, the upper portion of `A` contains the Schur form T. If gsl_eigen_nonsymm fails, no
     /// eigenvectors are computed, and an error code is returned.
     #[doc(alias = "gsl_eigen_nonsymmv")]
+    #[cfg(feature = "complex")]
     pub fn nonsymmv(
         &mut self,
         A: &mut MatrixF64,
@@ -420,6 +427,7 @@ impl EigenNonSymmetricVWorkspace {
     /// This function is identical to gsl_eigen_nonsymmv except that it also saves the Schur vectors
     /// into `Z`.
     #[doc(alias = "gsl_eigen_nonsymmv_Z")]
+    #[cfg(feature = "complex")]
     pub fn nonsymmv_Z(
         &mut self,
         A: &mut MatrixF64,
@@ -551,6 +559,7 @@ impl EigenGenHermWorkspace {
     /// pair (A, B), and stores them in `eval`, using the method outlined above. On output, `B`
     /// contains its Cholesky decomposition and `A` is destroyed.
     #[doc(alias = "gsl_eigen_genherm")]
+    #[cfg(feature = "complex")]
     pub fn genherm(
         &mut self,
         mut A: MatrixComplexF64,
@@ -593,6 +602,7 @@ impl EigenGenHermVWorkspace {
     /// pair (A, B), and stores them in `eval`, using the method outlined above. On output, `B`
     /// contains its Cholesky decomposition and `A` is destroyed.
     #[doc(alias = "gsl_eigen_genhermv")]
+    #[cfg(feature = "complex")]
     pub fn genhermv(
         &mut self,
         mut A: MatrixComplexF64,
@@ -664,6 +674,7 @@ impl EigenGenWorkspace {
     /// the Schur forms S and T. In rare cases, this function may fail to find all eigenvalues. If
     /// this occurs, an error code is returned.
     #[doc(alias = "gsl_eigen_gen")]
+    #[cfg(feature = "complex")]
     pub fn gen(
         &mut self,
         A: &mut MatrixF64,
@@ -686,6 +697,7 @@ impl EigenGenWorkspace {
     /// This function is identical to gsl_eigen_gen except that it also computes the left and right
     /// Schur vectors and stores them into `Q` and `Z` respectively.
     #[doc(alias = "gsl_eigen_gen_QZ")]
+    #[cfg(feature = "complex")]
     pub fn gen_QZ(
         &mut self,
         A: &mut MatrixF64,
@@ -739,6 +751,7 @@ impl EigenGenVWorkspace {
     /// have unit magnitude. On output, (A, B) contains the generalized Schur form (S, T). If
     /// gsl_eigen_gen fails, no eigenvectors are computed, and an error code is returned.
     #[doc(alias = "gsl_eigen_genv")]
+    #[cfg(feature = "complex")]
     pub fn genv(
         &mut self,
         A: &mut MatrixF64,
@@ -763,6 +776,7 @@ impl EigenGenVWorkspace {
     /// This function is identical to gsl_eigen_genv except that it also computes the left and right
     /// Schur vectors and stores them into `Q` and `Z` respectively.
     #[doc(alias = "gsl_eigen_genv_QZ")]
+    #[cfg(feature = "complex")]
     pub fn genv_QZ(
         &mut self,
         A: &mut MatrixF64,
@@ -889,6 +903,7 @@ fn eigen_symmetric_vworkspace() {
 // }
 // ```
 #[test]
+#[cfg(feature = "complex")]
 fn eigen_hermitian_workspace() {
     use crate::complex::ComplexOps;
     use num_complex::Complex;
@@ -944,6 +959,7 @@ fn eigen_hermitian_workspace() {
 // }
 // ```
 #[test]
+#[cfg(feature = "complex")]
 fn eigen_hermitian_vworkspace() {
     use crate::complex::ComplexOps;
     use num_complex::Complex;

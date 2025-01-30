@@ -2,11 +2,12 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
+#![cfg(feature = "complex")]
+#![cfg_attr(docsrs, doc(cfg(feature = "complex")))]
+
 use crate::ffi::FFI;
-use crate::{
-    vector::{ComplexSlice, VectorMut},
-    Error,
-};
+use crate::vector::ComplexSlice;
+use crate::{vector::VectorMut, Error};
 use num_complex::Complex;
 use paste::paste;
 

@@ -20,7 +20,9 @@ The LAPACK source code can be found at the website above along with an online co
 !*/
 
 use crate::ffi::FFI;
-use crate::types::{MatrixComplexF64, MatrixF64, VectorComplexF64, VectorF64};
+#[cfg(feature = "complex")]
+use crate::types::{MatrixComplexF64, VectorComplexF64};
+use crate::types::{MatrixF64, VectorF64};
 use crate::Error;
 
 /// This function simultaneously sorts the eigenvalues stored in the vector eval and the corresponding real eigenvectors stored in the columns
@@ -40,6 +42,7 @@ pub fn symmv_sort(
 /// This function simultaneously sorts the eigenvalues stored in the vector eval and the corresponding complex eigenvectors stored in the columns
 /// of the matrix evec into ascending or descending order according to the value of the parameter sort_type.
 #[doc(alias = "gsl_eigen_hermv_sort")]
+#[cfg(feature = "complex")]
 pub fn hermv_sort(
     eval: &mut VectorF64,
     evec: &mut MatrixComplexF64,
@@ -55,6 +58,7 @@ pub fn hermv_sort(
 /// of the matrix evec into ascending or descending order according to the value of the parameter sort_type. Only EigenSort::AbsAsc and
 /// EigenSort::AbsDesc are supported due to the eigenvalues being complex.
 #[doc(alias = "gsl_eigen_nonsymmv_sort")]
+#[cfg(feature = "complex")]
 pub fn nonsymmv_sort(
     eval: &mut VectorComplexF64,
     evec: &mut MatrixComplexF64,
@@ -83,6 +87,7 @@ pub fn gensymmv_sort(
 /// This function simultaneously sorts the eigenvalues stored in the vector eval and the corresponding complex eigenvectors stored in the
 /// columns of the matrix evec into ascending or descending order according to the value of the parameter sort_type.
 #[doc(alias = "gsl_eigen_genhermv_sort")]
+#[cfg(feature = "complex")]
 pub fn genhermv_sort(
     eval: &mut VectorF64,
     evec: &mut MatrixComplexF64,
@@ -98,6 +103,7 @@ pub fn genhermv_sort(
 /// in the columns of the matrix evec into ascending or descending order according to the value of the parameter sort_type. Only
 /// EigenSort::AbsAsc and EigenSort::AbsDesc are supported due to the eigenvalues being complex.
 #[doc(alias = "gsl_eigen_genv_sort")]
+#[cfg(feature = "complex")]
 pub fn genv_sort(
     alpha: &mut VectorComplexF64,
     beta: &mut VectorF64,

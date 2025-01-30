@@ -2,6 +2,9 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
+#![cfg(feature = "complex")]
+#![cfg_attr(docsrs, doc(cfg(feature = "complex")))]
+
 use crate::ffi::FFI;
 use crate::{
     complex::{FromC, ToC},

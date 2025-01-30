@@ -164,6 +164,7 @@ is desirable for better locality of memory accesses).
 /// the sign argument can be either forward (-1) or backward (+1).
 ///
 /// The functions return a value of crate::Error::Success if no errors were detected, or Error::Dom if the length n is not a power of two.
+#[cfg(feature = "complex")]
 pub mod radix2 {
     use crate::{
         vector::{ComplexSlice, VectorMut},

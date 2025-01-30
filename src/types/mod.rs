@@ -9,6 +9,7 @@ pub use self::basis_spline::BSpLineWorkspace;
 pub use self::chebyshev::ChebSeries;
 pub use self::combination::Combination;
 #[allow(deprecated)]
+#[cfg(feature = "complex")]
 pub use self::complex::{ComplexF32, ComplexF64, ComplexOps};
 pub use self::discrete_hankel::DiscreteHankel;
 pub use self::eigen_symmetric_workspace::{
@@ -17,6 +18,7 @@ pub use self::eigen_symmetric_workspace::{
     EigenNonSymmetricVWorkspace, EigenNonSymmetricWorkspace, EigenSymmetricVWorkspace,
     EigenSymmetricWorkspace,
 };
+#[cfg(feature = "complex")]
 pub use self::fast_fourier_transforms::{
     FftComplexF32WaveTable, FftComplexF32Workspace, FftComplexF64WaveTable, FftComplexF64Workspace,
 };
@@ -32,6 +34,7 @@ pub use self::matrix::{
     MatrixF32, MatrixF32View, MatrixF64, MatrixF64View, MatrixI32, MatrixI32View, MatrixU32,
     MatrixU32View,
 };
+#[cfg(feature = "complex")]
 pub use self::matrix_complex::{MatrixComplexF32, MatrixComplexF64};
 pub use self::minimizer::{Minimizer, MinimizerType};
 pub use self::monte_carlo::{
@@ -60,6 +63,7 @@ pub use self::vector::{
     VectorF32, VectorF32View, VectorF64, VectorF64View, VectorI32, VectorI32View, VectorU32,
     VectorU32View,
 };
+#[cfg(feature = "complex")]
 pub use self::vector_complex::{
     VectorComplexF32, VectorComplexF32View, VectorComplexF64, VectorComplexF64View,
 };

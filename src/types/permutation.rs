@@ -6,7 +6,9 @@ use crate::ffi::FFI;
 use crate::Error;
 #[cfg(feature = "v2_2")]
 use crate::MatrixF64;
-use crate::{MatrixComplexF32, MatrixComplexF64, MatrixF32, VectorF64};
+#[cfg(feature = "complex")]
+use crate::{MatrixComplexF32, MatrixComplexF64};
+use crate::{MatrixF32, VectorF64};
 use std::fmt::{self, Debug, Formatter};
 use std::slice;
 
@@ -232,6 +234,7 @@ impl Permutation {
     }
 
     #[doc(alias = "gsl_permute_matrix_complex")]
+    #[cfg(feature = "complex")]
     pub fn permute_matrix_complex(&self, A: &mut MatrixComplexF64) -> Result<(), Error> {
         let ret =
             unsafe { sys::gsl_permute_matrix_complex(self.unwrap_shared(), A.unwrap_unique()) };
@@ -239,6 +242,7 @@ impl Permutation {
     }
 
     #[doc(alias = "gsl_permute_matrix_complex_float")]
+    #[cfg(feature = "complex")]
     pub fn permute_matrix_complex_float(&self, A: &mut MatrixComplexF32) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_permute_matrix_complex_float(self.unwrap_shared(), A.unwrap_unique())

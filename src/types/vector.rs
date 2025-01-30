@@ -840,5 +840,7 @@ macro_rules! impl_ComplexSlice {
     };
 }
 
+#[cfg(feature = "complex")]
 impl_ComplexSlice!(f64);
+#[cfg(feature = "complex")]
 impl_ComplexSlice!(f32);
