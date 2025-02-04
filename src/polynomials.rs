@@ -336,6 +336,53 @@ impl Quadratic {
     }
 }
 
+impl<'a, T> IntoIterator for &'a QuadraticRoots<T> {
+    type Item = &'a T;
+    type IntoIter = QuadraticRootsIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            QuadraticRoots::None => QuadraticRootsIter {
+                d0: None,
+                d1: None,
+                n: 0,
+            },
+            QuadraticRoots::One(d0) => QuadraticRootsIter {
+                d0: Some(d0),
+                d1: None,
+                n: 1,
+            },
+            QuadraticRoots::Two(d1, d0) => QuadraticRootsIter {
+                d0: Some(d0),
+                d1: Some(d1),
+                n: 2,
+            },
+        }
+    }
+}
+
+pub struct QuadraticRootsIter<'a, T> {
+    d0: Option<&'a T>, // served last
+    d1: Option<&'a T>, // server first
+    n: usize,
+}
+
+impl<'a, T> Iterator for QuadraticRootsIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        if self.n == 0 {
+            None
+        } else if self.n == 1 {
+            self.n = 0;
+            self.d0
+        } else {
+            self.n = 1;
+            self.d1
+        }
+    }
+}
+
 /// Represent $x^3 + a x^2 + b x + c$.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cubic {
