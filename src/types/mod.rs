@@ -29,7 +29,6 @@ pub use self::filter::{
 };
 pub use self::histograms::{Histogram, Histogram2D, Histogram2DPdf, HistogramPdf};
 pub use self::interpolation::{Interp, InterpAccel, InterpType, Spline};
-pub use self::mathieu::MathieuWorkspace;
 pub use self::matrix::{
     MatrixF32, MatrixF32View, MatrixF64, MatrixF64View, MatrixI32, MatrixI32View, MatrixU32,
     MatrixU32View,
@@ -81,7 +80,6 @@ pub mod fast_fourier_transforms;
 pub mod filter;
 pub mod histograms;
 pub mod interpolation;
-pub mod mathieu;
 pub mod matrix;
 pub mod matrix_complex;
 pub mod minimizer;

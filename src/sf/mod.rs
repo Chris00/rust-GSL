@@ -34,6 +34,7 @@ pub mod laguerre;
 pub mod lambert_w;
 pub mod legendre;
 pub mod logarithm;
+pub mod mathieu;
 pub mod power;
 pub mod psi;
 pub mod synchrotron;
