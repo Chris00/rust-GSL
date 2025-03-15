@@ -5,8 +5,8 @@
 extern crate rgsl;
 
 use rgsl::{
-    gamma_beta,
     integration::{IntegrationFixedType, IntegrationFixedWorkspace},
+    sf::gamma::gamma,
 };
 use std::f64::consts::PI;
 
@@ -20,7 +20,7 @@ fn main() {
 
     let result = w.fixed(|x| x.powi(M as _) + 1.).unwrap();
 
-    let expected = PI.sqrt() + gamma_beta::gamma::gamma(0.5 * (1. + M as f64));
+    let expected = PI.sqrt() + gamma(0.5 * (1. + M as f64));
     println!("m             = {}", M);
     println!("intervals     = {}", w.n());
     println!("result        = {:.18}", result);

@@ -41,7 +41,7 @@ fn main() -> Result<(), rgsl::Error> {
     let result = w.fixed(|x| x.powf(m as _) + 1.).unwrap();
 
     let expected = if m % 2 == 0 {
-        consts::PI.sqrt() + rgsl::gamma_beta::gamma::gamma(0.5 * (1. + m as f64))
+        consts::PI.sqrt() + rgsl::sf::gamma::gamma(0.5 * (1. + m as f64))
     } else {
         consts::PI.sqrt()
     };

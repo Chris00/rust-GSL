@@ -14,6 +14,7 @@
 
 pub mod airy;
 pub mod bessel;
+pub mod beta;
 pub mod clausen;
 pub mod coulomb;
 pub mod coupling_coefficients;
@@ -25,8 +26,9 @@ pub mod elliptic;
 pub mod error;
 pub mod exponential;
 pub mod exponential_integrals;
+pub mod factorials;
 pub mod fermi_dirac;
-pub mod gamma_beta;
+pub mod gamma;
 pub mod gegenbauer;
 pub mod hypergeometric;
 pub mod jacobian_elliptic;
@@ -35,6 +37,7 @@ pub mod lambert_w;
 pub mod legendre;
 pub mod logarithm;
 pub mod mathieu;
+pub mod pochhammer_symbol;
 pub mod power;
 pub mod psi;
 pub mod synchrotron;
