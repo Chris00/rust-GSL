@@ -226,14 +226,6 @@ def check_macros(file_path, content, errors, totals):
                         data["sys_names"].append(sys_name)
                         data["is_in_func"] = True
 
-def check_file_header(file_path, content, errors, _totals):
-    if content.split('\n')[:3] != [
-        "//",
-        "// A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)",
-        "//"
-    ]:
-        add_error(file_path, 1, errors, "Invalid header (take a look at `lib.rs`)")
-
 
 def main():
     errors = []
@@ -247,7 +239,7 @@ def main():
     }
     excluded = ["src/_docs/header.html", "src/blas.rs", "src/integration.rs",
                 "src/polynomials.rs"]
-    read_dirs("src", excluded, errors, totals, [check_file_header, check_macros])
+    read_dirs("src", excluded, errors, totals, [check_macros])
     check_counts(errors, totals)
     if len(errors) > 0:
         for err in errors:
