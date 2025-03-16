@@ -5,10 +5,21 @@
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_int};
 
+/// The goal of the library is to achieve double precision accuracy
+/// wherever possible.  However the cost of evaluating some special
+/// functions to double precision can be significant, particularly
+/// where very high order terms are required.  In these cases a mode
+/// argument, of type [`Mode`] allows the accuracy of the function to
+/// be reduced in order to improve performance.
 #[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
 pub enum Mode {
+    /// Double-precision, a relative accuracy of approximately
+    /// $2 · 10^{-16}$.
     PrecDouble,
+    /// Single-precision, a relative accuracy of approximately $10^{-7}$.
     PrecSingle,
+    /// Approximate values, a relative accuracy of approximately
+    /// $5 · 10^{-4}$.
     PrecApprox,
 }
 
