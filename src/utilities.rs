@@ -29,10 +29,7 @@ impl IOStream {
         let path = CString::new(file.as_ref().to_str().unwrap()).unwrap();
         let ptr = unsafe { fopen(path.as_ptr(), c"w".as_ptr() as *const c_char) };
         if ptr.is_null() {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Failed to open file...",
-            ));
+            return Err(io::Error::other("Failed to open file..."));
         }
         Ok(IOStream {
             inner: ptr,
