@@ -1,6 +1,11 @@
 //
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
+//! # Bessel functions
+//!
+//! Bessel functions are solutions to the differential equation:
+//!
+//! $$z^2 \frac{d^2 w}{dz^2} + z \frac{dw}{dz} + (z^2 - \nu^2) w = 0.$$
 
 use crate::{types, Error};
 use std::mem::MaybeUninit;
