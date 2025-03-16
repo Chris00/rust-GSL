@@ -71,10 +71,13 @@ pub mod util;
 pub mod wavelet_transforms;
 
 /// The maximum x such that gamma(x) is not considered an overflow.
+#[deprecated(since = "8.0.0", note = "Use rgsl::sf::gamma::GAMMA_XMAX")]
 pub static SF_GAMMA_XMAX: f64 = 171.0;
 /// The maximum n such that gsl_sf_fact(n) does not give an overflow.
+#[deprecated(since = "8.0.0", note = "Use rgsl::sf::factorials::FACT_NMAX")]
 pub static SF_FACT_NMAX: f64 = 170.0;
 /// The maximum n such that gsl_sf_doublefact(n) does not give an overflow.
+#[deprecated(since = "8.0.0", note = "Use rgsl::sf::factorials::DOUBLEFACT_NMAX")]
 pub static SF_DOUBLEFACT_NMAX: f64 = 297.0;
 
 pub static SF_MATHIEU_COEFF: u32 = 100;
