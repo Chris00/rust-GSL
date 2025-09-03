@@ -450,7 +450,7 @@ impl VegasMonteCarlo {
 
     // checker:ignore
     #[doc(alias = "gsl_monte_vegas_params_get")]
-    pub fn get_params(&self) -> VegasParams {
+    pub fn get_params(&self) -> VegasParams<'_> {
         let mut params = VegasParams::default();
         unsafe {
             sys::gsl_monte_vegas_params_get(self.unwrap_shared(), &mut params.inner as *mut _);
