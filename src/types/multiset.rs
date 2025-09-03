@@ -133,7 +133,7 @@ impl MultiSet {
 
     /// This function steps backwards from the multiset self to the
     /// previous multiset element in lexicographic order, returning
-    /// [`Ok(())`].  If no previous multiset is available it returns
+    /// `Ok(())`.  If no previous multiset is available it returns
     /// [`Error::Failure`] and leaves self unmodified.
     #[doc(alias = "gsl_multiset_prev")]
     pub fn prev(&mut self) -> Result<(), Error> {

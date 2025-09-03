@@ -10,8 +10,9 @@ This binding requires the [GSL library] library (version >= 2) to be installed:
 
 ### Linux
 
+On debian based systems:
+
 ```bash
-# on debian based systems:
 sudo apt-get install libgsl0-dev
 ```
 

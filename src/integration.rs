@@ -1004,8 +1004,8 @@ impl QawoTable {
     /// Default number of levels (see [`new`]).
     const N: usize = 50;
 
-    /// This function allocates space for a [`QawoTable¯] and its
-    /// associated workspace describing a sine or cosine weight
+    /// This function allocates space for a [`QawoTable¯][Self]
+    /// and its associated workspace describing a sine or cosine weight
     /// function $w$ with the parameters $(ω, L)$,
     ///
     /// $w(x) = \sin(ω x)$,
