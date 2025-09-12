@@ -68,6 +68,8 @@ pub mod sort;
 pub mod statistics;
 pub mod stats;
 pub mod util;
+pub mod vector;
+pub mod vector_complex;
 pub mod wavelet_transforms;
 
 /// The maximum x such that gamma(x) is not considered an overflow.

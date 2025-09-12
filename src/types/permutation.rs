@@ -12,7 +12,7 @@ use crate::{MatrixF32, VectorF64};
 use std::fmt::{self, Debug, Formatter};
 use std::slice;
 
-use super::vector::VectorMut;
+use crate::vector::VectorMut;
 
 // FIXME: Permutations have the same representation as vectors.
 // Do we want to wrap vectors?  (The wrapping is to preserve invariants.)
