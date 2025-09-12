@@ -419,7 +419,6 @@ impl MinimizerFdfType {
     }
 }
 
-
 /// This function tests the minimizer specific characteristic size (if applicable to the used minimizer) against absolute tolerance `epsabs`.
 /// The test returns `crate::Error::Success` if the size is smaller than tolerance, otherwise crate::Error::Continue is returned.
 #[doc(alias = "gsl_multimin_test_size")]
@@ -438,8 +437,6 @@ pub fn test_gradient(g: &crate::VectorF64, epsabs: f64) -> Result<(), Error> {
         (),
     )
 }
-
-
 
 #[cfg(any(test, doctest))]
 mod test {

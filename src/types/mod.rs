@@ -58,6 +58,7 @@ pub use self::roots::{RootFSolver, RootFSolverType, RootFdfSolver, RootFdfSolver
 pub use self::rstat::{RStatQuantileWorkspace, RStatWorkspace};
 pub use self::series_acceleration::{LevinUTruncWorkspace, LevinUWorkspace};
 pub use self::siman::{SimAnnealing, SimAnnealingParams};
+pub use self::wavelet_transforms::{Wavelet, WaveletType, WaveletWorkspace};
 #[deprecated(since = "8.0.0", note = "Use rgsl::vector::*")]
 pub use super::vector::{
     VectorF32, VectorF32View, VectorF64, VectorF64View, VectorI32, VectorI32View, VectorU32,
@@ -68,7 +69,6 @@ pub use super::vector::{
 pub use super::vector_complex::{
     VectorComplexF32, VectorComplexF32View, VectorComplexF64, VectorComplexF64View,
 };
-pub use self::wavelet_transforms::{Wavelet, WaveletType, WaveletWorkspace};
 
 pub mod basis_spline;
 pub mod chebyshev;
