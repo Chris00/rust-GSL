@@ -18,18 +18,18 @@ Specifically, let f(t) be a function on the unit interval and j_(\nu,m) the m-th
 function J_\nu(x). Then the finite \nu-Hankel transform of f(t) is defined to be the set of numbers
 g_m given by,
 
-g_m = \int_0^1 t dt J_\nu(j_(\nu,m)t) f(t),
+$$g_m = \int_0^1 t dt J_\nu(j_(\nu,m)t) f(t),$$
 
 so that,
 
-f(t) = \sum_{m=1}^\infty (2 J_\nu(j_(\nu,m)t) / J_(\nu+1)(j_(\nu,m))^2) g_m.
+$$f(t) = \sum_{m=1}^\infty (2 J_\nu(j_(\nu,m)t) / J_(\nu+1)(j_(\nu,m))^2) g_m.$$
 
 Suppose that f is band-limited in the sense that g_m=0 for m > M. Then we have the following
 fundamental sampling theorem.
 
-g_m = (2 / j_(\nu,M)^2)
+$$g_m = (2 / j_(\nu,M)^2)
       \sum_{k=1}^{M-1} f(j_(\nu,k)/j_(\nu,M))
-          (J_\nu(j_(\nu,m) j_(\nu,k) / j_(\nu,M)) / J_(\nu+1)(j_(\nu,k))^2).
+          (J_\nu(j_(\nu,m) j_(\nu,k) / j_(\nu,M)) / J_(\nu+1)(j_(\nu,k))^2).$$
 
 It is this discrete expression which defines the discrete Hankel
 transform. The kernel in the summation above defines the matrix of the
@@ -107,7 +107,7 @@ impl DiscreteHankel {
                 (*self.unwrap_shared()).size == f_in.len() as _,
                 "f_in and f_out must have the same length as this struct"
             );
-            let mut f_out: Vec<f64> = std::iter::repeat_n(0., f_in.len()).collect();
+            let mut f_out: Vec<f64> = vec![0.; f_in.len()];
             let ret = sys::gsl_dht_apply(
                 self.unwrap_unique(),
                 f_in.as_ptr() as usize as *mut _,
