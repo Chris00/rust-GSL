@@ -429,11 +429,12 @@ impl From<std::os::raw::c_int> for GaussKronrodRule {
 }
 
 ffi_wrapper!(
+    /// Manage subintervals for adaptive integration.  It handles the
+    /// memory for the subinterval ranges, results and error
+    /// estimates.
     IntegrationWorkspace,
     *mut sys::gsl_integration_workspace,
-    gsl_integration_workspace_free,
-    "Manage subintervals for adaptive integration.  It handles the memory for the subinterval ranges, results and error estimates."
-);
+    gsl_integration_workspace_free);
 
 impl IntegrationWorkspace {
     /// This function allocates a workspace sufficient to hold `n`
@@ -845,11 +846,10 @@ impl<F: Fn(f64) -> f64> Qawc<'_, F> {
 }
 
 ffi_wrapper!(
+    /// Table of Chebyshev moments for [`qaws`].
     QawsTable,
     *mut sys::gsl_integration_qaws_table,
-    gsl_integration_qaws_table_free,
-    "Table of Chebyshev moments for [`qaws`]."
-);
+    gsl_integration_qaws_table_free);
 
 impl QawsTable {
     /// This function allocates space for a gsl_integration_qaws_table
@@ -965,11 +965,11 @@ impl<F: Fn(f64) -> f64> Qaws<'_, '_, F> {
 }
 
 ffi_wrapper!(
+    /// Table of Chebyshev moments according to parameters $ω$ and $L$
+    /// for [`qawo`] and [`qawf`].
     QawoTable,
     *mut sys::gsl_integration_qawo_table,
-    gsl_integration_qawo_table_free,
-    "Table of Chebyshev moments according to parameters $ω$ and $L$ for [`qawo`] and [`qawf`]."
-);
+    gsl_integration_qawo_table_free);
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
 /// Choice of the type of oscillatory function.
@@ -1291,11 +1291,10 @@ impl<'w, 't, F: Fn(f64) -> f64> Qawf<'w, '_, 't, F> {
 }
 
 ffi_wrapper!(
+    /// Workspace for the [`cquad`] integration algorithm.
     CquadWorkspace,
     *mut sys::gsl_integration_cquad_workspace,
-    gsl_integration_cquad_workspace_free,
-    "Workspace for the [`cquad`] integration algorithm."
-);
+    gsl_integration_cquad_workspace_free);
 
 impl CquadWorkspace {
     /// This function allocates a workspace sufficient to hold the
@@ -1392,11 +1391,10 @@ impl<F: Fn(f64) -> f64> Cquad<'_, F> {
 }
 
 ffi_wrapper!(
+    /// Stores the Gauss-Legendre abscissae and weights.
     GLFixedTable,
     *mut sys::gsl_integration_glfixed_table,
-    gsl_integration_glfixed_table_free,
-    "Stores the Gauss-Legendre abscissae and weights"
-);
+    gsl_integration_glfixed_table_free);
 
 impl GLFixedTable {
     /// This function determines the Gauss-Legendre abscissae and
@@ -1442,10 +1440,9 @@ impl GLFixedTable {
 }
 
 ffi_wrapper!(
+    /// Type of fixed point rule integration.
     IntegrationFixedType,
-    *const sys::gsl_integration_fixed_type,
-    "Type of fixed point rule integration."
-);
+    *const sys::gsl_integration_fixed_type);
 
 impl IntegrationFixedType {
     /// $w(x) = 1$ on the interval $(a,b)$.  Constraint $ b > a$.
@@ -1504,11 +1501,10 @@ impl IntegrationFixedType {
 }
 
 ffi_wrapper!(
+    /// Workspace for fixed point quadratures.
     IntegrationFixedWorkspace,
     *mut sys::gsl_integration_fixed_workspace,
-    gsl_integration_fixed_free,
-    "Workspace for fixed point quadratures."
-);
+    gsl_integration_fixed_free);
 
 impl IntegrationFixedWorkspace {
     /// This function allocates a workspace for computing integrals

@@ -46,16 +46,17 @@ use crate::Error;
 use std::ffi::{c_double, c_void};
 
 ffi_wrapper!(
+    /// The root bracketing algorithms described in this section
+    /// require an initial interval which is guaranteed to contain a
+    /// root—if $a$ and $b$ are the endpoints of the interval then
+    /// $f(a)$ must differ in sign from $f(b)$.  This ensures that the
+    /// function crosses zero at least once in the interval.  If a
+    /// valid initial interval is used then these algorithm cannot
+    /// fail, provided the function is well-behaved.  Note that a
+    /// bracketing algorithm cannot find roots of even degree, since
+    /// these do not cross the x-axis.
     RootFSolverType,
-    *const sys::gsl_root_fsolver_type,
-    "The root bracketing algorithms described in this section require an initial interval which is
-guaranteed to contain a root—if a and b are the endpoints of the interval then f (a) must
-differ in sign from f (b). This ensures that the function crosses zero at least once in the
-interval. If a valid initial interval is used then these algorithm cannot fail, provided the
-function is well-behaved.
-Note that a bracketing algorithm cannot find roots of even degree, since these do not
-cross the x-axis."
-);
+    *const sys::gsl_root_fsolver_type);
 
 impl RootFSolverType {
     /// The bisection algorithm is the simplest method of bracketing the roots of a function.
@@ -110,13 +111,13 @@ impl RootFSolverType {
 }
 
 ffi_wrapper!(
+    /// Workspace for finding roots using methods which do not require
+    /// derivatives.
     RootFSolver<'a>,
     *mut sys::gsl_root_fsolver,
     gsl_root_fsolver_free
     ;inner_call: sys::gsl_function_struct => sys::gsl_function_struct { function: None, params: std::ptr::null_mut() };
-    ;inner_closure: Option<Box<dyn Fn(f64) -> f64 + 'a>> => None;,
-    "This is a workspace for finding roots using methods which do not require derivatives."
-);
+    ;inner_closure: Option<Box<dyn Fn(f64) -> f64 + 'a>> => None;);
 
 impl<'a> RootFSolver<'a> {
     /// This function returns a pointer to a newly allocated instance of a solver of type T.
@@ -198,14 +199,17 @@ impl<'a> RootFSolver<'a> {
 }
 
 ffi_wrapper!(
+    /// The root polishing algorithms described in this section
+    /// require an initial guess for the location of the root.  There
+    /// is no absolute guarantee of convergence—the function must be
+    /// suitable for this technique and the initial guess must be
+    /// sufficiently close to the root for it
+    // TODO: o work.
+    /// When these conditions are satisfied then convergence is
+    /// quadratic.  These algorithms make use of both the function and
+    /// its derivative.
     RootFdfSolverType,
-    *const sys::gsl_root_fdfsolver_type,
-    "The root polishing algorithms described in this section require an initial guess for the
-location of the root. There is no absolute guarantee of convergence—the function must be
-suitable for this technique and the initial guess must be sufficiently close to the root
-for it to work. When these conditions are satisfied then convergence is quadratic.
-These algorithms make use of both the function and its derivative."
-);
+    *const sys::gsl_root_fdfsolver_type);
 
 impl RootFdfSolverType {
     /// Newton’s Method is the standard root-polishing algorithm. The algorithm begins
@@ -233,15 +237,14 @@ impl RootFdfSolverType {
 }
 
 ffi_wrapper!(
+    /// Workspace for finding roots using methods which do require derivatives.
     RootFdfSolver<'a>,
     *mut sys::gsl_root_fdfsolver,
     gsl_root_fdfsolver_free
     ;inner_call: sys::gsl_function_fdf_struct => sys::gsl_function_fdf_struct{f: None, df: None, fdf: None, params: std::ptr::null_mut()};
     ;inner_f_closure: Option<Box<dyn Fn(f64) -> f64 + 'a>> => None;
     ;inner_df_closure: Option<Box<dyn Fn(f64) -> f64 + 'a>> => None;
-    ;inner_fdf_closure: Option<Box<dyn Fn(f64, &mut f64, &mut f64) + 'a>> => None;,
-    "This is a workspace for finding roots using methods which do require derivatives."
-);
+    ;inner_fdf_closure: Option<Box<dyn Fn(f64, &mut f64, &mut f64) + 'a>> => None;);
 
 impl<'a> RootFdfSolver<'a> {
     /// This function returns a pointer to a newly allocated instance of a derivative-based

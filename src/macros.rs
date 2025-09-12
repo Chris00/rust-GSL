@@ -32,8 +32,10 @@ macro_rules! wrap_callback {
 
 #[doc(hidden)]
 macro_rules! ffi_wrapper {
-    ($name:ident $(<$($lt:lifetime),*>)?, *mut $ty:ty, $drop:ident $(;$extra_id:ident: $extra_ty:ty => $extra_expr:expr;)* $(, $doc:expr)?) => {
-        ffi_wrapper!($name $(<$($lt),*>)?, *mut $ty $(;$extra_id: $extra_ty => $extra_expr;)* $(, $doc)?);
+    ($(#[$doc: meta])* $name:ident $(<$($lt:lifetime),*>)?, *mut $ty:ty,
+        $drop:ident $(;$extra_id:ident: $extra_ty:ty => $extra_expr:expr;)*
+    ) => {
+        ffi_wrapper!($(#[$doc])* $name $(<$($lt),*>)?, *mut $ty $(;$extra_id: $extra_ty => $extra_expr;)*);
 
         impl$(<$($lt),*>)? Drop for $name$(<$($lt),*>)? {
             fn drop(&mut self) {
@@ -42,8 +44,8 @@ macro_rules! ffi_wrapper {
             }
         }
     };
-    ($name:ident $(<$($lt:lifetime),*>)?, *mut $ty:ty $(;$extra_id:ident: $extra_ty:ty => $extra_expr:expr;)* $(, $doc:expr)?) => {
-        $(#[doc = $doc])?
+    ($(#[$doc: meta])* $name:ident $(<$($lt:lifetime),*>)?, *mut $ty:ty $(;$extra_id:ident: $extra_ty:ty => $extra_expr:expr;)*) => {
+        $(#[$doc])*
         pub struct $name$(<$($lt),*>)? {
             inner: *mut $ty,
             $($extra_id: $extra_ty,)*
@@ -69,8 +71,8 @@ macro_rules! ffi_wrapper {
             }
         }
     };
-    ($name:ident $(<$($lt:lifetime),*>)?, *const $ty:ty $(;$extra_id:ident: $extra_ty:ty => $extra_expr:expr;)* $(, $doc:expr)?) => {
-        $(#[doc = $doc])?
+    ($(#[$doc: meta])* $name:ident $(<$($lt:lifetime),*>)?, *const $ty:ty $(;$extra_id:ident: $extra_ty:ty => $extra_expr:expr;)*) => {
+        $(#[$doc])*
         #[derive(Clone, Copy)]
         pub struct $name$(<$($lt),*>)? {
             inner: *const $ty,

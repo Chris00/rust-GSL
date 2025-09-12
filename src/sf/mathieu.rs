@@ -32,11 +32,10 @@ use crate::{types, Error};
 use std::mem::MaybeUninit;
 
 ffi_wrapper!(
+    /// Workspace to compute array-based routines.
     Mathieu,
     *mut sys::gsl_sf_mathieu_workspace,
-    gsl_sf_mathieu_free,
-    "Workspace to compute array-based routines."
-);
+    gsl_sf_mathieu_free);
 
 impl Mathieu {
     /// This function returns a workspace for the array versions of

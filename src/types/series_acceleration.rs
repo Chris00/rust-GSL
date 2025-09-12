@@ -53,11 +53,10 @@ use crate::ffi::FFI;
 use crate::Error;
 
 ffi_wrapper!(
+    /// Workspace for Levin U Transform with error estimation.
     LevinUWorkspace,
     *mut sys::gsl_sum_levin_u_workspace,
-    gsl_sum_levin_u_free,
-    "Workspace for Levin U Transform with error estimation."
-);
+    gsl_sum_levin_u_free);
 
 impl LevinUWorkspace {
     /// This function allocates a workspace for a Levin u-transform of n terms. The size of the workspace is O(2n^2 + 3n).
@@ -108,10 +107,14 @@ impl LevinUWorkspace {
     }
 }
 
-ffi_wrapper!(LevinUTruncWorkspace, *mut sys::gsl_sum_levin_utrunc_workspace, gsl_sum_levin_utrunc_free,
-"The following functions perform the same calculation without estimating the errors. They require
-`O(N)` storage instead of `O(N^2)`. This may be useful for summing many similar series where the
-size of the error has already been estimated reliably and is not expected to change.");
+ffi_wrapper!(
+    /// The following functions perform the same calculation without
+    /// estimating the errors. They require `O(N)` storage instead of
+    /// `O(N^2)`.  This may be useful for summing many similar series
+    /// where the size of the error has already been estimated
+    /// reliably and is not expected to change.
+    LevinUTruncWorkspace, *mut sys::gsl_sum_levin_utrunc_workspace,
+    gsl_sum_levin_utrunc_free);
 
 impl LevinUTruncWorkspace {
     /// This function allocates a workspace for a Levin u-transform of n terms, without error estimation. The size of the workspace is O(3n).

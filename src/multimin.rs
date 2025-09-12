@@ -281,6 +281,7 @@ impl<'a> MultiMinFdfFunction<'a> {
 }
 
 ffi_wrapper!(
+    /// Minimizarion using derivatives.
     MinimizerFdf,
     *mut sys::gsl_multimin_fdfminimizer,
     gsl_multimin_fdfminimizer_free

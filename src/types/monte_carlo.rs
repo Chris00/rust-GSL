@@ -79,26 +79,28 @@ use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::slice;
 
-ffi_wrapper!(PlainMonteCarlo, *mut sys::gsl_monte_plain_state, gsl_monte_plain_free,
-"The plain Monte Carlo algorithm samples points randomly from the integration region to estimate
-the integral and its error. Using this algorithm the estimate of the integral E(f; N) for N
-randomly distributed points x_i is given by,
-
-```text
-E(f; N) = =  V <f> = (V / N) sum_i^N f(x_i)
-```
-
-where V is the volume of the integration region. The error on this estimate `sigma(E;N)` is
-calculated from the estimated variance of the mean,
-
-```text
-sigma^2 (E; N) = (V^2 / N^2) sum_i^N (f(x_i) -  <f>)^2.
-```
-
-For large N this variance decreases asymptotically as `Var(f)/N`, where `Var(f)` is the true
-variance of the function over the integration region. The error estimate itself should decrease as
-`sigma(f)/sqrt{N}`. The familiar law of errors decreasing as `1/sqrt{N}` applies-to reduce the
-error by a factor of 10 requires a 100-fold increase in the number of sample points.");
+ffi_wrapper!(
+    /// The plain Monte Carlo algorithm samples points randomly from
+    /// the integration region to estimate the integral and its error.
+    /// Using this algorithm the estimate of the integral $E(f;N)$ for
+    /// $N$ randomly distributed points $x_i$ is given by,
+    ///
+    /// $$E(f; N) =  V<f> = (V / N) \sum_i^N f(x_i)$$
+    ///
+    /// where $V$ is the volume of the integration region.  The error
+    /// on this estimate $\sigma(E;N)$ is calculated from the
+    /// estimated variance of the mean,
+    ///
+    /// $$\sigma^2 (E; N) = (V^2 / N^2) sum_i^N (f(x_i) -  <f>)^2.$$
+    ///
+    /// For large $N$ this variance decreases asymptotically as
+    /// $Var(f)/N$, where $Var(f)$ is the true variance of the
+    /// function over the integration region.  The error estimate
+    /// itself should decrease as $\sigma(f)/\sqrt{N}$.  The familiar
+    /// law of errors decreasing as $1/sqrt{N}$ applies-to reduce the
+    /// error by a factor of 10 requires a 100-fold increase in the
+    /// number of sample points.
+    PlainMonteCarlo, *mut sys::gsl_monte_plain_state, gsl_monte_plain_free);
 
 impl PlainMonteCarlo {
     /// This function allocates and initializes a workspace for Monte Carlo integration in dim dimensions.
@@ -166,39 +168,47 @@ impl PlainMonteCarlo {
     }
 }
 
-ffi_wrapper!(MiserMonteCarlo, *mut sys::gsl_monte_miser_state, gsl_monte_miser_free,
-"The MISER algorithm of Press and Farrar is based on recursive stratified sampling. This technique
-aims to reduce the overall integration error by concentrating integration points in the regions of
-highest variance.
-
-The idea of stratified sampling begins with the observation that for two disjoint regions a and b
-with Monte Carlo estimates of the integral E_a(f) and E_b(f) and variances `sigma_a^2(f)` and
-`sigma_b^2(f)`, the variance `Var(f)` of the combined estimate `E(f) = (1/2) (E_a(f) + E_b(f))`
-is given by,
-
-```text
-Var(f) = (sigma_a^2(f) / 4 N_a) + (sigma_b^2(f) / 4 N_b).
-```
-
-It can be shown that this variance is minimized by distributing the points such that,
-
-```text
-N_a / (N_a + N_b) = sigma_a / (sigma_a + sigma_b).
-```
-
-Hence the smallest error estimate is obtained by allocating sample points in proportion to the
-standard deviation of the function in each sub-region.
-
-The MISER algorithm proceeds by bisecting the integration region along one coordinate axis to give
-two sub-regions at each step. The direction is chosen by examining all d possible bisections and
-selecting the one which will minimize the combined variance of the two sub-regions. The variance in
-the sub-regions is estimated by sampling with a fraction of the total number of points available to
-the current step. The same procedure is then repeated recursively for each of the two half-spaces
-from the best bisection. The remaining sample points are allocated to the sub-regions using the
-formula for N_a and N_b. This recursive allocation of integration points continues down to a
-user-specified depth where each sub-region is integrated using a plain Monte Carlo estimate. These
-individual values and their error estimates are then combined upwards to give an overall result and
-an estimate of its error.");
+ffi_wrapper!(
+    /// The MISER algorithm of Press and Farrar is based on recursive
+    /// stratified sampling.  This technique aims to reduce the
+    /// overall integration error by concentrating integration points
+    /// in the regions of highest variance.
+    ///
+    /// The idea of stratified sampling begins with the observation
+    /// that for two disjoint regions a and b with Monte Carlo
+    /// estimates of the integral $E_a(f)$ and $E_b(f)$ and variances
+    /// $\sigma_a^2(f)$ and $\sigma_b^2(f)$, the variance $Var(f)$ of
+    /// the combined estimate $E(f) = (1/2) (E_a(f) + E_b(f))$ is
+    /// given by,
+    ///
+    /// $$Var(f) = (sigma_a^2(f) / 4 N_a) + (sigma_b^2(f) / 4 N_b).$$
+    ///
+    /// It can be shown that this variance is minimized by
+    /// distributing the points such that,
+    ///
+    /// $$N_a / (N_a + N_b) = sigma_a / (sigma_a + sigma_b).$$
+    ///
+    /// Hence the smallest error estimate is obtained by allocating
+    /// sample points in proportion to the standard deviation of the
+    /// function in each sub-region.
+    ///
+    /// The MISER algorithm proceeds by bisecting the integration
+    /// region along one coordinate axis to give two sub-regions at
+    /// each step.  The direction is chosen by examining all d
+    /// possible bisections and selecting the one which will minimize
+    /// the combined variance of the two sub-regions. The variance in
+    /// the sub-regions is estimated by sampling with a fraction of
+    /// the total number of points available to the current step.  The
+    /// same procedure is then repeated recursively for each of the
+    /// two half-spaces from the best bisection.  The remaining sample
+    /// points are allocated to the sub-regions using the formula for
+    /// $N_a$ and $N_b$.  This recursive allocation of integration
+    /// points continues down to a user-specified depth where each
+    /// sub-region is integrated using a plain Monte Carlo estimate.
+    /// These individual values and their error estimates are then
+    /// combined upwards to give an overall result and an estimate of
+    /// its error.
+    MiserMonteCarlo, *mut sys::gsl_monte_miser_state, gsl_monte_miser_free);
 
 impl MiserMonteCarlo {
     /// This function allocates and initializes a workspace for Monte Carlo integration in dim dimensions. The workspace is used to maintain
@@ -297,65 +307,80 @@ impl MiserMonteCarlo {
 #[repr(C)]
 pub struct MiserParams(pub sys::gsl_monte_miser_params);
 
-ffi_wrapper!(VegasMonteCarlo, *mut sys::gsl_monte_vegas_state, gsl_monte_vegas_free,
-"The VEGAS algorithm of Lepage is based on importance sampling. It samples points from the probability
-distribution described by the function |f|, so that the points are concentrated in the regions that
-make the largest contribution to the integral.
-
-In general, if the Monte Carlo integral of f is sampled with points distributed according to a
-probability distribution described by the function g, we obtain an estimate E_g(f; N),
-
-```text
-E_g(f; N) = E(f/g; N)
-```
-
-with a corresponding variance,
-
-```text
-Var_g(f; N) = Var(f/g; N).
-```
-
-If the probability distribution is chosen as g = |f|/I(|f|) then it can be shown that the variance
-V_g(f; N) vanishes, and the error in the estimate will be zero. In practice it is not possible to
-sample from the exact distribution g for an arbitrary function, so importance sampling algorithms
-aim to produce efficient approximations to the desired distribution.
-
-The VEGAS algorithm approximates the exact distribution by making a number of passes over the
-integration region while histogramming the function f. Each histogram is used to define a sampling
-distribution for the next pass. Asymptotically this procedure converges to the desired distribution.
-In order to avoid the number of histogram bins growing like K^d the probability distribution is
-approximated by a separable function: g(x_1, x_2, ...) = g_1(x_1) g_2(x_2) ... so that the number
-of bins required is only Kd. This is equivalent to locating the peaks of the function from the
-projections of the integrand onto the coordinate axes. The efficiency of VEGAS depends on the
-validity of this assumption. It is most efficient when the peaks of the integrand are
-well-localized. If an integrand can be rewritten in a form which is approximately separable this
-will increase the efficiency of integration with VEGAS.
-
-VEGAS incorporates a number of additional features, and combines both stratified sampling and
-importance sampling. The integration region is divided into a number of “boxes”, with each box
-getting a fixed number of points (the goal is 2). Each box can then have a fractional number of
-bins, but if the ratio of bins-per-box is less than two, Vegas switches to a kind variance reduction
-(rather than importance sampling).
-
-The VEGAS algorithm computes a number of independent estimates of the integral internally, according
-to the iterations parameter described below, and returns their weighted average. Random sampling of
-the integrand can occasionally produce an estimate where the error is zero, particularly if the
-function is constant in some regions. An estimate with zero error causes the weighted average to
-break down and must be handled separately. In the original Fortran implementations of VEGAS the
-error estimate is made non-zero by substituting a small value (typically 1e-30). The implementation
-in GSL differs from this and avoids the use of an arbitrary constant—it either assigns the value a
-weight which is the average weight of the preceding estimates or discards it according to the
-following procedure,
-
-current estimate has zero error, weighted average has finite error
-
-* The current estimate is assigned a weight which is the average weight of the preceding estimates.
-current estimate has finite error, previous estimates had zero error
-
-* The previous estimates are discarded and the weighted averaging procedure begins with the current estimate.
-current estimate has zero error, previous estimates had zero error
-
-* The estimates are averaged using the arithmetic mean, but no error is computed.");
+ffi_wrapper!(
+    /// The VEGAS algorithm of Lepage is based on importance
+    /// sampling. It samples points from the probability distribution
+    /// described by the function $|f|$, so that the points are
+    /// concentrated in the regions that make the largest contribution
+    /// to the integral.
+    /// 
+    /// In general, if the Monte Carlo integral of f is sampled with
+    /// points distributed according to a probability distribution
+    /// described by the function $g$, we obtain an estimate $E_g(f; N)$,
+    ///
+    /// $$E_g(f; N) = E(f/g; N)$$
+    ///
+    /// with a corresponding variance,
+    ///
+    /// $$Var_g(f; N) = Var(f/g; N).$$
+    ///
+    /// If the probability distribution is chosen as $g = |f|/I(|f|)$
+    /// then it can be shown that the variance $V_g(f; N)$ vanishes,
+    /// and the error in the estimate will be zero.  In practice it is
+    /// not possible to sample from the exact distribution $g$ for an
+    /// arbitrary function, so importance sampling algorithms aim to
+    /// produce efficient approximations to the desired distribution.
+    ///
+    /// The VEGAS algorithm approximates the exact distribution by
+    /// making a number of passes over the integration region while
+    /// histogramming the function $f$.  Each histogram is used to
+    /// define a sampling distribution for the next pass.
+    /// Asymptotically this procedure converges to the desired
+    /// distribution.  In order to avoid the number of histogram bins
+    /// growing like $K^d$ the probability distribution is
+    /// approximated by a separable function: $g(x_1, x_2, ...) =
+    /// g_1(x_1) g_2(x_2) ...$ so that the number of bins required is
+    /// only $Kd$.  This is equivalent to locating the peaks of the
+    /// function from the projections of the integrand onto the
+    /// coordinate axes.  The efficiency of VEGAS depends on the
+    /// validity of this assumption.  It is most efficient when the
+    /// peaks of the integrand are well-localized.  If an integrand
+    /// can be rewritten in a form which is approximately separable
+    /// this will increase the efficiency of integration with VEGAS.
+    ///
+    /// VEGAS incorporates a number of additional features, and combines
+    /// both stratified sampling and importance sampling. The integration
+    /// region is divided into a number of “boxes”, with each box getting
+    /// a fixed number of points (the goal is 2). Each box can then have a
+    /// fractional number of bins, but if the ratio of bins-per-box is
+    /// less than two, Vegas switches to a kind variance reduction (rather
+    /// than importance sampling).
+    ///
+    /// The VEGAS algorithm computes a number of independent estimates
+    /// of the integral internally, according to the iterations
+    /// parameter described below, and returns their weighted average.
+    /// Random sampling of the integrand can occasionally produce an
+    /// estimate where the error is zero, particularly if the function
+    /// is constant in some regions.  An estimate with zero error
+    /// causes the weighted average to break down and must be handled
+    /// separately.  In the original Fortran implementations of VEGAS
+    /// the error estimate is made non-zero by substituting a small
+    /// value (typically 1e-30).  The implementation in GSL differs
+    /// from this and avoids the use of an arbitrary constant—it
+    /// either assigns the value a weight which is the average weight
+    /// of the preceding estimates or discards it according to the
+    /// following procedure, current estimate has zero error, weighted
+    /// average has finite error
+    ///
+    /// - The current estimate is assigned a weight which is the
+    ///   average weight of the preceding estimates.  current estimate has
+    ///   finite error, previous estimates had zero error
+    /// - The previous estimates are discarded and the weighted
+    ///   averaging procedure begins with the current estimate.  current
+    ///   estimate has zero error, previous estimates had zero error
+    /// - The estimates are averaged using the arithmetic mean, but no
+    ///   error is computed.
+    VegasMonteCarlo, *mut sys::gsl_monte_vegas_state, gsl_monte_vegas_free);
 
 impl VegasMonteCarlo {
     /// This function allocates and initializes a workspace for Monte Carlo integration in dim dimensions.

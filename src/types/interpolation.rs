@@ -213,11 +213,10 @@ impl InterpType {
 }
 
 ffi_wrapper!(
+    /// General interpolation object.
     Spline,
     *mut sys::gsl_spline,
-    gsl_spline_free,
-    "General interpolation object."
-);
+    gsl_spline_free);
 
 impl Spline {
     #[doc(alias = "gsl_spline_alloc")]

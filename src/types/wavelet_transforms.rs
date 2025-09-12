@@ -55,12 +55,11 @@ Circulation 101(23):e215-e220 2000.
 use crate::ffi::FFI;
 
 ffi_wrapper!(
+    /// The Wavelet structure contains the filter coefficients
+    /// defining the wavelet and any associated offset parameters.
     Wavelet,
     *mut sys::gsl_wavelet,
-    gsl_wavelet_free,
-    "The Wavelet structure contains the filter coefficients defining the wavelet and any associated
-offset parameters."
-);
+    gsl_wavelet_free);
 
 impl Wavelet {
     /// This function allocates and initializes a wavelet object of type T. The parameter k selects the specific member of the wavelet
@@ -91,10 +90,12 @@ impl Wavelet {
     }
 }
 
-ffi_wrapper!(WaveletType, *const sys::gsl_wavelet_type,
-"The centered forms of the wavelets align the coefficients of the various sub-bands on edges. Thus
-the resulting visualization of the coefficients of the wavelet transform in the phase plane is
-easier to understand.");
+ffi_wrapper!(
+    /// The centered forms of the wavelets align the coefficients of
+    /// the various sub-bands on edges.  Thus the resulting
+    /// visualization of the coefficients of the wavelet transform in
+    /// the phase plane is easier to understand.
+    WaveletType, *const sys::gsl_wavelet_type);
 
 impl WaveletType {
     /// This is the Daubechies wavelet family of maximum phase with k/2 vanishing moments. The implemented wavelets are k=4, 6, …, 20, with
@@ -138,9 +139,12 @@ impl WaveletType {
     }
 }
 
-ffi_wrapper!(WaveletWorkspace, *mut sys::gsl_wavelet_workspace, gsl_wavelet_workspace_free,
-"The WaveletWorkspace structure contains scratch space of the same size as the input data and is
-used to hold intermediate results during the transform.");
+ffi_wrapper!(
+    /// The WaveletWorkspace structure contains scratch space of the
+    /// same size as the input data and is used to hold intermediate
+    /// results during the transform.
+    WaveletWorkspace, *mut sys::gsl_wavelet_workspace,
+    gsl_wavelet_workspace_free);
 
 impl WaveletWorkspace {
     /// This function allocates a workspace for the discrete wavelet transform. To perform a one-dimensional transform on n elements, a

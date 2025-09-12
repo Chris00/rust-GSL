@@ -319,20 +319,22 @@ impl Histogram {
 }
 
 ffi_wrapper!(
+    /// The probability distribution function for a histogram consists
+    /// of a set of bins which measure the probability of an event
+    /// falling into a given range of a continuous variable x. A
+    /// probability distribution function is defined by the following
+    /// struct, which actually stores the cumulative probability
+    /// distribution function.  This is the natural quantity for
+    /// generating samples via the inverse transform method, because
+    /// there is a one-to-one mapping between the cumulative
+    /// probability distribution and the range \\[0,1\\]. It can be
+    /// shown that by taking a uniform random number in this range and
+    /// finding its corresponding coordinate in the cumulative
+    /// probability distribution we obtain samples with the desired
+    /// probability distribution.
     HistogramPdf,
     *mut sys::gsl_histogram_pdf,
-    gsl_histogram_pdf_free,
-    "The probability distribution function for a histogram consists of \
-a set of bins which measure the probability of an event falling into a \
-given range of a continuous variable x. A probability distribution \
-function is defined by the following struct, which actually stores the \
-cumulative probability distribution function.  This is the natural \
-quantity for generating samples via the inverse transform method, \
-because there is a one-to-one mapping between the cumulative probability \
-distribution and the range \\[0,1\\]. It can be shown that by taking \
-a uniform random number in this range and finding its corresponding \
-coordinate in the cumulative probability distribution we obtain \
-samples with the desired probability distribution."
+    gsl_histogram_pdf_free
 );
 
 impl HistogramPdf {
@@ -372,13 +374,17 @@ impl HistogramPdf {
     }
 }
 
-ffi_wrapper!(Histogram2D, *mut sys::gsl_histogram2d, gsl_histogram2d_free,
-"A two dimensional histogram consists of a set of bins which count the number of events falling in \
-a given area of the (x,y) plane. The simplest way to use a two dimensional histogram is to record \
-two-dimensional position information, n(x,y). Another possibility is to form a joint distribution \
-by recording related variables. For example a detector might record both the position of an event \
-(x) and the amount of energy it deposited E. These could be histogrammed as the joint distribution \
-n(x,E).");
+ffi_wrapper!(
+    /// A two dimensional histogram consists of a set of bins which
+    /// count the number of events falling in a given area of the
+    /// $(x,y)$ plane.  The simplest way to use a two dimensional
+    /// histogram is to record two-dimensional position information,
+    /// $n(x,y)$.  Another possibility is to form a joint distribution
+    /// by recording related variables.  For example a detector might
+    /// record both the position of an event $(x)$ and the amount of
+    /// energy it deposited $E$. These could be histogrammed as the
+    /// joint distribution $n(x,E)$.
+    Histogram2D, *mut sys::gsl_histogram2d, gsl_histogram2d_free);
 
 impl Histogram2D {
     /// This function allocates memory for a two-dimensional histogram with nx bins in the x direction and ny bins in the y direction. The
@@ -713,21 +719,23 @@ impl Histogram2D {
 }
 
 ffi_wrapper!(
+    /// As in the one-dimensional case, a two-dimensional histogram
+    /// made by counting events can be regarded as a measurement of a
+    /// probability distribution.  Allowing for statistical error, the
+    /// height of each bin represents the probability of an event where
+    /// $(x,y)$ falls in the range of that bin.  For a two-dimensional
+    /// histogram the probability distribution takes the form $p(x,y) dx dy$
+    /// where,
+    ///
+    /// $$p(x,y) = n_{ij}/ (N A_{ij})$$
+    ///
+    /// In this equation $n_{ij}$ is the number of events in the bin
+    /// which contains $(x,y)$, $A_{ij}$ is the area of the bin and
+    /// $N$ is the total number of events.  The distribution of events
+    /// within each bin is assumed to be uniform.
     Histogram2DPdf,
     *mut sys::gsl_histogram2d_pdf,
-    gsl_histogram2d_pdf_free,
-    "As in the one-dimensional case, a two-dimensional histogram made by counting events can be \
-regarded as a measurement of a probability distribution. Allowing for statistical error, the \
-height of each bin represents the probability of an event where (x,y) falls in the range of that \
-bin. For a two-dimensional histogram the probability distribution takes the form p(x,y) dx dy \
-where,
-
-p(x,y) = n_{ij}/ (N A_{ij})
-
-In this equation n_{ij} is the number of events in the bin which contains (x,y), A_{ij} is the \
-area of the bin and N is the total number of events. The distribution of events within each bin is \
-assumed to be uniform."
-);
+    gsl_histogram2d_pdf_free);
 
 impl Histogram2DPdf {
     /// This function allocates memory for a two-dimensional probability distribution of size nx-by-ny and returns a pointer to a newly initialized

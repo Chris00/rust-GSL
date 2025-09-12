@@ -61,14 +61,15 @@ use crate::{Error, MatrixF64, VectorF64, View};
 use std::ffi::{c_int, c_void};
 
 ffi_wrapper!(
+    /// The multiroot algorithms described in this section do not
+    /// require any derivative information to be supplied by the
+    /// user. Any derivatives needed are approximated by finite
+    /// differences.  Note that if the finite-differencing step size
+    /// chosen by these routines is inappropriate, an explicit
+    /// user-supplied numerical derivative can always be used with
+    /// derivative-based algorithms.
     MultiRootFSolverType,
-    *const sys::gsl_multiroot_fsolver_type,
-    "The multiroot algorithms described in this section do not require any derivative information to be
-    supplied by the user. Any derivatives needed are approximated by finite differences.
-    Note that if the finite-differencing step size chosen by these routines is inappropriate,
-    an explicit user-supplied numerical derivative can always be used with
-    derivative-based algorithms."
-);
+    *const sys::gsl_multiroot_fsolver_type);
 
 impl MultiRootFSolverType {
     /// This is a version of the Hybrid algorithm which replaces calls to the Jacobian function by
@@ -135,13 +136,12 @@ impl MultiRootFSolverType {
 }
 
 ffi_wrapper!(
+    /// Workspace for multidimensional root-finding without derivatives.
     MultiRootFSolver<'a>,
     *mut sys::gsl_multiroot_fsolver,
     gsl_multiroot_fsolver_free
     ;inner_call: sys::gsl_multiroot_function_struct => sys::gsl_multiroot_function_struct{ f: None, n: 0, params: std::ptr::null_mut() };
-    ;inner_closure: Option<Box<dyn Fn(&VectorF64, &mut VectorF64) -> Result<(), Error> + 'a>> => None;,
-    "This is a workspace for multidimensional root-finding without derivatives."
-);
+    ;inner_closure: Option<Box<dyn Fn(&VectorF64, &mut VectorF64) -> Result<(), Error> + 'a>> => None;);
 
 impl<'a> MultiRootFSolver<'a> {
     /// This function returns a pointer to a newly allocated instance of a solver of type `T` with
