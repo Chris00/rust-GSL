@@ -92,7 +92,7 @@ pub unsafe trait Vector<F> {
 /// strides to the types implementing `Vector`.
 ///
 /// # Safety
-/// One must make sore that `(len - 1) * stride` does not exceed the
+/// One must make sure that `(len - 1) * stride` does not exceed the
 /// length of the underlying slice.
 pub unsafe trait VectorMut<F>: Vector<F> {
     /// Same as [`Vector::as_slice`] but mutable.
