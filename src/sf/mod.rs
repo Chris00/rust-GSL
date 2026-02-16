@@ -31,7 +31,7 @@ pub mod fermi_dirac;
 pub mod gamma;
 pub mod gegenbauer;
 pub mod hypergeometric;
-pub mod jacobian_elliptic;
+pub mod elliptic_jacobian;
 pub mod laguerre;
 pub mod lambert_w;
 pub mod legendre;
