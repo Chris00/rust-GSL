@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["mathematics", "library", "GSL"]
 license = "GPL-3.0-or-later"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.92"
 
 [dependencies]
 sys = { path = "gsl-sys", package = "GSL-sys", version = "4.0.0" }
