@@ -63,25 +63,12 @@ pub enum Prec {
     Approx,
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<sys::gsl_mode_t> for Prec {
-    fn into(self) -> sys::gsl_mode_t {
-        match self {
+impl From<Prec> for sys::gsl_mode_t {
+    fn from(v: Prec) -> sys::gsl_mode_t {
+        match v {
             Prec::Double => sys::GSL_PREC_DOUBLE,
             Prec::Single => sys::GSL_PREC_SINGLE,
             Prec::Approx => sys::GSL_PREC_APPROX,
-        }
-    }
-}
-
-#[doc(hidden)]
-impl From<sys::gsl_mode_t> for Prec {
-    fn from(v: sys::gsl_mode_t) -> Prec {
-        match v {
-            sys::GSL_PREC_DOUBLE => Prec::Double,
-            sys::GSL_PREC_SINGLE => Prec::Single,
-            sys::GSL_PREC_APPROX => Prec::Approx,
-            _ => panic!("Unknown Mode value"),
         }
     }
 }
