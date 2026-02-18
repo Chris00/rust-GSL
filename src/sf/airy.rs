@@ -13,18 +13,18 @@
 //!
 //! For further information see Abramowitz & Stegun, Section 10.4.
 
-use crate::{types, Error};
+use crate::{sf::Prec, types, Error};
 use std::mem::MaybeUninit;
 
 /// Return $\Ai(x)$, the Airy function with an accuracy specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Ai")]
-pub fn Ai(x: f64, mode: crate::Mode) -> f64 {
+pub fn Ai(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Ai(x, mode.into()) }
 }
 
 /// Return $\Ai(x)$, the Airy function with an accuracy specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Ai_e")]
-pub fn Ai_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Ai_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Ai_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -33,13 +33,13 @@ pub fn Ai_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
 
 /// Return $\Bi(x)$, the Airy function with an accuracy specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Bi")]
-pub fn Bi(x: f64, mode: crate::Mode) -> f64 {
+pub fn Bi(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Bi(x, mode.into()) }
 }
 
 /// Return $\Bi(x)$, the Airy function with an accuracy specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Bi_e")]
-pub fn Bi_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Bi_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Bi_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -51,7 +51,7 @@ pub fn Bi_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
 /// For $x > 0$ the scaling factor $S_A(x)$ is $\exp(+(2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Ai_scaled")]
-pub fn Ai_scaled(x: f64, mode: crate::Mode) -> f64 {
+pub fn Ai_scaled(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Ai_scaled(x, mode.into()) }
 }
 
@@ -60,7 +60,7 @@ pub fn Ai_scaled(x: f64, mode: crate::Mode) -> f64 {
 /// For $x > 0$ the scaling factor $S_A(x)$ is $\exp(+(2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Ai_scaled_e")]
-pub fn Ai_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Ai_scaled_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Ai_scaled_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -72,7 +72,7 @@ pub fn Ai_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
 /// For $x > 0$ the scaling factor $S_B(x)$ is $\exp(-(2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Bi_scaled")]
-pub fn Bi_scaled(x: f64, mode: crate::Mode) -> f64 {
+pub fn Bi_scaled(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Bi_scaled(x, mode.into()) }
 }
 
@@ -81,7 +81,7 @@ pub fn Bi_scaled(x: f64, mode: crate::Mode) -> f64 {
 /// For $x > 0$ the scaling factor $S_B(x)$ is $\exp(-(2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Bi_scaled_e")]
-pub fn Bi_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Bi_scaled_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Bi_scaled_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -91,14 +91,14 @@ pub fn Bi_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
 /// Return the Airy function derivative $\Ai'(x)$ with an accuracy
 /// specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Ai_deriv")]
-pub fn Ai_deriv(x: f64, mode: crate::Mode) -> f64 {
+pub fn Ai_deriv(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Ai_deriv(x, mode.into()) }
 }
 
 /// Return the Airy function derivative $\Ai'(x)$ with an accuracy
 /// specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Ai_deriv_e")]
-pub fn Ai_deriv_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Ai_deriv_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Ai_deriv_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -108,14 +108,14 @@ pub fn Ai_deriv_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
 /// Return the Airy function derivative $\Bi'(x)$ with an accuracy
 /// specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Bi_deriv")]
-pub fn Bi_deriv(x: f64, mode: crate::Mode) -> f64 {
+pub fn Bi_deriv(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Bi_deriv(x, mode.into()) }
 }
 
 /// Return the Airy function derivative $\Bi'(x)$ with an accuracy
 /// specified by `mode`.
 #[doc(alias = "gsl_sf_airy_Bi_deriv_e")]
-pub fn Bi_deriv_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Bi_deriv_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Bi_deriv_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -127,7 +127,7 @@ pub fn Bi_deriv_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
 /// For $x > 0$ the scaling factor $S_A(x)$ is $\exp((2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Ai_deriv_scaled")]
-pub fn Ai_deriv_scaled(x: f64, mode: crate::Mode) -> f64 {
+pub fn Ai_deriv_scaled(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Ai_deriv_scaled(x, mode.into()) }
 }
 
@@ -136,7 +136,7 @@ pub fn Ai_deriv_scaled(x: f64, mode: crate::Mode) -> f64 {
 /// For $x > 0$ the scaling factor $S_A(x)$ is $\exp((2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Ai_deriv_scaled_e")]
-pub fn Ai_deriv_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Ai_deriv_scaled_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Ai_deriv_scaled_e(x, mode.into(), result.as_mut_ptr()) };
 
@@ -148,7 +148,7 @@ pub fn Ai_deriv_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Err
 /// For $x > 0$ the scaling factor $S_B(x)$ is $\exp(-(2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Bi_deriv_scaled")]
-pub fn Bi_deriv_scaled(x: f64, mode: crate::Mode) -> f64 {
+pub fn Bi_deriv_scaled(x: f64, mode: Prec) -> f64 {
     unsafe { sys::gsl_sf_airy_Bi_deriv_scaled(x, mode.into()) }
 }
 
@@ -157,7 +157,7 @@ pub fn Bi_deriv_scaled(x: f64, mode: crate::Mode) -> f64 {
 /// For $x > 0$ the scaling factor $S_B(x)$ is $\exp(-(2/3) x^(3/2))$,
 /// and is 1 for $x < 0$.
 #[doc(alias = "gsl_sf_airy_Bi_deriv_scaled_e")]
-pub fn Bi_deriv_scaled_e(x: f64, mode: crate::Mode) -> Result<types::Result, Error> {
+pub fn Bi_deriv_scaled_e(x: f64, mode: Prec) -> Result<types::Result, Error> {
     let mut result = MaybeUninit::<sys::gsl_sf_result>::uninit();
     let ret = unsafe { sys::gsl_sf_airy_Bi_deriv_scaled_e(x, mode.into(), result.as_mut_ptr()) };
 

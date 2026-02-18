@@ -44,3 +44,44 @@ pub mod synchrotron;
 pub mod transport;
 pub mod trigonometric;
 pub mod zeta;
+
+/// The goal of the library is to achieve double precision accuracy
+/// wherever possible.  However the cost of evaluating some special
+/// functions to double precision can be significant, particularly
+/// where very high order terms are required.  In these cases a mode
+/// argument, of type [`Prec`] allows the accuracy of the function to
+/// be reduced in order to improve performance.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
+pub enum Prec {
+    /// Double-precision, a relative accuracy of approximately
+    /// $2 · 10^{-16}$.
+    Double,
+    /// Single-precision, a relative accuracy of approximately $10^{-7}$.
+    Single,
+    /// Approximate values, a relative accuracy of approximately
+    /// $5 · 10^{-4}$.
+    Approx,
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<sys::gsl_mode_t> for Prec {
+    fn into(self) -> sys::gsl_mode_t {
+        match self {
+            Prec::Double => sys::GSL_PREC_DOUBLE,
+            Prec::Single => sys::GSL_PREC_SINGLE,
+            Prec::Approx => sys::GSL_PREC_APPROX,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl From<sys::gsl_mode_t> for Prec {
+    fn from(v: sys::gsl_mode_t) -> Prec {
+        match v {
+            sys::GSL_PREC_DOUBLE => Prec::Double,
+            sys::GSL_PREC_SINGLE => Prec::Single,
+            sys::GSL_PREC_APPROX => Prec::Approx,
+            _ => panic!("Unknown Mode value"),
+        }
+    }
+}

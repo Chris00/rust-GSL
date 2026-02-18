@@ -5,46 +5,8 @@
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_int};
 
-/// The goal of the library is to achieve double precision accuracy
-/// wherever possible.  However the cost of evaluating some special
-/// functions to double precision can be significant, particularly
-/// where very high order terms are required.  In these cases a mode
-/// argument, of type [`Mode`] allows the accuracy of the function to
-/// be reduced in order to improve performance.
-#[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
-pub enum Mode {
-    /// Double-precision, a relative accuracy of approximately
-    /// $2 · 10^{-16}$.
-    PrecDouble,
-    /// Single-precision, a relative accuracy of approximately $10^{-7}$.
-    PrecSingle,
-    /// Approximate values, a relative accuracy of approximately
-    /// $5 · 10^{-4}$.
-    PrecApprox,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<sys::gsl_mode_t> for Mode {
-    fn into(self) -> sys::gsl_mode_t {
-        match self {
-            Mode::PrecDouble => sys::GSL_PREC_DOUBLE,
-            Mode::PrecSingle => sys::GSL_PREC_SINGLE,
-            Mode::PrecApprox => sys::GSL_PREC_APPROX,
-        }
-    }
-}
-
-#[doc(hidden)]
-impl From<sys::gsl_mode_t> for Mode {
-    fn from(v: sys::gsl_mode_t) -> Mode {
-        match v {
-            sys::GSL_PREC_DOUBLE => Mode::PrecDouble,
-            sys::GSL_PREC_SINGLE => Mode::PrecSingle,
-            sys::GSL_PREC_APPROX => Mode::PrecApprox,
-            _ => panic!("Unknown Mode value"),
-        }
-    }
-}
+#[deprecated(since = "8.0.0", note = "Use rgsl::sf::Prec instead")]
+pub type Mode = crate::sf::Prec;
 
 #[deprecated(since = "8.0.0", note = "Use rgsl::sf::Error instead")]
 pub type Value = Error;

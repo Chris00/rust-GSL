@@ -7,7 +7,7 @@
 //!
 //! $$z^2 \frac{d^2 w}{dz^2} + z \frac{dw}{dz} + (z^2 - \nu^2) w = 0.$$
 
-use crate::{types, Error};
+use crate::{sf::Prec, types, Error};
 use std::mem::MaybeUninit;
 
 /// Return $I_0(x)$, where $I_0$ is the regular modified cylindrical
@@ -458,7 +458,7 @@ pub fn Jnu_e(nu: f64, x: f64) -> Result<types::Result, Error> {
 /// strictly ordered and positive.  The array is over-written with the
 /// values of $J_\nu(x_i)$.
 #[doc(alias = "gsl_sf_bessel_sequence_Jnu_e")]
-pub fn sequence_Jnu(nu: f64, mode: crate::Mode, v: &mut [f64]) -> Result<(), Error> {
+pub fn sequence_Jnu(nu: f64, mode: Prec, v: &mut [f64]) -> Result<(), Error> {
     let ret =
         unsafe { sys::gsl_sf_bessel_sequence_Jnu_e(nu, mode.into(), v.len() as _, v.as_mut_ptr()) };
     Error::handle(ret, ())
