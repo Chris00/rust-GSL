@@ -4,7 +4,7 @@
 
 extern crate rgsl;
 
-use rgsl::{eigen, EigenSort, EigenSymmetricVWorkspace, MatrixF64, MatrixF64View, VectorF64};
+use rgsl::{eigen, EigenSymmetricVWorkspace, MatrixF64, MatrixF64View, VectorF64};
 
 fn main() {
     let data = &mut [
@@ -35,7 +35,7 @@ fn main() {
             .unwrap();
     });
 
-    eigen::symmv_sort(&mut eval, &mut evec, EigenSort::AbsAsc).unwrap();
+    eigen::symmv_sort(&mut eval, &mut evec, eigen::Sort::AbsAsc).unwrap();
 
     for i in 0..4 {
         let eval_i = eval.get(i);

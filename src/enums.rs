@@ -8,43 +8,8 @@ pub type Mode = crate::sf::Prec;
 #[deprecated(since = "8.0.0", note = "Use rgsl::Error instead")]
 pub type Value = crate::Error;
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
-pub enum EigenSort {
-    /// ascending order in numerical value
-    ValAsc,
-    /// descending order in numerical value
-    ValDesc,
-    /// ascending order in magnitude
-    AbsAsc,
-    /// descending order in magnitude
-    AbsDesc,
-}
-
-#[doc(hidden)]
-#[allow(clippy::from_over_into)]
-impl Into<sys::gsl_eigen_sort_t> for EigenSort {
-    fn into(self) -> sys::gsl_eigen_sort_t {
-        match self {
-            Self::ValAsc => sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_VAL_ASC,
-            Self::ValDesc => sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_VAL_DESC,
-            Self::AbsAsc => sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_ABS_ASC,
-            Self::AbsDesc => sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_ABS_DESC,
-        }
-    }
-}
-
-#[doc(hidden)]
-impl From<sys::gsl_eigen_sort_t> for EigenSort {
-    fn from(v: sys::gsl_eigen_sort_t) -> EigenSort {
-        match v {
-            sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_VAL_ASC => Self::ValAsc,
-            sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_VAL_DESC => Self::ValDesc,
-            sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_ABS_ASC => Self::AbsAsc,
-            sys::gsl_eigen_sort_t_GSL_EIGEN_SORT_ABS_DESC => Self::AbsDesc,
-            _ => panic!("Unknown EigenSort value"),
-        }
-    }
-}
+#[deprecated(since = "8.0.0", note = "Use rgsl::eigen::Sort instead")]
+pub type EigenSort = crate::eigen::Sort;
 
 /// This gives the sign in the formula:
 ///

@@ -4,10 +4,7 @@
 
 extern crate rgsl;
 
-use rgsl::{
-    eigen, EigenNonSymmetricVWorkspace, EigenSort, MatrixComplexF64, MatrixF64View,
-    VectorComplexF64,
-};
+use rgsl::{eigen, EigenNonSymmetricVWorkspace, MatrixComplexF64, MatrixF64View, VectorComplexF64};
 
 fn main() {
     let data = &mut [
@@ -24,7 +21,7 @@ fn main() {
             .unwrap();
     });
 
-    eigen::nonsymmv_sort(&mut eval, &mut evec, EigenSort::AbsDesc).unwrap();
+    eigen::nonsymmv_sort(&mut eval, &mut evec, eigen::Sort::AbsDesc).unwrap();
 
     for i in 0..4 {
         let eval_i = eval.get(i);
