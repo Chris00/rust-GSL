@@ -5,8 +5,8 @@
 #[cfg(feature = "v2_2")]
 mod example {
     use rgsl::{
-        blas, set_error_handler_off, MatrixF64, MultilargeLinearType, MultilargeLinearWorkspace,
-        Rng, RngType, VectorF64,
+        blas, error, MatrixF64, MultilargeLinearType, MultilargeLinearWorkspace, Rng, RngType,
+        VectorF64,
     };
 
     // number of observations
@@ -145,7 +145,7 @@ mod example {
         let mut c_normal = VectorF64::new(P).expect("VectorF64::new failed");
 
         // turn off error handler so normal equations method won't abort
-        set_error_handler_off();
+        error::set_handler_off();
 
         // solve system with TSQR method
         solve_system(true, MultilargeLinearType::tsqr(), &mut c_tsqr);

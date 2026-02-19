@@ -25,6 +25,9 @@ pub use self::view::View;
 // enums part
 pub use self::enums::*;
 
+pub mod error;
+pub use error::Error;
+
 mod enums;
 mod macros;
 mod utilities;
