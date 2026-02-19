@@ -47,9 +47,16 @@ pub unsafe trait Vector<F> {
     /// the vector in [`Vector::as_slice`] and [`VectorMut::as_mut_slice`].
     fn stride(x: &Self) -> usize;
 
-    /// Return a reference to the underlying slice.  Note that the
-    /// `i`th element of the vector, `0 <= i < len(x)`, is the
-    /// `i * stride` element in the slice.
+    /// Return a reference to the underlying slice.  The `i`th element
+    /// of the vector, `0 <= i < len(x)`, is the `i * stride` element
+    /// in the slice.
+    ///
+    /// # Safety
+    ///
+    /// The implementation must ensure that the slice is large enough
+    /// to hold all elements of the vector.
+    ///
+    /// # Remark
     ///
     /// This is an associated function rather than a method, in order
     /// to avoid conflicts with methods with the same name.

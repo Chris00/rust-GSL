@@ -56,29 +56,32 @@ control and stepper objects for easy use.
   Differential Equations I: Nonstiff Problems, Springer, Berlin, 1993.
 - Hairer, E., Wanner, G., Solving Ordinary Differential Equations II:
   Stiff and Differential-Algebraic Problems, Springer, Berlin, 1996.
-- Many of the basic Runge-Kutta formulas can be found in the Handbook of
-  Mathematical Functions,
 
-Abramowitz & Stegun (eds.), Handbook of Mathematical Functions,
-Section 25.5.  The implicit Bulirsch-Stoer algorithm bsimp is
+Many of the basic Runge-Kutta formulas can be found in the Handbook of
+Mathematical Functions,
+
+- Abramowitz & Stegun (eds.), Handbook of Mathematical Functions,
+  Section 25.5.
+
+The implicit Bulirsch-Stoer algorithm [`ODEiv2StepType::bsimp`] is
 described in the following paper,
 
 - G. Bader and P. Deuflhard, “A Semi-Implicit Mid-Point Rule for Stiff
-  Systems of Ordinary Differential Equations.”, Numer. Math. 41,
+  Systems of Ordinary Differential Equations”, Numer. Math. 41,
   373–398, 1983.
 
-The Adams and BDF multistep methods msadams and msbdf are based on the
-following articles,
+The Adams and BDF multistep methods [`ODEiv2StepType::msadams`] and
+[`ODEiv2StepType::msbdf`] are based on the following articles,
 
 - G. D. Byrne and A. C. Hindmarsh, “A Polyalgorithm for the Numerical
-  Solution of Ordinary Differential Equations.”, ACM Trans. Math.
+  Solution of Ordinary Differential Equations”, ACM Trans. Math.
   Software, 1, 71–96, 1975.
 - P. N. Brown, G. D. Byrne and A. C. Hindmarsh, “VODE: A
-  Variable-coefficient ODE Solver.”, SIAM J. Sci. Stat. Comput. 10,
+  Variable-coefficient ODE Solver”, SIAM J. Sci. Stat. Comput. 10,
   1038–1051, 1989.
 - A. C. Hindmarsh, P. N. Brown, K. E. Grant, S. L. Lee, R. Serban,
   D. E. Shumaker and C. S. Woodward, “SUNDIALS: Suite of Nonlinear and
-- Differential/Algebraic Equation Solvers.”, ACM Trans. Math. Software
+  Differential/Algebraic Equation Solvers”, ACM Trans. Math. Software
   31, 363–396, 2005.
 */
 
