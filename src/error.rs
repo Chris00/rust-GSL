@@ -1,7 +1,7 @@
 //! Error handling.
 
-use std::ffi::CStr;
-use std::os::raw::{c_char, c_int};
+use ctor::ctor;
+use std::os::raw::c_int;
 
 /// GSL errors.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
@@ -220,115 +220,15 @@ impl Error {
     }
 }
 
-// FIXME: Can do better?
-static mut CALLBACK: Option<fn(&str, &str, u32, crate::Error)> = None;
-
-/// `f` is the type of GSL error handler functions. An error handler
-/// will be passed four arguments which specify the reason for the
-/// error (a string), the name of the source file in which it occurred
-/// (also a string), the line number in that file (an integer) and the
-/// error number (an integer). The source file and line number are set
-/// at compile time using the __FILE__ and __LINE__ directives in the
-/// preprocessor. An error handler function returns type void. Error
-/// handler functions should be defined like this,
-///
-/// This function sets a new error handler, new_handler, for the GSL
-/// library routines. The previous handler is returned (so that you
-/// can restore it later).  Note that the pointer to a user defined
-/// error handler function is stored in a static variable, so there
-/// can be only one error handler per program. This function should be
-/// not be used in multi-threaded programs except to set up a
-/// program-wide error handler from a master thread. The following
-/// example shows how to set and restore a new error handler,
-///
-/// ```
-/// use rgsl::{Error, error};
-///
-/// fn error_handling(error_str: &str, file: &str, line: u32, error_value: Error) {
-///     println!("[{:?}] '{}:{}': {}", error_value, file, line, error_str);
-/// }
-///
-/// /* save original handler, install new handler */
-/// let old_handler = error::set_handler(Some(error_handling));
-///
-/// /* code uses new handler */
-/// // ...
-///
-/// /* restore original handler */
-/// error::set_handler(old_handler);
-/// ```
-///
-/// To use the default behavior (abort on error) set the error handler
-/// to `None`:
-///
-/// ```
-/// # use rgsl::error;
-/// let old_handler = error::set_handler(None);
-/// ```
-#[doc(alias = "gsl_set_error_handler")]
-#[allow(static_mut_refs)]
-pub fn set_handler(f: Option<fn(&str, &str, u32, Error)>) -> Option<fn(&str, &str, u32, Error)> {
-    unsafe {
-        let out = CALLBACK.take();
-        match f {
-            Some(f) => {
-                CALLBACK = Some(f);
-                sys::gsl_set_error_handler(Some(inner_error_handler));
-            }
-            None => {
-                sys::gsl_set_error_handler(None);
-            }
-        }
-        out
-    }
-}
-
-/// This function turns off the error handler by defining an error
-/// handler which does nothing. This will cause the program to
-/// continue after any error, so the return values from any library
-/// routines must be checked. This is the recommended behavior for
-/// production programs. The previous handler is returned (so that you
-/// can restore it later).
-#[doc(alias = "gsl_set_error_handler_off")]
-#[allow(static_mut_refs)]
-pub fn set_handler_off() -> Option<fn(&str, &str, u32, crate::Error)> {
+// The GSL manual clearly says that the purpose of setting an error
+// handler "is to provide a function where a breakpoint can be set
+// that will catch library errors when running under the debugger.  It
+// is not intended for use in production programs, which should handle
+// any errors using the error return codes".  In Rust, errors cannot
+// be ignored, so we deactivate the error handler.
+#[ctor]
+fn disable_error_handler() {
     unsafe {
         sys::gsl_set_error_handler_off();
-        CALLBACK.take()
-    }
-}
-
-extern "C" fn inner_error_handler(
-    reason: *const c_char,
-    file: *const c_char,
-    line: c_int,
-    gsl_errno: c_int,
-) {
-    unsafe {
-        if let Some(ref call) = CALLBACK {
-            let s = CStr::from_ptr(reason);
-            let f = CStr::from_ptr(file);
-            if let Err(e) = Error::handle(gsl_errno, ()) {
-                // Do nothing on success.
-                call(
-                    s.to_str().unwrap_or("Unknown"),
-                    f.to_str().unwrap_or("Unknown"),
-                    line as _,
-                    e,
-                );
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-#[test]
-fn test_error_handler() {
-    use crate::{bessel, error, Error};
-
-    error::set_handler_off();
-    match bessel::K0_e(1e3) {
-        Err(Error::UnderFlow) => println!("K0(1e3) underflowed"),
-        _ => panic!("unexpected"),
     }
 }
