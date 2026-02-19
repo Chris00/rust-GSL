@@ -101,7 +101,7 @@ impl $complex_rust_name {
         &mut self,
         data: &mut V,
         wavetable: &$rust_name,
-        sign: crate::FftDirection,
+        dir: crate::fft::Dir,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::[<$name $($extra)? _transform>](
@@ -110,7 +110,7 @@ impl $complex_rust_name {
                 V::len(data),
                 wavetable.unwrap_shared(),
                 self.unwrap_unique(),
-                sign.into(),
+                dir.into(),
             )
         };
         Error::handle(ret, ())

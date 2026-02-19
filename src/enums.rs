@@ -11,40 +11,8 @@ pub type Value = crate::Error;
 #[deprecated(since = "8.0.0", note = "Use rgsl::eigen::Sort instead")]
 pub type EigenSort = crate::eigen::Sort;
 
-/// This gives the sign in the formula:
-///
-/// ```text
-/// h(f) = \sum x(t) exp(+/- 2 pi i f t)
-/// ```
-///
-/// where - is the forward transform direction and + the inverse direction
-#[derive(Clone, PartialEq, PartialOrd, Debug, Copy)]
-pub enum FftDirection {
-    Forward,
-    Backward,
-}
-
-#[doc(hidden)]
-#[allow(clippy::from_over_into)]
-impl Into<sys::gsl_fft_direction> for FftDirection {
-    fn into(self) -> sys::gsl_fft_direction {
-        match self {
-            Self::Forward => sys::gsl_fft_direction_gsl_fft_forward,
-            Self::Backward => sys::gsl_fft_direction_gsl_fft_backward,
-        }
-    }
-}
-
-#[doc(hidden)]
-impl From<sys::gsl_fft_direction> for FftDirection {
-    fn from(v: sys::gsl_fft_direction) -> FftDirection {
-        match v {
-            sys::gsl_fft_direction_gsl_fft_forward => Self::Forward,
-            sys::gsl_fft_direction_gsl_fft_backward => Self::Backward,
-            _ => panic!("Unknown FftDirection value"),
-        }
-    }
-}
+#[deprecated(since = "8.0.0", note = "Use rgsl::fft::Dir instead")]
+pub type FftDirection = crate::fft::Dir;
 
 /// Used by [`VegasParams`][crate::VegasParams].
 ///

@@ -157,7 +157,41 @@ The precise storage arrangements depend on the algorithm, and are different for 
 in-place, which constrains the locations where each element can be stored. The restriction forces real and imaginary parts to be stored far apart.
 The mixed-radix algorithm does not have this restriction, and it stores the real and imaginary parts of a given term in neighboring locations (which
 is desirable for better locality of memory accesses).
-!*/
+*/
+
+/// This gives the sign in the formula:
+///
+/// $$h(f) = \sum x(t) \exp(±2π i f t)$$
+///
+/// where $-$ is the forward transform direction and $+$ the inverse
+/// direction.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
+pub enum Dir {
+    Forward,
+    Backward,
+}
+
+#[doc(hidden)]
+#[allow(clippy::from_over_into)]
+impl Into<sys::gsl_fft_direction> for Dir {
+    fn into(self) -> sys::gsl_fft_direction {
+        match self {
+            Self::Forward => sys::gsl_fft_direction_gsl_fft_forward,
+            Self::Backward => sys::gsl_fft_direction_gsl_fft_backward,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl From<sys::gsl_fft_direction> for Dir {
+    fn from(v: sys::gsl_fft_direction) -> Dir {
+        match v {
+            sys::gsl_fft_direction_gsl_fft_forward => Self::Forward,
+            sys::gsl_fft_direction_gsl_fft_backward => Self::Backward,
+            _ => panic!("Unknown rgsl::fft::Dir value"),
+        }
+    }
+}
 
 /// These functions compute forward, backward and inverse FFTs of length n with stride stride, on the packed complex array data using an in-place radix-2
 /// decimation-in-time algorithm. The length of the transform is restricted to powers of two. For the transform version of the function
@@ -190,14 +224,14 @@ pub mod radix2 {
     #[doc(alias = "gsl_fft_complex_radix2_transform")]
     pub fn transform<V: VectorMut<Complex<f64>> + ?Sized>(
         data: &mut V,
-        sign: crate::FftDirection,
+        dir: super::Dir,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_fft_complex_radix2_transform(
                 V::as_mut_slice(data).as_mut_ptr_fXX(),
                 V::stride(data),
                 V::len(data),
-                sign.into(),
+                dir.into(),
             )
         };
         Error::handle(ret, ())
@@ -253,14 +287,14 @@ pub mod radix2 {
     #[doc(alias = "gsl_fft_complex_radix2_dif_transform")]
     pub fn dif_transform<V: VectorMut<Complex<f64>> + ?Sized>(
         data: &mut V,
-        sign: crate::FftDirection,
+        dir: super::Dir,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_fft_complex_radix2_dif_transform(
                 V::as_mut_slice(data).as_mut_ptr_fXX(),
                 V::stride(data),
                 V::len(data),
-                sign.into(),
+                dir.into(),
             )
         };
         Error::handle(ret, ())
