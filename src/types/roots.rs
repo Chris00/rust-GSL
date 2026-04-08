@@ -282,7 +282,7 @@ impl<'a> RootFdfSolver<'a> {
             x: c_double,
             params: *mut c_void,
         ) -> f64 {
-            let f: &F = &*(params as *const F);
+            let f: &F = unsafe { &*(params as *const F) };
             f(x)
         }
 
@@ -290,7 +290,7 @@ impl<'a> RootFdfSolver<'a> {
             x: c_double,
             params: *mut c_void,
         ) -> f64 {
-            let df: &DF = &*(params as *const DF);
+            let df: &DF = unsafe { &*(params as *const DF) };
             df(x)
         }
 
@@ -299,10 +299,10 @@ impl<'a> RootFdfSolver<'a> {
             params: *mut c_void,
             y: *mut c_double,
             dy: *mut c_double,
-        ) {
+        ) { unsafe {
             let fdf: &FDF = &*(params as *const FDF);
             fdf(x, &mut *y, &mut *dy);
-        }
+        }}
 
         self.inner_call = sys::gsl_function_fdf {
             f: Some(inner_f::<F>),

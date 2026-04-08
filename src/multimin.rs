@@ -118,7 +118,7 @@ impl<'a> Minimizer<'a> {
             x: *const sys::gsl_vector,
             params: *mut c_void,
         ) -> f64 {
-            let f: &F = &*(params as *const F);
+            let f: &F = unsafe { &*(params as *const F) };
             let x_new = VectorF64::soft_wrap(x as *const _ as *mut _);
             f(&x_new)
         }
@@ -225,7 +225,7 @@ impl<'a> MultiMinFdfFunction<'a> {
         n: usize,
     ) -> MultiMinFdfFunction<'a> {
         unsafe extern "C" fn inner_f(x: *const sys::gsl_vector, params: *mut c_void) -> f64 {
-            let t = &*(params as *mut MultiMinFdfFunction);
+            let t = unsafe { &*(params as *mut MultiMinFdfFunction) };
             let i_f = &t.f;
             i_f(&VectorF64::soft_wrap(x as *const _ as *mut _))
         }
@@ -235,7 +235,7 @@ impl<'a> MultiMinFdfFunction<'a> {
             params: *mut c_void,
             g: *mut sys::gsl_vector,
         ) {
-            let t = &*(params as *mut MultiMinFdfFunction);
+            let t = unsafe { &*(params as *mut MultiMinFdfFunction) };
             let i_df = &t.df;
             i_df(
                 &VectorF64::soft_wrap(x as *const _ as *mut _),
@@ -248,14 +248,14 @@ impl<'a> MultiMinFdfFunction<'a> {
             params: *mut c_void,
             f: *mut f64,
             g: *mut sys::gsl_vector,
-        ) {
+        ) { unsafe {
             let t = &*(params as *mut MultiMinFdfFunction);
             let i_fdf = &t.fdf;
             *f = i_fdf(
                 &VectorF64::soft_wrap(x as *const _ as *mut _),
                 &mut VectorF64::soft_wrap(g as *const _ as *mut _),
             );
-        }
+        }}
 
         MultiMinFdfFunction {
             f: Box::new(f),

@@ -675,7 +675,7 @@ impl EigenGenWorkspace {
     /// this occurs, an error code is returned.
     #[doc(alias = "gsl_eigen_gen")]
     #[cfg(feature = "complex")]
-    pub fn gen(
+    pub fn r#gen(
         &mut self,
         A: &mut MatrixF64,
         B: &mut MatrixF64,

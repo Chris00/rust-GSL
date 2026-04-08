@@ -627,8 +627,8 @@ unsafe extern "C" fn monte_trampoline<F: FnMut(&[f64]) -> f64>(
     dim: usize,
     param: *mut c_void,
 ) -> f64 {
-    let f: &mut F = &mut *(param as *mut F);
-    f(slice::from_raw_parts(x, dim))
+    let f: &mut F = unsafe { &mut *(param as *mut F) };
+    f(unsafe { slice::from_raw_parts(x, dim) })
 }
 
 // The following tests have been made and tested against the following C code:

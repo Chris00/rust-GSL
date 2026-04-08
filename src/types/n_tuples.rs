@@ -157,16 +157,16 @@ macro_rules! impl_project {
                     x: *mut c_void,
                     params: *mut c_void,
                 ) -> f64 {
-                    let f: &F = &*(params as *const F);
-                    let x: &T = &*(x as *const T);
+                    let f: &F = unsafe { &*(params as *const F) };
+                    let x: &T = unsafe { &*(x as *const T) };
                     f(x)
                 }
                 unsafe extern "C" fn select_trampoline<T: Sized, F: Fn(&T) -> bool>(
                     x: *mut c_void,
                     params: *mut c_void,
                 ) -> i32 {
-                    let f: &F = &*(params as *const F);
-                    let x: &T = &*(x as *const T);
+                    let f: &F = unsafe { &*(params as *const F) };
+                    let x: &T = unsafe { &*(x as *const T) };
                     if f(x) {
                         1
                     } else {

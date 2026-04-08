@@ -177,7 +177,7 @@ impl<'a> MultiRootFSolver<'a> {
         where
             A: Fn(&VectorF64, &mut VectorF64) -> Result<(), Error>,
         {
-            let g: &A = &*(params as *const A);
+            let g: &A = unsafe { &*(params as *const A) };
             let x_new = VectorF64::soft_wrap(x as *const _ as *mut _);
             Error::to_c(g(&x_new, &mut VectorF64::soft_wrap(f)))
         }
@@ -334,7 +334,7 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
             params: *mut c_void,
             f: *mut sys::gsl_vector,
         ) -> i32 {
-            let t = &*(params as *mut MultiRootFdfSolverFunction);
+            let t = unsafe { &*(params as *mut MultiRootFdfSolverFunction) };
             let i_f = &t.f;
             Error::to_c(i_f(
                 &VectorF64::soft_wrap(x as *const _ as *mut _),
@@ -347,7 +347,7 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
             params: *mut c_void,
             J: *mut sys::gsl_matrix,
         ) -> i32 {
-            let t = &*(params as *mut MultiRootFdfSolverFunction);
+            let t = unsafe { &*(params as *mut MultiRootFdfSolverFunction) };
             let i_df = &t.df;
             Error::to_c(i_df(
                 &VectorF64::soft_wrap(x as *const _ as *mut _),
@@ -361,7 +361,7 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
             f: *mut sys::gsl_vector,
             J: *mut sys::gsl_matrix,
         ) -> i32 {
-            let t = &*(params as *mut MultiRootFdfSolverFunction);
+            let t = unsafe { &*(params as *mut MultiRootFdfSolverFunction) };
             let i_fdf = &t.fdf;
             Error::to_c(i_fdf(
                 &VectorF64::soft_wrap(x as *const _ as *mut _),

@@ -249,7 +249,7 @@ impl<T> BorrowedOrOwned<'_, T> {
     fn to_mut(&mut self) -> &mut T {
         match self {
             Self::Borrowed(t) => t,
-            Self::Owned(ref mut t) => t,
+            Self::Owned(t) => t,
         }
     }
 }

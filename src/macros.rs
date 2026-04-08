@@ -18,7 +18,7 @@ macro_rules! wrap_callback {
             x: f64,
             params: *mut std::os::raw::c_void,
         ) -> f64 {
-            let f: &F = &*(params as *const F);
+            let f: &F = unsafe { &*(params as *const F) };
             let x = f(x);
             x
         }
