@@ -54,7 +54,7 @@ use crate::ffi::{self, FFI};
 use crate::types::{VectorF32, VectorF64, VectorI32, VectorU32};
 use crate::types::{VectorF32View, VectorF64View, VectorI32View, VectorU32View};
 use crate::Error;
-use paste::paste;
+use pastey::paste;
 use std::fmt::{self, Debug, Formatter};
 use std::marker::PhantomData;
 

@@ -9,7 +9,7 @@ use crate::ffi::FFI;
 use crate::vector::ComplexSlice;
 use crate::{vector::VectorMut, Error};
 use num_complex::Complex;
-use paste::paste;
+use pastey::paste;
 
 macro_rules! gsl_fft_wavetable {
     ($rust_name:ident, $name:ident, $complex_rust_name:ident, $complex_name:ident, $ty:ident $(, $extra:ident)?) => (

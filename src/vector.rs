@@ -19,7 +19,7 @@ use std::{
     ops::Range,
 };
 
-use paste::paste;
+use pastey::paste;
 
 #[cfg(feature = "complex")]
 extern crate num_complex;

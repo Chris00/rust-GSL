@@ -9,7 +9,7 @@ use crate::complex::{FromC, ToC};
 use crate::ffi::FFI;
 use crate::Error;
 use num_complex::Complex;
-use paste::paste;
+use pastey::paste;
 use std::fmt::{self, Debug, Formatter};
 
 macro_rules! gsl_matrix_complex {

@@ -11,7 +11,7 @@ use crate::{
     Error,
 };
 use num_complex::Complex;
-use paste::paste;
+use pastey::paste;
 use std::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,

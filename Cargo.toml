@@ -14,10 +14,10 @@ rust-version = "1.92"
 
 [dependencies]
 sys = { path = "gsl-sys", package = "GSL-sys", version = "4.0.0" }
-paste = "1.0"
 num-complex = { version = "0.4.6", optional = true }
 libc = "0.2.169"
 ctor = "0.6.3"
+pastey = "0.2.1"
 
 [features]
 default = ["complex"]
