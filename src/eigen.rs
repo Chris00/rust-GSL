@@ -20,11 +20,11 @@ LAPACK Users’ Guide (Third Edition, 1999), Published by SIAM, ISBN 0-89871-447
 The LAPACK source code can be found at the website above along with an online copy of the users guide.
 */
 
+use crate::Error;
 use crate::ffi::FFI;
 #[cfg(feature = "complex")]
 use crate::types::{MatrixComplexF64, VectorComplexF64};
 use crate::types::{MatrixF64, VectorF64};
-use crate::Error;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
 pub enum Sort {

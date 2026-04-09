@@ -2,7 +2,7 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the lowest-order normalized hydrogenic bound state radial wavefunction R_1 := 2Z \sqrt{Z} \exp(-Z r).

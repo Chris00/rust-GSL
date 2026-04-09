@@ -95,11 +95,11 @@ the generalized Schur form whose diagonal elements give the \alpha and \beta val
 used is the QZ method due to Moler and Stewart (see references).
 !*/
 
+use crate::Error;
 use crate::ffi::FFI;
 #[cfg(feature = "complex")]
 use crate::types::{MatrixComplexF64, VectorComplexF64};
 use crate::types::{MatrixF64, VectorF64};
-use crate::Error;
 
 ffi_wrapper!(
     EigenSymmetricWorkspace,
@@ -906,9 +906,9 @@ fn eigen_symmetric_vworkspace() {
 #[cfg(feature = "complex")]
 fn eigen_hermitian_workspace() {
     use crate::complex::ComplexOps;
-    use num_complex::Complex;
     use MatrixComplexF64;
     use VectorF64;
+    use num_complex::Complex;
 
     let mut e = EigenHermitianWorkspace::new(3).unwrap();
     let mut m = MatrixComplexF64::new(2, 2).unwrap();

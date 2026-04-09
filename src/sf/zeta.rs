@@ -6,7 +6,7 @@
 
 /// The Riemann zeta function is defined by the infinite sum \zeta(s) = \sum_{k=1}^\infty k^{-s}.
 pub mod riemann {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the Riemann zeta function \zeta(n) for integer n, n \ne 1.
@@ -43,7 +43,7 @@ pub mod riemann {
 /// For large positive argument, the Riemann zeta function approaches one.
 /// In this region the fractional part is interesting, and therefore we need a function to evaluate it explicitly.
 pub mod riemann_mins_one {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the Riemann zeta function \zeta(n) for integer n, n \ne 1.
@@ -79,7 +79,7 @@ pub mod riemann_mins_one {
 
 /// The Hurwitz zeta function is defined by \zeta(s,q) = \sum_0^\infty (k+q)^{-s}.
 pub mod hurwitz {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the Hurwitz zeta function \zeta(s,q) for s > 1, q > 0.
@@ -100,7 +100,7 @@ pub mod hurwitz {
 
 /// The eta function is defined by \eta(s) = (1-2^{1-s}) \zeta(s).
 pub mod eta {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the eta function \eta(n) for integer n.

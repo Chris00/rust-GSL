@@ -1,7 +1,7 @@
 //
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
-use rgsl::integration::{qags, IntegrationWorkspace};
+use rgsl::integration::{IntegrationWorkspace, qags};
 use std::f64::consts;
 
 fn main() -> Result<(), rgsl::Error> {

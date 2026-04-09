@@ -37,8 +37,8 @@ C.W. Ueberhuber, Numerical Computation (Volume 1), Chapter 9 “Interpolation”
 D.M. Young, R.T. Gregory A Survey of Numerical Mathematics (Volume 1), Chapter 6.8, Dover (1988), ISBN 0-486-65691-8.
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 /// Evaluation accelerator.
 #[derive(Clone)]

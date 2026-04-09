@@ -5,7 +5,7 @@
 //! The following functions are equivalent to the function gsl_pow_int (see
 //! [Small integer powers](Pow.html)) with an error estimate.
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the power x^n for integer n. The power is computed using the minimum

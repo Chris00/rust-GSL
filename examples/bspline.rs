@@ -4,8 +4,8 @@
 
 extern crate rgsl;
 
-use rgsl::{multilinear, stats};
 use rgsl::{BSpLineWorkspace, MatrixF64, MultifitLinearWorkspace, Rng, RngType, VectorF64};
+use rgsl::{multilinear, stats};
 
 const N: usize = 200;
 const NCOEFFS: usize = 12;

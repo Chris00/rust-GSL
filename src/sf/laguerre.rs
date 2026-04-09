@@ -7,7 +7,7 @@ The generalized Laguerre polynomials are defined in terms of confluent hypergeom
 They are related to the plain Laguerre polynomials L_n(x) by L^0_n(x) = L_n(x) and L^k_n(x) = (-1)^k (d^k/dx^k) L_(n+k)(x). For more information see Abramowitz & Stegun, Chapter 22.
 !*/
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This function evaluates the generalized Laguerre polynomials L^a_1(x), L^a_2(x), L^a_3(x) using explicit representations.

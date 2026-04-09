@@ -5,8 +5,8 @@
 extern crate rgsl;
 
 use rgsl::{
-    blas::{self, Transpose},
     MatrixF64View,
+    blas::{self, Transpose},
 };
 
 fn main() {

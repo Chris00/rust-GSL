@@ -3,7 +3,7 @@
 //! The Gamma function is available in the module
 //! [`sf::gamma`][crate::sf::gamma].
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the Beta Function, $B(a,b) =

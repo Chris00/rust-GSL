@@ -58,11 +58,7 @@ type gsl_siman_print_t<T> = fn(&T);
 fn boltzmann(E: f64, new_E: f64, T: f64, params: &SimAnnealingParams) -> f64 {
     let x = -(new_E - E) / (params.k * T);
     // avoid underflow errors for large uphill steps
-    if x < GSL_LOG_DBL_MIN {
-        0.0
-    } else {
-        x.exp()
-    }
+    if x < GSL_LOG_DBL_MIN { 0.0 } else { x.exp() }
 }
 
 impl<T> SimAnnealing<T>

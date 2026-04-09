@@ -2,8 +2,8 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 /// This function returns the index i of the array x_array such that `x_array[i] <= x < x_array[i+1]`.
 /// The index is searched for in the range `[index_lo,index_hi]`.

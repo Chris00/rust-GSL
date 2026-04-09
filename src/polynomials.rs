@@ -26,9 +26,9 @@ R. L. Burden and J. D. Faires, Numerical Analysis, 9th edition, ISBN 0-538-73351
 
 use std::borrow::Cow;
 
+use crate::Error;
 #[cfg(feature = "complex")]
 use crate::complex::{FromC, ToC};
-use crate::Error;
 #[cfg(feature = "complex")]
 use num_complex::Complex;
 

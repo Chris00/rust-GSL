@@ -48,8 +48,6 @@ pub use self::multifit_solver::{
 pub use self::multilarge_linear::{MultilargeLinearType, MultilargeLinearWorkspace};
 pub use self::multiset::MultiSet;
 pub use self::n_tuples::{ReadNTuples, WriteNTuples};
-#[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
-pub use crate::permutation::Permutation;
 pub use self::polynomial::PolyComplexWorkspace;
 pub use self::qrng::{QRng, QRngType};
 pub use self::ran_discrete::RanDiscrete;
@@ -70,6 +68,8 @@ pub use super::vector::{
 pub use super::vector_complex::{
     VectorComplexF32, VectorComplexF32View, VectorComplexF64, VectorComplexF64View,
 };
+#[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
+pub use crate::permutation::Permutation;
 
 pub mod basis_spline;
 pub mod chebyshev;

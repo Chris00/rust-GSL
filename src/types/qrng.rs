@@ -18,8 +18,8 @@ P. Bratley and B.L. Fox and H. Niederreiter, “Algorithm 738: Programs to Gener
 Transactions on Mathematical Software, Vol. 20, No. 4, December, 1994, p. 494–495.
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 ffi_wrapper!(QRng, *mut sys::gsl_qrng, gsl_qrng_free);
 

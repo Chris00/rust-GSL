@@ -5,7 +5,7 @@
 //! The Legendre Functions and Legendre Polynomials are described in Abramowitz & Stegun, Chapter 8.
 
 pub mod polynomials {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This function evaluates the Legendre polynomials P_l(x) using explicit representations for l=1, 2, 3.
@@ -146,7 +146,7 @@ pub mod polynomials {
 ///
 /// If you want to calculate a spherical harmonic, then do not use these functions. Instead use [`legendre_sphPlm`](fn.legendre_sphPlm.html) below, which uses a similar recursion, but with the normalized functions.
 pub mod associated_polynomials {
-    use crate::{enums, types, Error};
+    use crate::{Error, enums, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the associated Legendre polynomial P_l^m(x) for m >= 0, l >= m, |x| <= 1.
@@ -228,7 +228,7 @@ pub mod associated_polynomials {
 
 /// The Conical Functions P^\mu_{-(1/2)+i\lambda}(x) and Q^\mu_{-(1/2)+i\lambda} are described in Abramowitz & Stegun, Section 8.12.
 pub mod conical {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the irregular Spherical Conical Function P^{1/2}_{-1/2 + i \lambda}(x) for x > -1.
@@ -325,7 +325,7 @@ pub mod conical {
 /// The following spherical functions are specializations of Legendre functions which give the regular eigenfunctions of the Laplacian on a 3-dimensional hyperbolic space H3d.
 /// Of particular interest is the flat limit, \lambda \to \infty, \eta \to 0, \lambda\eta fixed.
 pub mod radial {
-    use crate::{types, Error};
+    use crate::{Error, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the zeroth radial eigenfunction of the Laplacian on the 3-dimensional hyperbolic space, L^{H3d}_0(\lambda,\eta) := \sin(\lambda\eta)/(\lambda\sinh(\eta)) for \eta >= 0.

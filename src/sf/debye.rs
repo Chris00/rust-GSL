@@ -10,7 +10,7 @@ D_n(x) = n/x^n \int_0^x dt (t^n/(e^t - 1))
 For further information see Abramowitz & Stegun, Section 27.1.
 !*/
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the first-order Debye function D_1(x) = (1/x) \int_0^x dt (t/(e^t - 1)).

@@ -11,8 +11,8 @@ slice of a memory block.  A vector slice is a set of equally-spaced
 elements of an area of memory.
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 use std::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,
@@ -217,7 +217,7 @@ where
 }
 
 macro_rules! gsl_vec {
-    ($rust_name:ident, $name:ident, $rust_ty:ident) => (
+    ($rust_name:ident, $name:ident, $rust_ty:ident) => {
 paste! {
 
 pub struct $rust_name {
@@ -761,7 +761,7 @@ impl<'a> [<$rust_name View>]<'a> {
     }
 
 } // end of paste! block
-); // end of gsl_vec macro
+}; // end of gsl_vec macro
 }
 
 gsl_vec!(VectorF32, gsl_vector_float, f32);

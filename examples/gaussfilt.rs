@@ -6,7 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{filter, FilterEnd, FilterGaussianWorkspace, Rng, RngType, VectorF64};
+    use rgsl::{FilterEnd, FilterGaussianWorkspace, Rng, RngType, VectorF64, filter};
 
     const N: usize = 500; // length of time series
     const K: usize = 51; // window size

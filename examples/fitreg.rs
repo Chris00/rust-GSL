@@ -6,7 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{multifit, MatrixF64, MultifitLinearWorkspace, Rng, RngType, VectorF64};
+    use rgsl::{MatrixF64, MultifitLinearWorkspace, Rng, RngType, VectorF64, multifit};
 
     const N: usize = 1000; // number of observations
     const P: usize = 2; // number of model parameters

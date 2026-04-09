@@ -7,7 +7,7 @@
 //!
 //! $$z^2 \frac{d^2 w}{dz^2} + z \frac{dw}{dz} + (z^2 - \nu^2) w = 0.$$
 
-use crate::{sf::Prec, types, Error};
+use crate::{Error, sf::Prec, types};
 use std::mem::MaybeUninit;
 
 /// Return $I_0(x)$, where $I_0$ is the regular modified cylindrical

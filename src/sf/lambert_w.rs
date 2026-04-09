@@ -7,7 +7,7 @@ Lambert’s W functions, W(x), are defined to be solutions of the equation W(x) 
 We define W_0(x) to be the principal branch, where W > -1 for x < 0, and W_{-1}(x) to be the other real branch, where W < -1 for x < 0.
 !*/
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This computes the principal branch of the Lambert W function, W_0(x).

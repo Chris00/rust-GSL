@@ -4,7 +4,7 @@
 
 //! The Gegenbauer polynomials are defined in Abramowitz & Stegun, Chapter 22, where they are known as Ultraspherical polynomials.
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This function evaluates the Gegenbauer polynomials C^{(\lambda)}_n(x) using explicit representations for n =1, 2, 3.

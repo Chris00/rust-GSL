@@ -8,7 +8,7 @@ Since the arguments of the standard coupling coefficient functions are integer o
 are, by convention, integers equal to twice the actual spin value.
 !*/
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the Wigner 3-j coefficient,

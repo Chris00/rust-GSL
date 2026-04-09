@@ -2,8 +2,8 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-use crate::types;
 use crate::Error;
+use crate::types;
 use std::mem::MaybeUninit;
 
 pub trait Trigonometric {

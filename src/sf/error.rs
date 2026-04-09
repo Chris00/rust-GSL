@@ -4,7 +4,7 @@
 
 //! The error function is described in Abramowitz & Stegun, Chapter 7.
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the error function erf(x), where erf(x) = (2/\sqrt(\pi)) \int_0^x dt \exp(-t^2).

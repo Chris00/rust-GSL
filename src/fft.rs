@@ -201,8 +201,8 @@ impl From<sys::gsl_fft_direction> for Dir {
 #[cfg(feature = "complex")]
 pub mod radix2 {
     use crate::{
-        vector::{ComplexSlice, VectorMut},
         Error,
+        vector::{ComplexSlice, VectorMut},
     };
     use num_complex::Complex;
 
@@ -337,8 +337,8 @@ pub mod radix2 {
 /// are a power of 2.
 pub mod real_radix2 {
     use crate::{
-        vector::{check_equal_len, Vector, VectorMut},
         Error,
+        vector::{Vector, VectorMut, check_equal_len},
     };
 
     /// This function computes an in-place radix-2 FFT of length n and stride stride on the real array data. The output is a half-complex sequence,

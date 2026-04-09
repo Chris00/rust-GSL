@@ -70,8 +70,8 @@ NIST Special Publication 800-22, “A Statistical Test Suite for the Validation 
 Thanks to Makoto Matsumoto, Takuji Nishimura and Yoshiharu Kurita for making the source code to their generators (MT19937, MM&TN; TT800, MM&YK) available under the GNU General Public License. Thanks to Martin Lüscher for providing notes and source code for the RANLXS and RANLXD generators.
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 use std::os::raw::c_ulong;
 
 ffi_wrapper!(Rng, *mut sys::gsl_rng, gsl_rng_free);

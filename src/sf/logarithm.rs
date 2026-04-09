@@ -4,7 +4,7 @@
 
 //! Information on the properties of the Logarithm function can be found in Abramowitz & Stegun, Chapter 4.
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the logarithm of x, \log(x), for x > 0.

@@ -13,7 +13,7 @@
 //!
 //! For further information see Abramowitz & Stegun, Section 10.4.
 
-use crate::{sf::Prec, types, Error};
+use crate::{Error, sf::Prec, types};
 use std::mem::MaybeUninit;
 
 /// Return $\Ai(x)$, the Airy function with an accuracy specified by `mode`.

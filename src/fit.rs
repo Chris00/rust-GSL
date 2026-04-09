@@ -9,8 +9,8 @@ The functions described in this section can be used to perform least-squares fit
 !*/
 
 use crate::{
-    vector::{check_equal_len, Vector},
     Error,
+    vector::{Vector, check_equal_len},
 };
 
 /// This function computes the best-fit linear regression coefficients

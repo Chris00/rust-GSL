@@ -898,10 +898,10 @@ pub fn tri_UL(LU: &mut MatrixF64) -> Result<(), Error> {
 #[cfg(feature = "complex")]
 pub mod z {
     use crate::{
+        Error, MatrixComplexF64, Permutation, VectorComplexF64,
         blas::{Diag, Uplo},
         complex::{FromC, ToC},
         ffi::FFI,
-        Error, MatrixComplexF64, Permutation, VectorComplexF64,
     };
     use num_complex::Complex;
 
@@ -1191,7 +1191,7 @@ pub mod z {
 /// Hermitian matrices
 #[cfg(feature = "complex")]
 pub mod hermtd {
-    use crate::{ffi::FFI, Error, MatrixComplexF64, VectorComplexF64, VectorF64};
+    use crate::{Error, MatrixComplexF64, VectorComplexF64, VectorF64, ffi::FFI};
 
     /// This function factorizes the hermitian matrix A into the symmetric tridiagonal decomposition U T U^T. On output the real parts of the
     /// diagonal and subdiagonal part of the input matrix A contain the tridiagonal matrix T. The remaining lower triangular part of the input

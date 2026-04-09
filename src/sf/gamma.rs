@@ -12,7 +12,7 @@
 //! [`pochhammer_symbol`][crate::sf::pochhammer_symbol] and
 //! [`beta`][crate::sf::beta].
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// The maximum value of $x$ so that $Γ(x)$ does not overflow.

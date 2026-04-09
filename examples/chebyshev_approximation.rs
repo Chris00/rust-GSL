@@ -11,11 +11,7 @@ extern crate rgsl;
 use rgsl::ChebSeries;
 
 fn f(x: f64) -> f64 {
-    if x < 0.5 {
-        0.25
-    } else {
-        0.75
-    }
+    if x < 0.5 { 0.25 } else { 0.75 }
 }
 
 fn main() {

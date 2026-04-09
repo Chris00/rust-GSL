@@ -2,8 +2,8 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 ffi_wrapper!(
     RStatQuantileWorkspace,

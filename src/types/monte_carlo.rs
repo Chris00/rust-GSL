@@ -76,8 +76,8 @@ current estimate has zero error, previous estimates had zero error
 The estimates are averaged using the arithmetic mean, but no error is computed.
 */
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::slice;

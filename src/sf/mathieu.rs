@@ -28,7 +28,7 @@ Stegun, Chapter 20.
 !*/
 
 use crate::ffi::FFI;
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 ffi_wrapper!(

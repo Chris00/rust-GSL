@@ -2,10 +2,10 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-use crate::ffi::FFI;
 use crate::Error;
 #[cfg(feature = "v2_2")]
 use crate::MatrixF64;
+use crate::ffi::FFI;
 #[cfg(feature = "complex")]
 use crate::{MatrixComplexF32, MatrixComplexF64};
 use crate::{MatrixF32, VectorF64};

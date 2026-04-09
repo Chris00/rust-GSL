@@ -10,7 +10,7 @@ Cl_2(x) = - \int_0^x dt \log(2 \sin(t/2))
 It is related to the dilogarithm by Cl_2(\theta) = \Im Li_2(\exp(i\theta)).
 !*/
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// This routine computes the Clausen integral Cl_2(x).

@@ -87,8 +87,8 @@ The Adams and BDF multistep methods [`ODEiv2StepType::msadams`] and
 
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 use std::ffi::CStr;
 use std::os::raw::{c_int, c_void};
 

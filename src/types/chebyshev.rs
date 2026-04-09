@@ -31,8 +31,8 @@ R. Broucke, `Ten Subroutines for the Manipulation of Chebyshev Series [C1] (Algo
 Communications of the ACM 16(4), 254–256 (1973)
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 ffi_wrapper!(ChebSeries, *mut sys::gsl_cheb_series, gsl_cheb_free);
 

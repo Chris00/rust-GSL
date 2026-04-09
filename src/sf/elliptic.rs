@@ -17,7 +17,7 @@
 /// The notation used here is based on Carlson, Numerische Mathematik 33 (1979) 1 and differs slightly from that used by Abramowitz & Stegun, where the functions are given in terms of the parameter m = k^2 and n is replaced by -n.
 pub mod legendre {
     pub mod complete {
-        use crate::{sf::Prec, types, Error};
+        use crate::{Error, sf::Prec, types};
         use std::mem::MaybeUninit;
 
         /// This routine computes the complete elliptic integral K(k) to the accuracy specified by the mode variable mode.
@@ -73,7 +73,7 @@ pub mod legendre {
     }
 
     pub mod incomplete {
-        use crate::{sf::Prec, types, Error};
+        use crate::{Error, sf::Prec, types};
         use std::mem::MaybeUninit;
 
         /// This routine computes the incomplete elliptic integral F(\phi,k) to the accuracy specified by the mode variable mode.
@@ -162,7 +162,7 @@ pub mod legendre {
 /// RJ(x,y,z,p) = 3/2 \int_0^\infty dt
 ///                (t+x)^(-1/2) (t+y)^(-1/2) (t+z)^(-1/2) (t+p)^(-1)
 pub mod carlson {
-    use crate::{sf::Prec, types, Error};
+    use crate::{Error, sf::Prec, types};
     use std::mem::MaybeUninit;
 
     /// This routine computes the incomplete elliptic integral RC(x,y) to the accuracy specified by the mode variable mode.

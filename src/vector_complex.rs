@@ -7,8 +7,8 @@
 
 use crate::ffi::FFI;
 use crate::{
-    complex::{FromC, ToC},
     Error,
+    complex::{FromC, ToC},
 };
 use num_complex::Complex;
 use pastey::paste;

@@ -3,7 +3,7 @@
 //!
 //! The gamma function is available in the [gamma module][crate::sf::gamma].
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// Return the Pochhammer symbol $(a)_x = \Gamma(a + x)/\Gamma(a)$.

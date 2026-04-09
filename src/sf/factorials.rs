@@ -7,7 +7,7 @@
 //! for small values of $n$, whose factorial values are maintained in
 //! hardcoded tables.
 
-use crate::{types, Error};
+use crate::{Error, types};
 use std::mem::MaybeUninit;
 
 /// The maximum value $n$ suvh that $n!$ does not overflow.

@@ -7,7 +7,7 @@
 
 use crate::ffi::FFI;
 use crate::vector::ComplexSlice;
-use crate::{vector::VectorMut, Error};
+use crate::{Error, vector::VectorMut};
 use num_complex::Complex;
 use pastey::paste;
 

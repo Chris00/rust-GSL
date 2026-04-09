@@ -50,10 +50,10 @@ reference,
 B. Stroustrup, The C++ Programming Language (3rd Ed), Section 22.4 Vector Arithmetic. Addison-Wesley 1997, ISBN 0-201-88954-4.
 !*/
 
+use crate::Error;
 use crate::ffi::{self, FFI};
 use crate::types::{VectorF32, VectorF64, VectorI32, VectorU32};
 use crate::types::{VectorF32View, VectorF64View, VectorI32View, VectorU32View};
-use crate::Error;
 use pastey::paste;
 use std::fmt::{self, Debug, Formatter};
 use std::marker::PhantomData;

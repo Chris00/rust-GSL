@@ -248,14 +248,16 @@ impl<'a> MultiMinFdfFunction<'a> {
             params: *mut c_void,
             f: *mut f64,
             g: *mut sys::gsl_vector,
-        ) { unsafe {
-            let t = &*(params as *mut MultiMinFdfFunction);
-            let i_fdf = &t.fdf;
-            *f = i_fdf(
-                &VectorF64::soft_wrap(x as *const _ as *mut _),
-                &mut VectorF64::soft_wrap(g as *const _ as *mut _),
-            );
-        }}
+        ) {
+            unsafe {
+                let t = &*(params as *mut MultiMinFdfFunction);
+                let i_fdf = &t.fdf;
+                *f = i_fdf(
+                    &VectorF64::soft_wrap(x as *const _ as *mut _),
+                    &mut VectorF64::soft_wrap(g as *const _ as *mut _),
+                );
+            }
+        }
 
         MultiMinFdfFunction {
             f: Box::new(f),

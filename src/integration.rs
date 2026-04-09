@@ -184,8 +184,8 @@ The CQUAD integration algorithm is described in the following paper:
   Volume 37 (2010), Issue 3, Article 26.
 */
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 /// Add to `self` methods `epsabs` and `epsrel` assuming the struct
 /// has fields of the same name.

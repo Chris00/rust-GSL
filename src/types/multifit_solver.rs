@@ -462,7 +462,8 @@ unsafe extern "C" fn f(
             )
         } else {
             Ok(())
-        }})
+        }
+    })
 }
 
 unsafe extern "C" fn df(
@@ -479,7 +480,8 @@ unsafe extern "C" fn df(
             )
         } else {
             Ok(())
-        }})
+        }
+    })
 }
 
 unsafe extern "C" fn fdf(
@@ -498,5 +500,6 @@ unsafe extern "C" fn fdf(
             )
         } else {
             Ok(())
-        }})
+        }
+    })
 }

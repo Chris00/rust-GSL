@@ -26,9 +26,9 @@ level of the transform.
 /// These functions return a status of crate::Error::Success upon successful completion. crate::Inval is returned if n is not an integer power of
 /// 2 or if insufficient workspace is provided.
 pub mod one_dimension {
+    use crate::Error;
     use crate::ffi::FFI;
     use crate::vector::VectorMut;
-    use crate::Error;
 
     #[doc(alias = "gsl_wavelet_transform")]
     pub fn transform<V: VectorMut<f64> + ?Sized>(
@@ -100,8 +100,8 @@ pub mod one_dimension {
 /// the rows and columns of the data for the subsequent levels of the transform, until the full discrete wavelet transform is complete.
 /// The non-standard form of the discrete wavelet transform is typically used in image analysis.
 pub mod two_dimension {
-    use crate::ffi::FFI;
     use crate::Error;
+    use crate::ffi::FFI;
 
     /// These functions compute two-dimensional in-place forward and inverse discrete wavelet transforms in standard form on the array
     /// data stored in row-major form with dimensions size1 and size2 and physical row length tda. The dimensions must be equal

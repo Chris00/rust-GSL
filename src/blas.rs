@@ -148,7 +148,7 @@ impl From<sys::CBLAS_SIDE> for Diag {
 /// `f32` vectors.
 pub mod s {
     use super::*;
-    use crate::{ffi::FFI, Error, MatrixF32, VectorF32};
+    use crate::{Error, MatrixF32, VectorF32, ffi::FFI};
 
     // Level 1
 
@@ -626,7 +626,7 @@ pub mod s {
 /// `f64` vectors.
 pub mod d {
     use super::*;
-    use crate::{ffi::FFI, Error, MatrixF64, VectorF64};
+    use crate::{Error, MatrixF64, VectorF64, ffi::FFI};
 
     // Level 1
 
@@ -1085,11 +1085,11 @@ pub mod d {
 #[cfg_attr(docsrs, doc(cfg(feature = "complex")))]
 pub mod c {
     use super::*;
+    use crate::{Error, MatrixComplexF32, VectorComplexF32};
     use crate::{
         ffi::FFI,
         types::complex::{FromC, ToC},
     };
-    use crate::{Error, MatrixComplexF32, VectorComplexF32};
     use num_complex::Complex;
 
     // Level 1
@@ -1650,11 +1650,11 @@ pub mod c {
 #[cfg_attr(docsrs, doc(cfg(feature = "complex")))]
 pub mod z {
     use super::*;
+    use crate::{Error, MatrixComplexF64, VectorComplexF64};
     use crate::{
         ffi::FFI,
         types::complex::{FromC, ToC},
     };
-    use crate::{Error, MatrixComplexF64, VectorComplexF64};
     use num_complex::Complex;
 
     // Level 1

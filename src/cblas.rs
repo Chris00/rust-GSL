@@ -3,7 +3,7 @@
 //
 
 pub use crate::blas::{Diag, Order, Side, Transpose, Uplo};
-use crate::vector::{as_mut_ptr, as_ptr, check_equal_len, len, stride, Vector, VectorMut};
+use crate::vector::{Vector, VectorMut, as_mut_ptr, as_ptr, check_equal_len, len, stride};
 
 /// Modified matrix transformation (for the mathematical field `F`).
 #[derive(Clone, Copy)]

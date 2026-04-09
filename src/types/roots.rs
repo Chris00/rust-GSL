@@ -41,8 +41,8 @@ solvers is held in a gsl_root_fdfsolver struct. The updates require both the fun
 its derivative (hence the name fdf) to be supplied by the user.
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 use std::ffi::{c_double, c_void};
 
 ffi_wrapper!(
@@ -299,10 +299,12 @@ impl<'a> RootFdfSolver<'a> {
             params: *mut c_void,
             y: *mut c_double,
             dy: *mut c_double,
-        ) { unsafe {
-            let fdf: &FDF = &*(params as *const FDF);
-            fdf(x, &mut *y, &mut *dy);
-        }}
+        ) {
+            unsafe {
+                let fdf: &FDF = &*(params as *const FDF);
+                fdf(x, &mut *y, &mut *dy);
+            }
+        }
 
         self.inner_call = sys::gsl_function_fdf {
             f: Some(inner_f::<F>),

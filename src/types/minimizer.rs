@@ -96,8 +96,8 @@ somewhere in the interval. If a valid initial interval is used then these algori
 provided the function is well-behaved.
 !*/
 
-use crate::ffi::FFI;
 use crate::Error;
+use crate::ffi::FFI;
 
 ffi_wrapper!(
     Minimizer<'a>,

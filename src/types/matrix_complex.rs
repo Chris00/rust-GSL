@@ -5,9 +5,9 @@
 #![cfg(feature = "complex")]
 #![cfg_attr(docsrs, doc(cfg(feature = "complex")))]
 
+use crate::Error;
 use crate::complex::{FromC, ToC};
 use crate::ffi::FFI;
-use crate::Error;
 use num_complex::Complex;
 use pastey::paste;
 use std::fmt::{self, Debug, Formatter};

@@ -4,7 +4,7 @@
 
 extern crate rgsl;
 
-use rgsl::{eigen, EigenNonSymmetricVWorkspace, MatrixComplexF64, MatrixF64View, VectorComplexF64};
+use rgsl::{EigenNonSymmetricVWorkspace, MatrixComplexF64, MatrixF64View, VectorComplexF64, eigen};
 
 fn main() {
     let data = &mut [

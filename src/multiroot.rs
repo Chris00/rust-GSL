@@ -5,7 +5,7 @@
 //! Multiroot test algorithms, See `rgsl::types::multiroot` for solvers.
 
 use crate::Error;
-use crate::{ffi::FFI, VectorF64};
+use crate::{VectorF64, ffi::FFI};
 
 #[doc(alias = "gsl_multiroot_test_delta")]
 pub fn test_delta(dx: &VectorF64, x: &VectorF64, epsabs: f64, epsrel: f64) -> Result<(), Error> {

@@ -30,10 +30,10 @@ Robert Sedgewick, Algorithms in C, Addison-Wesley, ISBN 0201514257.
 /// vector by magnitude compute a real vector containing the magnitudes of the complex elements, and sort this vector indirectly. The resulting index
 /// gives the appropriate ordering of the original complex vector.
 pub mod vectors {
+    use crate::Error;
     use crate::ffi::FFI;
     use crate::types::{Permutation, VectorF64};
-    use crate::vector::{self, check_equal_len, Vector, VectorMut};
-    use crate::Error;
+    use crate::vector::{self, Vector, VectorMut, check_equal_len};
 
     /// This function sorts the elements of the array `data` into
     /// ascending numerical order.
@@ -161,10 +161,10 @@ pub mod vectors {
 /// 10 largest values from one million data points, but not for selecting the largest 100,000 values. If the subset is a significant part of the total dataset
 /// it may be faster to sort all the elements of the dataset directly with an O(N \log N) algorithm and obtain the smallest or largest values that way.
 pub mod select {
+    use crate::Error;
     use crate::ffi::FFI;
     use crate::types::VectorF64;
     use crate::vector::{self, Vector};
-    use crate::Error;
 
     /// This function copies the `dest.len()` smallest elements of the
     /// array `src`, in ascending numerical order into the array
