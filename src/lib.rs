@@ -62,6 +62,7 @@ pub mod multiroot;
 pub mod numerical_differentiation;
 pub mod ordinary_differential_equations;
 pub mod physical_constant;
+pub mod permutation;
 pub mod polynomials;
 pub mod pow;
 pub mod roots;

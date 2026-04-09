@@ -48,7 +48,8 @@ pub use self::multifit_solver::{
 pub use self::multilarge_linear::{MultilargeLinearType, MultilargeLinearWorkspace};
 pub use self::multiset::MultiSet;
 pub use self::n_tuples::{ReadNTuples, WriteNTuples};
-pub use self::permutation::Permutation;
+#[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
+pub use crate::permutation::Permutation;
 pub use self::polynomial::PolyComplexWorkspace;
 pub use self::qrng::{QRng, QRngType};
 pub use self::ran_discrete::RanDiscrete;
@@ -94,7 +95,6 @@ pub mod multilarge_linear;
 pub mod multiroot;
 pub mod multiset;
 pub mod n_tuples;
-pub mod permutation;
 pub mod polynomial;
 pub mod qrng;
 pub mod ran_discrete;
