@@ -227,7 +227,8 @@ impl Error {
 // any errors using the error return codes".  In Rust, errors cannot
 // be ignored, so we deactivate the error handler.
 #[ctor]
-fn disable_error_handler() {
+#[doc(alias = "gsl_set_error_handler_off")]
+fn set_handler_off() {
     unsafe {
         sys::gsl_set_error_handler_off();
     }

@@ -45,6 +45,7 @@ def to_rust_name(n):
     return {
         "is_nonneg": "is_non_neg",
         "swap_rowcol": "swap_row_col",
+        "gsl_eigen_gen": "r#gen", # "gen" is reserved keyword
         "gsl_set_error_handler": "set_handler", # in "error" module
         "gsl_set_error_handler_off": "set_handler_off",
     }.get(n, n)
