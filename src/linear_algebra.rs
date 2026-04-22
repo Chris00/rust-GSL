@@ -5,160 +5,231 @@
 /*!
 # Linear Algebra
 
-This chapter describes functions for solving linear systems. The library provides linear algebra operations which operate directly on the
-gsl_vector and gsl_matrix objects. These routines use the standard algorithms from Golub & Van Loan’s Matrix Computations with Level-1 and
-Level-2 BLAS calls for efficiency.
+This chapter describes functions for solving linear systems. The
+library provides linear algebra operations which operate directly on
+the [`crate::vector::Vector`] and [`crate::types::matrix`] objects.
+These routines use the standard algorithms from Golub & Van Loan’s
+Matrix Computations with Level-1 and Level-2 BLAS calls for
+efficiency.
 
 ## LU Decomposition
 
-A general square matrix A has an LU decomposition into upper and lower triangular matrices,
+A general $M$-by-$N$ matrix matrix $A$ has an LU decomposition into
+upper and lower triangular matrices,
 
-P A = L U
-where P is a permutation matrix, L is unit lower triangular matrix and U is upper triangular matrix. For square matrices this decomposition
-can be used to convert the linear system A x = b into a pair of triangular systems (L y = P b, U x = y), which can be solved by forward and
-back-substitution. Note that the LU decomposition is valid for singular matrices.
+$$P A = L U$$
+
+where $P$ is a permutation matrix, $L$ is unit lower triangular matrix
+and $U$ is upper triangular matrix.  For square matrices this
+decomposition can be used to convert the linear system $A x = b$ into
+a pair of triangular systems ($L y = P b$, $U x = y$), which can be
+solved by forward and back-substitution.  Note that the LU
+decomposition is valid for singular matrices.
 
 ## QR Decomposition
 
-A general rectangular M-by-N matrix A has a QR decomposition into the product of an orthogonal M-by-M square matrix Q (where Q^T Q = I) and
-an M-by-N right-triangular matrix R,
+A general rectangular $M$-by-$N$ matrix $A$ has a QR decomposition
+into the product of an orthogonal $M$-by-$M$ square matrix $Q$ (where
+$Q^T Q = I$) and an $M$-by-$N$ right-triangular matrix $R$,
 
-A = Q R
-This decomposition can be used to convert the linear system A x = b into the triangular system R x = Q^T b, which can be solved by back-substitution.
-Another use of the QR decomposition is to compute an orthonormal basis for a set of vectors. The first N columns of Q form an orthonormal
-basis for the range of A, ran(A), when A has full column rank.
+$$A = Q R$$
+
+This decomposition can be used to convert the linear system $A x = b$
+into the triangular system $R x = Q^T b$, which can be solved by
+back-substitution.  Another use of the QR decomposition is to compute
+an orthonormal basis for a set of vectors.  The first $N$ columns of
+$Q$ form an orthonormal basis for the range of $A$, $\Ran(A)$, when
+$A$ has full column rank.
 
 ## QR Decomposition with Column Pivoting
 
-The QR decomposition can be extended to the rank deficient case by introducing a column permutation P,
+The QR decomposition can be extended to the rank deficient case by
+introducing a column permutation $P$,
 
-A P = Q R
-The first r columns of Q form an orthonormal basis for the range of A for a matrix with column rank r. This decomposition can also be used
-to convert the linear system A x = b into the triangular system R y = Q^T b, x = P y, which can be solved by back-substitution and permutation.
-We denote the QR decomposition with column pivoting by QRP^T since A = Q R P^T.
+$$A P = Q R$$
+
+The first r columns of $Q$ form an orthonormal basis for the range of
+$A$ for a matrix with column rank $r$.  This decomposition can also be
+used to convert the linear system $A x = b$ into the triangular system
+$R y = Q^T b$, $x = P y$, which can be solved by back-substitution and
+permutation.  We denote the QR decomposition with column pivoting by
+$QRP^T$ since $A = Q R P^T$.
 
 ## Singular Value Decomposition
 
-A general rectangular M-by-N matrix A has a singular value decomposition (SVD) into the product of an M-by-N orthogonal matrix U, an N-by-N
-diagonal matrix of singular values S and the transpose of an N-by-N orthogonal square matrix V,
+A general rectangular $M$-by-$N$ matrix $A$ has a singular value
+decomposition (SVD) into the product of an $M$-by-$N$ orthogonal
+matrix $U$, an $N$-by-$N$ diagonal matrix of singular values $S$ and
+the transpose of an $N$-by-$N$ orthogonal square matrix $V$,
 
-A = U S V^T
+$$A = U S V^T$$
 
-The singular values \sigma_i = S_{ii} are all non-negative and are generally chosen to form a non-increasing sequence \sigma_1 >= \sigma_2 >=
-... >= \sigma_N >= 0.
+The singular values $σ_i = S_{ii}$ are all non-negative and are
+generally chosen to form a non-increasing sequence
+$σ_1 ≥ σ_2 ≥ ⋯ ≥ σ_N ≥ 0$.
 
-The singular value decomposition of a matrix has many practical uses. The condition number of the matrix is given by the ratio of the largest
-singular value to the smallest singular value. The presence of a zero singular value indicates that the matrix is singular. The number of
-non-zero singular values indicates the rank of the matrix. In practice singular value decomposition of a rank-deficient matrix will not produce
-exact zeroes for singular values, due to finite numerical precision. Small singular values should be edited by choosing a suitable tolerance.
+The singular value decomposition of a matrix has many practical uses.
+The condition number of the matrix is given by the ratio of the
+largest singular value to the smallest singular value.  The presence
+of a zero singular value indicates that the matrix is singular.  The
+number of non-zero singular values indicates the rank of the matrix.
+In practice singular value decomposition of a rank-deficient matrix
+will not produce exact zeroes for singular values, due to finite
+numerical precision.  Small singular values should be edited by
+choosing a suitable tolerance.
 
-For a rank-deficient matrix, the null space of A is given by the columns of V corresponding to the zero singular values. Similarly, the range
-of A is given by columns of U corresponding to the non-zero singular values.
+For a rank-deficient matrix, the null space of $A$ is given by the
+columns of $V$ corresponding to the zero singular values.  Similarly,
+the range of $A$ is given by columns of $U$ corresponding to the
+non-zero singular values.
 
-Note that the routines here compute the “thin” version of the SVD with U as M-by-N orthogonal matrix. This allows in-place computation and is
-the most commonly-used form in practice. Mathematically, the “full” SVD is defined with U as an M-by-M orthogonal matrix and S as an M-by-N
-diagonal matrix (with additional rows of zeros).
+Note that the routines here compute the “thin” version of the SVD with
+$U$ as $M$-by-$N$ orthogonal matrix.  This allows in-place computation
+and is the most commonly-used form in practice.  Mathematically, the
+“full” SVD is defined with $U$ as an $M$-by-$M$ orthogonal matrix and
+$S$ as an $M$-by-$N$ diagonal matrix (with additional rows of zeros).
 
 ## Cholesky Decomposition
 
-A symmetric, positive definite square matrix A has a Cholesky decomposition into a product of a lower triangular matrix L and its transpose L^T,
+A symmetric, positive definite square matrix $A$ has a Cholesky
+decomposition into a product of a lower triangular matrix $L$ and its
+transpose $L^T$,
 
-A = L L^T
+$$A = L L^T$$
 
-This is sometimes referred to as taking the square-root of a matrix. The Cholesky decomposition can only be carried out when all the eigenvalues
-of the matrix are positive. This decomposition can be used to convert the linear system A x = b into a pair of triangular systems (L y = b,
-L^T x = y), which can be solved by forward and back-substitution.
+This is sometimes referred to as taking the square-root of a matrix.
+The Cholesky decomposition can only be carried out when all the
+eigenvalues of the matrix are positive.  This decomposition can be
+used to convert the linear system $A x = b$ into a pair of triangular
+systems ($L y = b$, $L^T x = y$), which can be solved by forward and
+back-substitution.
 
 ## Tridiagonal Decomposition of Real Symmetric Matrices
 
-A symmetric matrix A can be factorized by similarity transformations into the form,
+A symmetric matrix $A$ can be factorized by similarity transformations
+into the form,
 
-A = Q T Q^T
+$$A = Q T Q^T$$
 
-where Q is an orthogonal matrix and T is a symmetric tridiagonal matrix.
+where $Q$ is an orthogonal matrix and $T$ is a symmetric tridiagonal
+matrix.
 
 ## Tridiagonal Decomposition of Hermitian Matrices
 
-A hermitian matrix A can be factorized by similarity transformations into the form,
+A hermitian matrix $A$ can be factorized by similarity transformations
+into the form,
 
-A = U T U^T
+$$A = U T U^T$$
 
-where U is a unitary matrix and T is a real symmetric tridiagonal matrix.
+where $U$ is a unitary matrix and $T$ is a real symmetric tridiagonal
+matrix.
 
 ## Hessenberg Decomposition of Real Matrices
 
-A general real matrix A can be decomposed by orthogonal similarity transformations into the form
+A general real matrix $A$ can be decomposed by orthogonal similarity
+transformations into the form
 
-A = U H U^T
+$$A = U H U^T$$
 
-where U is orthogonal and H is an upper Hessenberg matrix, meaning that it has zeros below the first subdiagonal. The Hessenberg reduction
-is the first step in the Schur decomposition for the nonsymmetric eigenvalue problem, but has applications in other areas as well.
+where $U$ is orthogonal and $H$ is an upper Hessenberg matrix, meaning
+that it has zeros below the first subdiagonal.  The Hessenberg
+reduction is the first step in the Schur decomposition for the
+nonsymmetric eigenvalue problem, but has applications in other areas
+as well.
 
 ## Hessenberg-Triangular Decomposition of Real Matrices
 
-A general real matrix pair (A, B) can be decomposed by orthogonal similarity transformations into the form
+A general real matrix pair $(A, B)$ can be decomposed by orthogonal
+similarity transformations into the form
 
-A = U H V^T
-B = U R V^T
+$$A = U H V^T$$
+$$B = U R V^T$$
 
-where U and V are orthogonal, H is an upper Hessenberg matrix, and R is upper triangular. The Hessenberg-Triangular reduction is the first
-step in the generalized Schur decomposition for the generalized eigenvalue problem.
+where $U$ and $V$ are orthogonal, $H$ is an upper Hessenberg matrix,
+and $R$ is upper triangular.  The Hessenberg-Triangular reduction is
+the first step in the generalized Schur decomposition for the
+generalized eigenvalue problem.
 
 ## Bidiagonalization
 
-A general matrix A can be factorized by similarity transformations into the form,
+A general matrix $A$ can be factorized by similarity transformations
+into the form,
 
-A = U B V^T
-where U and V are orthogonal matrices and B is a N-by-N bidiagonal matrix with non-zero entries only on the diagonal and superdiagonal. The
-size of U is M-by-N and the size of V is N-by-N.
+$$A = U B V^T$$
+
+where $U$ and $V$ are orthogonal matrices and $B$ is a $N$-by-$N$
+bidiagonal matrix with non-zero entries only on the diagonal and
+superdiagonal.  The size of $U$ is $M$-by-$N$ and the size of $V$ is
+$N$-by-$N$.
 
 ## Householder Transformations
 
-A Householder transformation is a rank-1 modification of the identity matrix which can be used to zero out selected elements of a vector.
-A Householder matrix P takes the form,
+A Householder transformation is a rank-1 modification of the identity
+matrix which can be used to zero out selected elements of a vector.  A
+Householder matrix $P$ takes the form,
 
-P = I - \tau v v^T
+$$P = I - τ v v^T$$
 
-where v is a vector (called the Householder vector) and \tau = 2/(v^T v). The functions described in this section use the rank-1 structure
-of the Householder matrix to create and apply Householder transformations efficiently.
+where $v$ is a vector (called the Householder vector) and $τ = 2/(v^T v)$.
+The functions described in this section use the rank-1 structure of
+the Householder matrix to create and apply Householder transformations
+efficiently.
 
 ## Tridiagonal Systems
 
-The functions described in this section efficiently solve symmetric, non-symmetric and cyclic tridiagonal systems with minimal storage. Note
-that the current implementations of these functions use a variant of Cholesky decomposition, so the tridiagonal matrix must be positive definite.
-For non-positive definite matrices, the functions return the error code crate::Sing.
+The functions described in this section efficiently solve symmetric,
+non-symmetric and cyclic tridiagonal systems with minimal storage.
+Note that the current implementations of these functions use a variant
+of Cholesky decomposition, so the tridiagonal matrix must be positive
+definite.  For non-positive definite matrices, the functions return
+the error code [`Error::Singularity`].
 
 ## Balancing
 
-The process of balancing a matrix applies similarity transformations to make the rows and columns have comparable norms. This is useful, for
-example, to reduce roundoff errors in the solution of eigenvalue problems. Balancing a matrix A consists of replacing A with a similar matrix
+The process of balancing a matrix applies similarity transformations
+to make the rows and columns have comparable norms.  This is useful,
+for example, to reduce roundoff errors in the solution of eigenvalue
+problems.  Balancing a matrix $A$ consists of replacing $A$ with a
+similar matrix
 
-A' = D^(-1) A D
+$$A′ = D⁻¹ A D$$
 
-where D is a diagonal matrix whose entries are powers of the floating point radix.
+where $D$ is a diagonal matrix whose entries are powers of the
+floating point radix.
 
-##14.16 References and Further Reading
+## References and Further Reading
 
-Further information on the algorithms described in this section can be found in the following book,
+Further information on the algorithms described in this section can be
+found in the following book,
 
-G. H. Golub, C. F. Van Loan, Matrix Computations (3rd Ed, 1996), Johns Hopkins University Press, ISBN 0-8018-5414-8.
-The LAPACK library is described in the following manual,
+- G. H. Golub, C. F. Van Loan, Matrix Computations (3rd Ed, 1996), Johns
+  Hopkins University Press, ISBN 0-8018-5414-8.  The LAPACK library is
+  described in the following manual,
 
-LAPACK Users’ Guide (Third Edition, 1999), Published by SIAM, ISBN 0-89871-447-8.
-<http://www.netlib.org/lapack>
+- LAPACK Users’ Guide (Third Edition, 1999), Published by SIAM,
+  ISBN 0-89871-447-8.  <http://www.netlib.org/lapack>
 
-The LAPACK source code can be found at the website above, along with an online copy of the users guide.
+The LAPACK source code can be found at the website above, along with
+an online copy of the users guide.
 
 The Modified Golub-Reinsch algorithm is described in the following paper,
 
-T.F. Chan, “An Improved Algorithm for Computing the Singular Value Decomposition”, ACM Transactions on Mathematical Software, 8 (1982), pp 72–83.
-The Jacobi algorithm for singular value decomposition is described in the following papers,
+- T.F. Chan, “An Improved Algorithm for Computing the Singular Value
+  Decomposition”, ACM Transactions on Mathematical Software, 8 (1982),
+  pp 72–83.
 
-J.C. Nash, “A one-sided transformation method for the singular value decomposition and algebraic eigenproblem”, Computer Journal, Volume 18, Number
-1 (1975), p 74–76
-J.C. Nash and S. Shlien “Simple algorithms for the partial singular value decomposition”, Computer Journal, Volume 30 (1987), p 268–275.
-James Demmel, Krešimir Veselić, “Jacobi’s Method is more accurate than QR”, Lapack Working Note 15 (LAWN-15), October 1989. Available from netlib,
-<http://www.netlib.org/lapack/> in the lawns or lawnspdf directories.
+The Jacobi algorithm for singular value decomposition is described
+in the following papers,
+
+- J.C. Nash, “A one-sided transformation method for the singular value
+  decomposition and algebraic eigenproblem”, Computer Journal,
+  Volume 18, Number 1 (1975), p 74–76
+- J.C. Nash and S. Shlien “Simple algorithms for the partial singular
+  value decomposition”, Computer Journal, Volume 30 (1987), p 268–275.
+- James Demmel, Krešimir Veselić, “Jacobi’s Method is more accurate
+  than QR”, Lapack Working Note 15 (LAWN-15), October 1989. Available
+  from netlib, <http://www.netlib.org/lapack/> in the lawns or
+  lawnspdf directories.
 */
 
 use crate::ffi::FFI;
@@ -167,32 +238,35 @@ use crate::{MatrixF64, VectorF64};
 
 pub use crate::blas::{Diag, Order, Side, Transpose, Uplo};
 
-/// Factorise a general N x N matrix A into,
+/// Factorise a general $N × N$ matrix `A` into,
 ///
-///  P A = L U
+/// $$P A = L U$$
 ///
-/// where P is a permutation matrix, L is unit lower triangular and U is upper triangular.
+/// where $P$ is a permutation matrix, $L$ is unit lower triangular
+/// and $U$ is upper triangular.
 ///
-/// L is stored in the strict lower triangular part of the input matrix. The diagonal elements of L are unity and are not stored.
+/// - $L$ is stored in the strict lower triangular part of the input
+///   matrix. The diagonal elements of $L$ are unity and are not stored.
+/// - $U$ is stored in the diagonal and upper triangular part of the
+///   input matrix.
+/// - $P$ is stored in the permutation `p`.  Column $j$ of $P$ is column
+///   $k$ of the identity matrix, where $k$ = `p.get(j)`.
 ///
-/// U is stored in the diagonal and upper triangular part of the input matrix.
+/// Return the sign of the permutation, i.e. $(-1)^n$, where $n$ is
+/// the number of interchanges in the permutation.
 ///
-/// P is stored in the permutation p. Column j of P is column k of the identity matrix, where `k = permutation->data[j]`
-///
-/// signum gives the sign of the permutation, (-1)^n, where n is the  number of interchanges in the permutation.
-///
-/// See Golub & Van Loan, Matrix Computations, Algorithm 3.4.1 (Gauss Elimination with Partial Pivoting).
+/// See Golub & Van Loan, Matrix Computations, Algorithm 3.4.1 (Gauss
+/// Elimination with Partial Pivoting).
 #[doc(alias = "gsl_linalg_LU_decomp")]
-pub fn LU_decomp(
-    a: &mut crate::MatrixF64,
-    p: &mut crate::Permutation,
-    signum: &mut i32,
-) -> Result<(), Error> {
-    let ret = unsafe { sys::gsl_linalg_LU_decomp(a.unwrap_unique(), p.unwrap_unique(), signum) };
-    Error::handle(ret, ())
+pub fn LU_decomp(A: &mut crate::MatrixF64, p: &mut crate::Permutation) -> Result<i32, Error> {
+    let mut signum = 0;
+    let ret =
+        unsafe { sys::gsl_linalg_LU_decomp(A.unwrap_unique(), p.unwrap_unique(), &mut signum) };
+    Error::handle(ret, signum)
 }
 
-/// This function solves the square system A x = b using the LU decomposition of A into (LU, p) given by LU_decomp or LU_decomp as input.
+/// Solves the square system $A x = b$ using the LU decomposition of A
+/// into $(LU, p)$ given by [`LU_decomp`] as input.
 #[doc(alias = "gsl_linalg_LU_solve")]
 pub fn LU_solve(
     lu: &MatrixF64,
@@ -211,8 +285,10 @@ pub fn LU_solve(
     Error::handle(ret, ())
 }
 
-/// This function solves the square system A x = b in-place using the precomputed LU decomposition of A into (LU,p). On input x should contain
-/// the right-hand side b, which is replaced by the solution on output.
+/// Solves the square system $A x = b$ in-place using the precomputed
+/// LU decomposition of $A$ into $(LU,p)$.  On input `x` should
+/// contain the right-hand side `b`, which is replaced by the solution
+/// on output.
 #[doc(alias = "gsl_linalg_LU_svx")]
 pub fn LU_svx(lu: &MatrixF64, p: &Permutation, x: &mut VectorF64) -> Result<(), Error> {
     let ret =

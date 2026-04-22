@@ -220,6 +220,7 @@ macro_rules! gsl_vec {
     ($rust_name:ident, $name:ident, $rust_ty:ident) => {
 paste! {
 
+#[doc = "GSL vector of type `" $rust_ty "`."]
 pub struct $rust_name {
     vec: *mut sys::$name,
     can_free: bool,
@@ -271,7 +272,7 @@ impl FFI<sys::$name> for $rust_name {
 }
 
 impl $rust_name {
-    #[doc = "create a new " $rust_name " with all elements set to zero"]
+    #[doc = "Create a new `" $rust_name "` with all elements set to zero."]
     #[doc(alias = $name _calloc)]
     pub fn new(size: usize) -> Option<$rust_name> {
         let tmp = unsafe { sys::[<$name _calloc>](size) };
@@ -283,6 +284,7 @@ impl $rust_name {
         }
     }
 
+    #[doc = "Create a new `" $rust_name "` with elements initialized from `slice`."]
     #[doc(alias = $name _alloc)]
     pub fn from_slice(slice: &[$rust_ty]) -> Option<$rust_name> {
         let tmp = unsafe { sys::[<$name _alloc>](slice.len() as _) };
@@ -560,6 +562,7 @@ impl $rust_name {
     }
 }
 
+#[doc = "GSL vector view of type `" $rust_ty "`."]
 pub struct [<$rust_name View>]<'a> {
     v: sys::[<$name _view>],
     #[allow(dead_code)]

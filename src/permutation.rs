@@ -87,14 +87,16 @@ impl Permutation {
         Error::handle(ret, ())
     }
 
-    /// This function returns the value of the i-th element of the permutation p. If i lies outside the allowed range of 0 to n-1 then
-    /// the error handler is invoked and 0 is returned.
+    /// This function returns the value of the `i`-th element of the
+    /// permutation `self`.  If `i` lies outside the allowed range of
+    /// `0` to `n-1` then `0` is returned.
     #[doc(alias = "gsl_permutation_get")]
     pub fn get(&self, i: usize) -> usize {
         unsafe { sys::gsl_permutation_get(self.unwrap_shared(), i) }
     }
 
-    /// This function exchanges the i-th and j-th elements of the permutation p.
+    /// This function exchanges the `i`-th and `j`-th elements of the
+    /// permutation `self`.
     #[doc(alias = "gsl_permutation_swap")]
     pub fn swap(&mut self, i: usize, j: usize) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_permutation_swap(self.unwrap_unique(), i, j) };

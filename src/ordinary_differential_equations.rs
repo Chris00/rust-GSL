@@ -141,7 +141,7 @@ impl From<c_int> for ODEiv {
 /// equation and possibly a jacobian function.
 ///
 /// Some methods require the jacobian function, which calculates the
-/// matrix dfdy and the vector dfdt. The matrix dfdy conforms to the
+/// matrix df/dy and the vector df/dt. The matrix df/dy conforms to the
 /// GSL standard, being a continuous range of floating point values,
 /// in row-order.
 pub struct ODEiv2System<'a> {

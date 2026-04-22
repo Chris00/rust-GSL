@@ -82,6 +82,7 @@ use crate::{Error, VectorF64, View};
 use std::ffi::c_void;
 
 ffi_wrapper!(
+    /// Minimization without derivatives.
     Minimizer<'a>,
     *mut sys::gsl_multimin_fminimizer,
     gsl_multimin_fminimizer_free
@@ -283,14 +284,14 @@ impl<'a> MultiMinFdfFunction<'a> {
 }
 
 ffi_wrapper!(
-    /// Minimizarion using derivatives.
+    /// Minimization using derivatives.
     MinimizerFdf,
     *mut sys::gsl_multimin_fdfminimizer,
     gsl_multimin_fdfminimizer_free
 );
 
 impl MinimizerFdf {
-    /// Creates a minimizer of type `t` for an n-dimensional function.
+    /// Creates a minimizer of type `t` for an `n`-dimensional function.
     /// If there is insufficient memory to create the minimizer then
     /// the function returns a `None`.
     #[doc(alias = "gsl_multimin_fdfminimizer_alloc")]
@@ -319,7 +320,7 @@ impl MinimizerFdf {
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multimin_fdfminimizer_set(
-                self.unwrap_unique(),
+                self.unwrap_unique(), // Copied inside C struct
                 f.to_raw(),
                 x.unwrap_shared(),
                 step_size,
