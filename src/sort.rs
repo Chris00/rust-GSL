@@ -32,8 +32,8 @@ Robert Sedgewick, Algorithms in C, Addison-Wesley, ISBN 0201514257.
 pub mod vectors {
     use crate::Error;
     use crate::ffi::FFI;
-    use crate::types::{Permutation, VectorF64};
-    use crate::vector::{self, Vector, VectorMut, check_equal_len};
+    use crate::permutation::Permutation;
+    use crate::vector::{self, VecF64, Vector, VectorMut, check_equal_len};
 
     /// This function sorts the elements of the array `data` into
     /// ascending numerical order.
@@ -50,10 +50,10 @@ pub mod vectors {
     /// The same function can also be used with GSL vectors:
     ///
     /// ```
-    /// use rgsl::{vector::VectorF64, sort::vectors::sort};
-    /// let mut data = VectorF64::from_slice(&[4., 1., 3., 2.]).unwrap();
+    /// use rgsl::{vector::VecF64, sort::vectors::sort};
+    /// let mut data = VecF64::from_slice(&[4., 1., 3., 2.]);
     /// sort(&mut data);
-    /// assert_eq!(data.as_slice().unwrap(), [1., 2., 3., 4.]);
+    /// assert_eq!(data.as_slice(), [1., 2., 3., 4.]);
     /// ```
     #[doc(alias = "gsl_sort")]
     pub fn sort<T>(data: &mut T)
@@ -82,12 +82,12 @@ pub mod vectors {
     /// The same function can also be used with GSL vectors:
     ///
     /// ```
-    /// use rgsl::{vector::VectorF64, sort::vectors::sort2};
-    /// let mut data1 = VectorF64::from_slice(&[4., 1., 3., 2.]).unwrap();
-    /// let mut data2 = VectorF64::from_slice(&[10., 20., 30., 40.]).unwrap();
+    /// use rgsl::{vector::VecF64, sort::vectors::sort2};
+    /// let mut data1 = VecF64::from_slice(&[4., 1., 3., 2.]);
+    /// let mut data2 = VecF64::from_slice(&[10., 20., 30., 40.]);
     /// sort2(&mut data1, &mut data2);
-    /// assert_eq!(data1.as_slice().unwrap(), [1., 2., 3., 4.]);
-    /// assert_eq!(data2.as_slice().unwrap(), [20., 40., 30., 10.]);
+    /// assert_eq!(data1.as_slice(), [1., 2., 3., 4.]);
+    /// assert_eq!(data2.as_slice(), [20., 40., 30., 10.]);
     /// ```
     #[doc(alias = "gsl_sort2")]
     pub fn sort2<T1, T2>(data1: &mut T1, data2: &mut T2)
@@ -111,14 +111,14 @@ pub mod vectors {
     /// This function sorts the elements of the vector v into ascending numerical order.
     #[doc(alias = "gsl_sort_vector")]
     #[deprecated(since = "8.0.0", note = "Please use `sort` instead")]
-    pub fn sort_vector(v: &mut VectorF64) {
+    pub fn sort_vector(v: &mut VecF64) {
         unsafe { sys::gsl_sort_vector(v.unwrap_unique()) }
     }
 
     /// This function sorts the elements of the vector v1 into ascending numerical order, while making the same rearrangement of the vector v2.
     #[doc(alias = "gsl_sort_vector2")]
     #[deprecated(since = "8.0.0", note = "Please use `sort2` instead")]
-    pub fn sort_vector2(v1: &mut VectorF64, v2: &mut VectorF64) {
+    pub fn sort_vector2(v1: &mut VecF64, v2: &mut VecF64) {
         unsafe { sys::gsl_sort_vector2(v1.unwrap_unique(), v2.unwrap_unique()) }
     }
 
@@ -150,7 +150,7 @@ pub mod vectors {
     /// index of the vector element which would have been stored in that position if the vector had been sorted in place. The first element of p gives the index
     /// of the least element in v, and the last element of p gives the index of the greatest element in v. The vector v is not changed.
     #[doc(alias = "gsl_sort_vector_index")]
-    pub fn sort_vector_index(p: &mut Permutation, v: &VectorF64) -> Result<(), Error> {
+    pub fn sort_vector_index(p: &mut Permutation, v: &VecF64) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_sort_vector_index(p.unwrap_unique(), v.unwrap_shared()) };
         Error::handle(ret, ())
     }
@@ -163,8 +163,7 @@ pub mod vectors {
 pub mod select {
     use crate::Error;
     use crate::ffi::FFI;
-    use crate::types::VectorF64;
-    use crate::vector::{self, Vector};
+    use crate::vector::{self, VecF64, Vector};
 
     /// This function copies the `dest.len()` smallest elements of the
     /// array `src`, in ascending numerical order into the array
@@ -217,7 +216,7 @@ pub mod select {
     /// larger than the size of `src`.
     #[doc(alias = "gsl_sort_vector_smallest")]
     #[deprecated(since = "8.0.0", note = "Please use `sort_smallest` instead")]
-    pub fn sort_vector_smallest(dest: &mut [f64], v: &VectorF64) -> Result<(), Error> {
+    pub fn sort_vector_smallest(dest: &mut [f64], v: &VecF64) -> Result<(), Error> {
         if dest.len() > v.len() {
             panic!("rgsl::sort::select::sort_vector_smallest: `dest.len() > v.len()`");
         }
@@ -232,7 +231,7 @@ pub mod select {
     /// larger than the size of `src`.
     #[doc(alias = "gsl_sort_vector_largest")]
     #[deprecated(since = "8.0.0", note = "Please use `sort_largest` instead")]
-    pub fn sort_vector_largest(dest: &mut [f64], v: &VectorF64) -> Result<(), Error> {
+    pub fn sort_vector_largest(dest: &mut [f64], v: &VecF64) -> Result<(), Error> {
         if dest.len() > v.len() {
             panic!("rgsl::sort::select::sort_vector_largest: `dest.len() > v.len()`");
         }
@@ -294,7 +293,7 @@ pub mod select {
     /// `p.len()` is larger than the size of `src`.
     #[doc(alias = "gsl_sort_vector_smallest_index")]
     #[deprecated(since = "8.0.0", note = "Please use `sort_smallest_index` instead")]
-    pub fn sort_vector_smallest_index(p: &mut [usize], v: &VectorF64) -> Result<(), Error> {
+    pub fn sort_vector_smallest_index(p: &mut [usize], v: &VecF64) -> Result<(), Error> {
         if p.len() > v.len() {
             panic!("rgsl::sort::select::sort_vector_smallest_index: `p.len() > v.len()`");
         }
@@ -309,7 +308,7 @@ pub mod select {
     /// `p.len()` is larger than the size of `src`.
     #[doc(alias = "gsl_sort_vector_largest_index")]
     #[deprecated(since = "8.0.0", note = "Please use `sort_largest_index` instead")]
-    pub fn sort_vector_largest_index(p: &mut [usize], v: &VectorF64) -> Result<(), Error> {
+    pub fn sort_vector_largest_index(p: &mut [usize], v: &VecF64) -> Result<(), Error> {
         if p.len() > v.len() {
             panic!("rgsl::sort::select::sort_vector_largest_index: `p.len() > v.len()`");
         }

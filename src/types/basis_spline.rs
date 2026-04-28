@@ -50,7 +50,7 @@ A large collection of B-spline routines is available in the PPPACK library avail
 
 use crate::Error;
 use crate::ffi::FFI;
-use crate::types::VectorF64;
+use crate::vector::VecF64;
 
 ffi_wrapper!(
     BSpLineWorkspace,
@@ -79,7 +79,7 @@ impl BSpLineWorkspace {
     /// This function computes the knots associated with the given breakpoints and stores them
     /// internally in w->knots.
     #[doc(alias = "gsl_bspline_knots")]
-    pub fn knots(&mut self, breakpts: &VectorF64) -> Result<(), Error> {
+    pub fn knots(&mut self, breakpts: &VecF64) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_bspline_knots(breakpts.unwrap_shared(), self.unwrap_unique()) };
         Error::handle(ret, ())
     }
@@ -103,7 +103,7 @@ impl BSpLineWorkspace {
     /// Computing all the basis functions at once is more efficient than computing them
     /// individually, due to the nature of the defining recurrence relation.
     #[doc(alias = "gsl_bspline_eval")]
-    pub fn eval(&mut self, x: f64, B: &mut VectorF64) -> Result<(), Error> {
+    pub fn eval(&mut self, x: f64, B: &mut VecF64) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_bspline_eval(x, B.unwrap_unique(), self.unwrap_unique()) };
         Error::handle(ret, ())
     }

@@ -6,7 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{FilterEnd, FilterGaussianWorkspace, Rng, RngType, VectorF64};
+    use rgsl::{FilterEnd, FilterGaussianWorkspace, Rng, RngType, VecF64};
 
     const N: usize = 1000; // length of time series
     const K: usize = 61; // window size
@@ -14,13 +14,13 @@ mod example {
 
     pub fn run() {
         // input vector
-        let mut x = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut x = VecF64::new(N);
         // filtered output vector
-        let mut y = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y = VecF64::new(N);
         // first derivative filtered vector
-        let mut dy = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut dy = VecF64::new(N);
         // second derivative filtered vector
-        let mut d2y = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut d2y = VecF64::new(N);
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
         let mut gauss_p =
             FilterGaussianWorkspace::new(K).expect("FilterGaussianWorkspace::new failed");

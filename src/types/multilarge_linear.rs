@@ -3,7 +3,10 @@
 //
 
 use crate::ffi::FFI;
-use crate::{Error, MatrixF64, VectorF64};
+use crate::{
+    Error, MatF64, VecF64,
+    view::{AsView, View},
+};
 
 ffi_wrapper!(MultilargeLinearType, *const sys::gsl_multilarge_linear_type);
 
@@ -60,7 +63,7 @@ impl MultilargeLinearWorkspace {
     }
 
     #[doc(alias = "gsl_multilarge_linear_accumulate")]
-    pub fn accumulate(&mut self, x: &mut MatrixF64, y: &mut VectorF64) -> Result<(), Error> {
+    pub fn accumulate(&mut self, x: &mut MatF64, y: &mut VecF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_accumulate(
                 x.unwrap_unique(),
@@ -73,7 +76,7 @@ impl MultilargeLinearWorkspace {
 
     /// Returns `(rnorm, snorm)`.
     #[doc(alias = "gsl_multilarge_linear_solve")]
-    pub fn solve(&mut self, lambda: f64, c: &mut VectorF64) -> Result<(f64, f64), Error> {
+    pub fn solve(&mut self, lambda: f64, c: &mut VecF64) -> Result<(f64, f64), Error> {
         let mut rnorm = 0.;
         let mut snorm = 0.;
         let ret = unsafe {
@@ -101,9 +104,9 @@ impl MultilargeLinearWorkspace {
     #[doc(alias = "gsl_multilarge_linear_lcurve")]
     pub fn lcurve(
         &mut self,
-        reg_param: &mut VectorF64,
-        rho: &mut VectorF64,
-        eta: &mut VectorF64,
+        reg_param: &mut VecF64,
+        rho: &mut VecF64,
+        eta: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_lcurve(
@@ -119,12 +122,12 @@ impl MultilargeLinearWorkspace {
     #[doc(alias = "gsl_multilarge_linear_wstdform1")]
     pub fn wstdform1(
         &mut self,
-        L: &VectorF64,
-        X: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
-        Xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        L: &VecF64,
+        X: &MatF64,
+        w: &VecF64,
+        y: &VecF64,
+        Xs: &mut MatF64,
+        ys: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_wstdform1(
@@ -143,11 +146,11 @@ impl MultilargeLinearWorkspace {
     #[doc(alias = "gsl_multilarge_linear_stdform1")]
     pub fn stdform1(
         &mut self,
-        L: &VectorF64,
-        X: &MatrixF64,
-        y: &VectorF64,
-        Xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        L: &VecF64,
+        X: &MatF64,
+        y: &VecF64,
+        Xs: &mut MatF64,
+        ys: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_stdform1(
@@ -165,13 +168,13 @@ impl MultilargeLinearWorkspace {
     #[doc(alias = "gsl_multilarge_linear_wstdform2")]
     pub fn wstdform2(
         &mut self,
-        LQR: &MatrixF64,
-        Ltau: &VectorF64,
-        X: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
-        Xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        LQR: &MatF64,
+        Ltau: &VecF64,
+        X: &MatF64,
+        w: &VecF64,
+        y: &VecF64,
+        Xs: &mut MatF64,
+        ys: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_wstdform2(
@@ -191,12 +194,12 @@ impl MultilargeLinearWorkspace {
     #[doc(alias = "gsl_multilarge_linear_stdform2")]
     pub fn stdform2(
         &mut self,
-        LQR: &MatrixF64,
-        Ltau: &VectorF64,
-        X: &MatrixF64,
-        y: &VectorF64,
-        Xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        LQR: &MatF64,
+        Ltau: &VecF64,
+        X: &MatF64,
+        y: &VecF64,
+        Xs: &mut MatF64,
+        ys: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_stdform2(
@@ -213,12 +216,7 @@ impl MultilargeLinearWorkspace {
     }
 
     #[doc(alias = "gsl_multilarge_linear_genform1")]
-    pub fn genform1(
-        &mut self,
-        L: &VectorF64,
-        cs: &VectorF64,
-        c: &mut VectorF64,
-    ) -> Result<(), Error> {
+    pub fn genform1(&mut self, L: &VecF64, cs: &VecF64, c: &mut VecF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_genform1(
                 L.unwrap_shared(),
@@ -233,10 +231,10 @@ impl MultilargeLinearWorkspace {
     #[doc(alias = "gsl_multilarge_linear_genform2")]
     pub fn genform2(
         &mut self,
-        LQR: &MatrixF64,
-        Ltau: &VectorF64,
-        cs: &VectorF64,
-        c: &mut VectorF64,
+        LQR: &MatF64,
+        Ltau: &VecF64,
+        cs: &VecF64,
+        c: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multilarge_linear_genform2(
@@ -253,18 +251,14 @@ impl MultilargeLinearWorkspace {
     #[cfg(feature = "v2_7")]
     #[cfg_attr(docsrs, doc(cfg(feature = "v2_7")))]
     #[doc(alias = "gsl_multilarge_linear_matrix_ptr")]
-    pub fn matrix<F: FnOnce(&MatrixF64)>(&self, f: F) {
-        f(&MatrixF64::soft_wrap(unsafe {
-            sys::gsl_multilarge_linear_matrix_ptr(self.unwrap_shared()) as _
-        }))
+    pub fn matrix(&self) -> View<'_, MatF64> {
+        MatF64::as_view(unsafe { sys::gsl_multilarge_linear_matrix_ptr(self.unwrap_shared()) as _ })
     }
 
     #[cfg(feature = "v2_7")]
     #[cfg_attr(docsrs, doc(cfg(feature = "v2_7")))]
     #[doc(alias = "gsl_multilarge_linear_rhs_ptr")]
-    pub fn rhs<F: FnOnce(&VectorF64)>(&self, f: F) {
-        f(&VectorF64::soft_wrap(unsafe {
-            sys::gsl_multilarge_linear_rhs_ptr(self.unwrap_shared()) as _
-        }))
+    pub fn rhs(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multilarge_linear_rhs_ptr(self.unwrap_shared()) as _ })
     }
 }

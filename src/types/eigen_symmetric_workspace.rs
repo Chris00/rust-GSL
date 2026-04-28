@@ -98,8 +98,7 @@ used is the QZ method due to Moler and Stewart (see references).
 use crate::Error;
 use crate::ffi::FFI;
 #[cfg(feature = "complex")]
-use crate::types::{MatrixComplexF64, VectorComplexF64};
-use crate::types::{MatrixF64, VectorF64};
+use crate::{matrix::MatF64, matrix_complex::MatC64, vector::VecF64, vector_complex::VecC64};
 
 ffi_wrapper!(
     EigenSymmetricWorkspace,
@@ -126,7 +125,7 @@ impl EigenSymmetricWorkspace {
     /// triangular part is not referenced. The eigenvalues are stored in the vector `eval` and are
     /// unordered.
     #[doc(alias = "gsl_eigen_symm")]
-    pub fn symm(&mut self, A: &mut MatrixF64, eval: &mut VectorF64) -> Result<(), Error> {
+    pub fn symm(&mut self, A: &mut MatF64, eval: &mut VecF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_symm(
                 A.unwrap_unique(),
@@ -168,9 +167,9 @@ impl EigenSymmetricVWorkspace {
     #[doc(alias = "gsl_eigen_symmv")]
     pub fn symmv(
         &mut self,
-        A: &mut MatrixF64,
-        eval: &mut VectorF64,
-        evec: &mut MatrixF64,
+        A: &mut MatF64,
+        eval: &mut VecF64,
+        evec: &mut MatF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_symmv(
@@ -211,7 +210,7 @@ impl EigenHermitianWorkspace {
     /// not referenced. The eigenvalues are stored in the vector `eval` and are unordered.
     #[doc(alias = "gsl_eigen_herm")]
     #[cfg(feature = "complex")]
-    pub fn herm(&mut self, A: &mut MatrixComplexF64, eval: &mut VectorF64) -> Result<(), Error> {
+    pub fn herm(&mut self, A: &mut MatC64, eval: &mut VecF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_herm(
                 A.unwrap_unique(),
@@ -256,9 +255,9 @@ impl EigenHermitianVWorkspace {
     #[cfg(feature = "complex")]
     pub fn hermv(
         &mut self,
-        A: &mut MatrixComplexF64,
-        eval: &mut VectorF64,
-        evec: &mut MatrixComplexF64,
+        A: &mut MatC64,
+        eval: &mut VecF64,
+        evec: &mut MatC64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_hermv(
@@ -332,7 +331,7 @@ impl EigenNonSymmetricWorkspace {
     /// eigenvalues are stored in the beginning of `eval`.
     #[doc(alias = "gsl_eigen_nonsymm")]
     #[cfg(feature = "complex")]
-    pub fn nonsymm(&mut self, A: &mut MatrixF64, eval: &mut VectorComplexF64) -> Result<(), Error> {
+    pub fn nonsymm(&mut self, A: &mut MatF64, eval: &mut VecC64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_nonsymm(
                 A.unwrap_unique(),
@@ -349,9 +348,9 @@ impl EigenNonSymmetricWorkspace {
     #[cfg(feature = "complex")]
     pub fn nonsymm_Z(
         &mut self,
-        A: &mut MatrixF64,
-        eval: &mut VectorComplexF64,
-        Z: &mut MatrixF64,
+        A: &mut MatF64,
+        eval: &mut VecC64,
+        Z: &mut MatF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_nonsymm_Z(
@@ -409,9 +408,9 @@ impl EigenNonSymmetricVWorkspace {
     #[cfg(feature = "complex")]
     pub fn nonsymmv(
         &mut self,
-        A: &mut MatrixF64,
-        eval: &mut VectorComplexF64,
-        evec: &mut MatrixComplexF64,
+        A: &mut MatF64,
+        eval: &mut VecC64,
+        evec: &mut MatC64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_nonsymmv(
@@ -430,10 +429,10 @@ impl EigenNonSymmetricVWorkspace {
     #[cfg(feature = "complex")]
     pub fn nonsymmv_Z(
         &mut self,
-        A: &mut MatrixF64,
-        eval: &mut VectorComplexF64,
-        evec: &mut MatrixComplexF64,
-        Z: &mut MatrixF64,
+        A: &mut MatF64,
+        eval: &mut VecC64,
+        evec: &mut MatC64,
+        Z: &mut MatF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_nonsymmv_Z(
@@ -474,9 +473,9 @@ impl EigenGenSymmWorkspace {
     #[doc(alias = "gsl_eigen_gensymm")]
     pub fn gensymm(
         &mut self,
-        mut A: MatrixF64,
-        B: &mut MatrixF64,
-        eval: &mut VectorF64,
+        mut A: MatF64,
+        B: &mut MatF64,
+        eval: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_gensymm(
@@ -517,10 +516,10 @@ impl EigenGenSymmVWorkspace {
     #[doc(alias = "gsl_eigen_gensymmv")]
     pub fn gensymmv(
         &mut self,
-        mut A: MatrixF64,
-        B: &mut MatrixF64,
-        eval: &mut VectorF64,
-        evec: &mut MatrixF64,
+        mut A: MatF64,
+        B: &mut MatF64,
+        eval: &mut VecF64,
+        evec: &mut MatF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_gensymmv(
@@ -562,9 +561,9 @@ impl EigenGenHermWorkspace {
     #[cfg(feature = "complex")]
     pub fn genherm(
         &mut self,
-        mut A: MatrixComplexF64,
-        B: &mut MatrixComplexF64,
-        eval: &mut VectorF64,
+        mut A: MatC64,
+        B: &mut MatC64,
+        eval: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_genherm(
@@ -605,10 +604,10 @@ impl EigenGenHermVWorkspace {
     #[cfg(feature = "complex")]
     pub fn genhermv(
         &mut self,
-        mut A: MatrixComplexF64,
-        B: &mut MatrixComplexF64,
-        eval: &mut VectorF64,
-        evec: &mut MatrixComplexF64,
+        mut A: MatC64,
+        B: &mut MatC64,
+        eval: &mut VecF64,
+        evec: &mut MatC64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_genhermv(
@@ -677,10 +676,10 @@ impl EigenGenWorkspace {
     #[cfg(feature = "complex")]
     pub fn r#gen(
         &mut self,
-        A: &mut MatrixF64,
-        B: &mut MatrixF64,
-        alpha: &mut VectorComplexF64,
-        beta: &mut VectorF64,
+        A: &mut MatF64,
+        B: &mut MatF64,
+        alpha: &mut VecC64,
+        beta: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_gen(
@@ -700,12 +699,12 @@ impl EigenGenWorkspace {
     #[cfg(feature = "complex")]
     pub fn gen_QZ(
         &mut self,
-        A: &mut MatrixF64,
-        B: &mut MatrixF64,
-        alpha: &mut VectorComplexF64,
-        beta: &mut VectorF64,
-        Q: &mut MatrixF64,
-        Z: &mut MatrixF64,
+        A: &mut MatF64,
+        B: &mut MatF64,
+        alpha: &mut VecC64,
+        beta: &mut VecF64,
+        Q: &mut MatF64,
+        Z: &mut MatF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_gen_QZ(
@@ -754,11 +753,11 @@ impl EigenGenVWorkspace {
     #[cfg(feature = "complex")]
     pub fn genv(
         &mut self,
-        A: &mut MatrixF64,
-        B: &mut MatrixF64,
-        alpha: &mut VectorComplexF64,
-        beta: &mut VectorF64,
-        evec: &mut MatrixComplexF64,
+        A: &mut MatF64,
+        B: &mut MatF64,
+        alpha: &mut VecC64,
+        beta: &mut VecF64,
+        evec: &mut MatC64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_genv(
@@ -779,13 +778,13 @@ impl EigenGenVWorkspace {
     #[cfg(feature = "complex")]
     pub fn genv_QZ(
         &mut self,
-        A: &mut MatrixF64,
-        B: &mut MatrixF64,
-        alpha: &mut VectorComplexF64,
-        beta: &mut VectorF64,
-        evec: &mut MatrixComplexF64,
-        Q: &mut MatrixF64,
-        Z: &mut MatrixF64,
+        A: &mut MatF64,
+        B: &mut MatF64,
+        alpha: &mut VecC64,
+        beta: &mut VecF64,
+        evec: &mut MatC64,
+        Q: &mut MatF64,
+        Z: &mut MatF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_eigen_genv_QZ(
@@ -804,21 +803,22 @@ impl EigenGenVWorkspace {
 }
 
 #[test]
-fn eigen_symmetric_workspace() {
-    use MatrixF64;
-    use VectorF64;
+fn eigen_symmetric_workspace() -> Result<(), Error> {
+    use MatF64;
+    use VecF64;
 
     let mut e = EigenSymmetricWorkspace::new(2).unwrap();
-    let mut m = MatrixF64::new(2, 2).unwrap();
+    let mut m = MatF64::new(2, 2);
 
     let data = [5., 5., 1., 6.];
     m.set(0, 0, data[0]);
     m.set(0, 1, data[1]);
     m.set(1, 0, data[2]);
     m.set(1, 1, data[3]);
-    let mut v = VectorF64::new(2).unwrap();
-    e.symm(&mut m, &mut v).unwrap();
+    let mut v = VecF64::new(2);
+    e.symm(&mut m, &mut v)?;
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "4.3820 6.6180");
+    Ok(())
 }
 
 // C code:
@@ -849,21 +849,21 @@ fn eigen_symmetric_workspace() {
 // }
 // ```
 #[test]
-fn eigen_symmetric_vworkspace() {
-    use MatrixF64;
-    use VectorF64;
+fn eigen_symmetric_vworkspace() -> Result<(), Error> {
+    use MatF64;
+    use VecF64;
 
     let mut e = EigenSymmetricVWorkspace::new(3).unwrap();
     let data = [5., 5., 1., 6.];
-    let mut m = MatrixF64::new(2, 2).unwrap();
+    let mut m = MatF64::new(2, 2);
 
     m.set(0, 0, data[0]);
     m.set(0, 1, data[1]);
     m.set(1, 0, data[2]);
     m.set(1, 1, data[3]);
-    let mut m2 = MatrixF64::new(2, 2).unwrap();
-    let mut v = VectorF64::new(2).unwrap();
-    e.symmv(&mut m, &mut v, &mut m2).unwrap();
+    let mut m2 = MatF64::new(2, 2);
+    let mut v = VecF64::new(2);
+    e.symmv(&mut m, &mut v, &mut m2)?;
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "4.3820 6.6180");
     assert_eq!(
         &format!("{:.4} {:.4}", m2.get(0, 0), m2.get(0, 1)),
@@ -873,6 +873,7 @@ fn eigen_symmetric_vworkspace() {
         &format!("{:.4} {:.4}", m2.get(1, 0), m2.get(1, 1)),
         "-0.5257 0.8507"
     );
+    Ok(())
 }
 
 // C code:
@@ -906,19 +907,19 @@ fn eigen_symmetric_vworkspace() {
 #[cfg(feature = "complex")]
 fn eigen_hermitian_workspace() {
     use crate::complex::ComplexOps;
-    use MatrixComplexF64;
-    use VectorF64;
+    use MatC64;
+    use VecF64;
     use num_complex::Complex;
 
     let mut e = EigenHermitianWorkspace::new(3).unwrap();
-    let mut m = MatrixComplexF64::new(2, 2).unwrap();
+    let mut m = MatC64::new(2, 2);
 
     m.set(0, 0, &Complex::<f64>::rect(5., 5.));
     m.set(0, 1, &Complex::<f64>::rect(1., 4.));
     m.set(1, 0, &Complex::<f64>::rect(2., 3.));
     m.set(1, 1, &Complex::<f64>::rect(5., 7.));
 
-    let mut v = VectorF64::new(2).unwrap();
+    let mut v = VecF64::new(2);
     e.herm(&mut m, &mut v).unwrap();
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "8.6056 1.3944");
 }
@@ -965,15 +966,15 @@ fn eigen_hermitian_vworkspace() {
     use num_complex::Complex;
 
     let mut e = EigenHermitianVWorkspace::new(3).unwrap();
-    let mut m = MatrixComplexF64::new(2, 2).unwrap();
+    let mut m = MatC64::new(2, 2);
 
     m.set(0, 0, &Complex::<f64>::rect(5., 5.));
     m.set(0, 1, &Complex::<f64>::rect(1., 4.));
     m.set(1, 0, &Complex::<f64>::rect(2., 3.));
     m.set(1, 1, &Complex::<f64>::rect(5., 7.));
 
-    let mut v = VectorF64::new(2).unwrap();
-    let mut m2 = MatrixComplexF64::new(2, 2).unwrap();
+    let mut v = VecF64::new(2);
+    let mut m2 = MatC64::new(2, 2);
     e.hermv(&mut m, &mut v, &mut m2).unwrap();
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "8.6056 1.3944");
     assert_eq!(

@@ -2,30 +2,29 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-extern crate rgsl;
-
-use rgsl::{BSpLineWorkspace, MatrixF64, MultifitLinearWorkspace, Rng, RngType, VectorF64};
-use rgsl::{multilinear, stats};
+use rgsl::{
+    BSpLineWorkspace, MatF64, MultifitLinearWorkspace, Rng, RngType, VecF64, multilinear, stats,
+};
+use std::error::Error;
 
 const N: usize = 200;
 const NCOEFFS: usize = 12;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let rng_ty = RngType::env_setup().expect("Failed to setup RngType...");
     let mut r = Rng::new(rng_ty).expect("Rng::new failed...");
 
     // allocate a cubic bspline workspace (k = 4)
     let mut bw = BSpLineWorkspace::new(4, NCOEFFS - 2).expect("BSpLineWorkspace::new failed...");
-    let mut b = VectorF64::new(NCOEFFS).expect("VectorF64::new failed...");
+    let mut b = VecF64::new(NCOEFFS);
 
-    let mut x = VectorF64::new(N).expect("VectorF64::new failed...");
-    let mut y = VectorF64::new(N).expect("VectorF64::new failed...");
-    let mut mat_x = MatrixF64::new(N, NCOEFFS).expect("MatrixF64::new failed...");
-    let mut c = VectorF64::new(NCOEFFS).expect("VectorF64::new failed...");
-    let mut w = VectorF64::new(N).expect("VectorF64::new failed...");
-    let mut cov = MatrixF64::new(NCOEFFS, NCOEFFS).expect("MatrixF64::new failed...");
-    let mut mw =
-        MultifitLinearWorkspace::new(N, NCOEFFS).expect("MultifitLinearWorkspace::new failed...");
+    let mut x = VecF64::new(N);
+    let mut y = VecF64::new(N);
+    let mut mat_x = MatF64::new(N, NCOEFFS);
+    let mut c = VecF64::new(NCOEFFS);
+    let mut w = VecF64::new(N);
+    let mut cov = MatF64::new(NCOEFFS, NCOEFFS);
+    let mut mw = MultifitLinearWorkspace::new(N, NCOEFFS).unwrap();
 
     // this is the data to be fitted
     for i in 0..N {
@@ -44,14 +43,14 @@ fn main() {
     }
 
     // use uniform breakpoints on [0, 15]
-    bw.knots_uniform(0., 15.).unwrap();
+    bw.knots_uniform(0., 15.)?;
 
     // construct the fit matrix X
     for i in 0..N {
         let xi = x.get(i);
 
         // compute B_j(xi) for all j
-        bw.eval(xi, &mut b).unwrap();
+        bw.eval(xi, &mut b)?;
 
         // fill in row i of X
         for j in 0..NCOEFFS {
@@ -61,7 +60,7 @@ fn main() {
     }
 
     // do the fit
-    let chisq = mw.wlinear(&mat_x, &w, &y, &mut c, &mut cov).unwrap();
+    let chisq = mw.wlinear(&mat_x, &w, &y, &mut c, &mut cov)?;
 
     let dof = N - NCOEFFS;
     let tss = stats::wtss(&w, &y);
@@ -75,9 +74,11 @@ fn main() {
     // output the smoothed curve
     let mut xi = 0.;
     while xi < 15. {
-        bw.eval(xi, &mut b).unwrap();
-        let (yi, _) = multilinear::linear_est(&b, &c, &cov).unwrap();
+        bw.eval(xi, &mut b)?;
+        let (yi, _) = multilinear::linear_est(&b, &c, &cov)?;
         println!("{} {}", xi, yi);
         xi += 0.1;
     }
+
+    Ok(())
 }

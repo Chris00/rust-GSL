@@ -29,12 +29,6 @@ pub use self::filter::{
 };
 pub use self::histograms::{Histogram, Histogram2D, Histogram2DPdf, HistogramPdf};
 pub use self::interpolation::{Interp, InterpAccel, InterpType, Spline};
-pub use self::matrix::{
-    MatrixF32, MatrixF32View, MatrixF64, MatrixF64View, MatrixI32, MatrixI32View, MatrixU32,
-    MatrixU32View,
-};
-#[cfg(feature = "complex")]
-pub use self::matrix_complex::{MatrixComplexF32, MatrixComplexF64};
 pub use self::minimizer::{Minimizer, MinimizerType};
 pub use self::monte_carlo::{
     MiserMonteCarlo, MiserParams, PlainMonteCarlo, VegasMonteCarlo, VegasParams,
@@ -58,18 +52,22 @@ pub use self::rstat::{RStatQuantileWorkspace, RStatWorkspace};
 pub use self::series_acceleration::{LevinUTruncWorkspace, LevinUWorkspace};
 pub use self::siman::{SimAnnealing, SimAnnealingParams};
 pub use self::wavelet_transforms::{Wavelet, WaveletType, WaveletWorkspace};
+#[deprecated(since = "8.0.0", note = "Use rgsl::matrix::*")]
+pub use crate::matrix::{
+    MatF32 as MatrixF32, MatF64 as MatrixF64, MatI32 as MatrixI32, MatU32 as MatrixU32,
+};
+#[cfg(feature = "complex")]
+#[deprecated(since = "8.0.0", note = "Use rgsl::matrix_complex::*")]
+pub use crate::matrix_complex::{MatC32 as MatrixComplexF32, MatC64 as MatrixComplexF64};
+#[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
+pub use crate::permutation::Permutation;
 #[deprecated(since = "8.0.0", note = "Use rgsl::vector::*")]
-pub use super::vector::{
-    VectorF32, VectorF32View, VectorF64, VectorF64View, VectorI32, VectorI32View, VectorU32,
-    VectorU32View,
+pub use crate::vector::{
+    VecF32 as VectorF32, VecF64 as VectorF64, VecI32 as VectorI32, VecU32 as VectorU32,
 };
 #[cfg(feature = "complex")]
 #[deprecated(since = "8.0.0", note = "Use rgsl::vector_complex::*")]
-pub use super::vector_complex::{
-    VectorComplexF32, VectorComplexF32View, VectorComplexF64, VectorComplexF64View,
-};
-#[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
-pub use crate::permutation::Permutation;
+pub use crate::vector_complex::{VecC32 as VectorComplexF32, VecC64 as VectorComplexF64};
 
 pub mod basis_spline;
 pub mod chebyshev;
@@ -83,8 +81,6 @@ pub mod fast_fourier_transforms;
 pub mod filter;
 pub mod histograms;
 pub mod interpolation;
-pub mod matrix;
-pub mod matrix_complex;
 pub mod minimizer;
 pub mod monte_carlo;
 pub mod multifit_linear;

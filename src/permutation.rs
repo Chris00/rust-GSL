@@ -8,7 +8,7 @@ use crate::MatrixF64;
 use crate::ffi::FFI;
 #[cfg(feature = "complex")]
 use crate::{MatrixComplexF32, MatrixComplexF64};
-use crate::{MatrixF32, VectorF64};
+use crate::{MatrixF32, vector::VecF64};
 use std::fmt::{self, Debug, Formatter};
 use std::slice;
 
@@ -206,7 +206,7 @@ impl Permutation {
     /// matrix from the right, v' = v P. The j-th column of the permutation matrix P is given by the p_j-th column of the identity matrix.
     /// The permutation p and the vector v must have the same length.
     #[doc(alias = "gsl_permute_vector")]
-    pub fn permute_vector(&mut self, v: &mut VectorF64) -> Result<(), Error> {
+    pub fn permute_vector(&mut self, v: &mut VecF64) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_permute_vector(self.unwrap_unique(), v.unwrap_unique()) };
         Error::handle(ret, ())
     }
@@ -215,7 +215,7 @@ impl Permutation {
     /// matrix from the right, v' = v P^T. Note that for permutation matrices the inverse is the same as the transpose. The j-th column of the permutation
     /// matrix P is given by the p_j-th column of the identity matrix. The permutation p and the vector v must have the same length.
     #[doc(alias = "gsl_permute_vector_inverse")]
-    pub fn permute_vector_inverse(&self, v: &mut VectorF64) -> Result<(), Error> {
+    pub fn permute_vector_inverse(&self, v: &mut VecF64) -> Result<(), Error> {
         let ret =
             unsafe { sys::gsl_permute_vector_inverse(self.unwrap_shared(), v.unwrap_unique()) };
         Error::handle(ret, ())

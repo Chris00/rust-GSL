@@ -5,7 +5,7 @@
 #[cfg(feature = "v2_2")]
 mod example {
     use rgsl::{
-        MatrixF64, MultilargeLinearType, MultilargeLinearWorkspace, Rng, RngType, VectorF64, blas,
+        MatF64, MultilargeLinearType, MultilargeLinearWorkspace, Rng, RngType, VecF64, blas,
     };
 
     // number of observations
@@ -26,7 +26,7 @@ mod example {
         (x * x * x).exp()
     }
 
-    fn build_row(t: f64, row: &mut VectorF64) {
+    fn build_row(t: f64, row: &mut VecF64) {
         let p = row.len();
         let mut xj = 1.;
 
@@ -36,16 +36,16 @@ mod example {
         }
     }
 
-    fn solve_system(print_data: bool, t: MultilargeLinearType, c: &mut VectorF64) {
+    fn solve_system(print_data: bool, t: MultilargeLinearType, c: &mut VecF64) {
         let mut w =
             MultilargeLinearWorkspace::new(t, P).expect("MultilargeLinearWorkspace::new failed");
-        let mut x = MatrixF64::new(NROWS, P).expect("MatrixF64::new failed");
-        let mut y = VectorF64::new(NROWS).expect("VectorF64::new failed");
+        let mut x = MatF64::new(NROWS, P);
+        let mut y = VecF64::new(NROWS);
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
 
-        let mut reg_param = VectorF64::new(NLCURVE).expect("VectorF64::new failed");
-        let mut rho = VectorF64::new(NLCURVE).expect("VectorF64::new failed");
-        let mut eta = VectorF64::new(NLCURVE).expect("VectorF64::new failed");
+        let mut reg_param = VecF64::new(NLCURVE);
+        let mut rho = VecF64::new(NLCURVE);
+        let mut eta = VecF64::new(NLCURVE);
 
         let mut rowidx = 0;
         let mut t = 0.;
@@ -61,43 +61,27 @@ mod example {
 
             // build (X,y) block with 'nr' rows
             for i in 0..nr {
-                xv.matrix_mut(|mat| {
-                    mat.expect("Failed to get matrix").row(i, |row| {
-                        let mut row = row.expect("Failed to get row...");
-                        let fi = func(t);
-                        // noise
-                        let ei = r.gaussian(0.1 * fi);
-                        let yi = fi + ei;
+                let mut row = xv.row(i);
+                let fi = func(t);
+                // noise
+                let ei = r.gaussian(0.1 * fi);
+                let yi = fi + ei;
 
-                        // construct this row of LS matrix
-                        row.vector_mut(|vector| {
-                            build_row(t, vector.expect("Failed to get vector"));
-                        });
+                // construct this row of LS matrix
+                build_row(t, &mut row);
 
-                        // set right hand side value with added noise
-                        yv.vector_mut(|vector| {
-                            vector.expect("Failed to get vector").set(i, yi);
-                        });
+                // set right hand side value with added noise
+                yv.set(i, yi);
 
-                        if print_data && i % 100 == 0 {
-                            println!("{} {}", t, yi);
-                        }
-                    });
+                if print_data && i % 100 == 0 {
+                    println!("{} {}", t, yi);
+                }
 
-                    t += DT;
-                });
+                t += DT;
             }
 
             // accumulate (X,y) block into LS system
-            xv.matrix_mut(|matrix| {
-                yv.vector_mut(|vector| {
-                    w.accumulate(
-                        matrix.expect("Failed to get matrix"),
-                        vector.expect("Failed to get vector"),
-                    )
-                    .unwrap();
-                });
-            });
+            w.accumulate(&mut xv, &mut yv);
 
             rowidx += nr;
         }
@@ -140,8 +124,8 @@ mod example {
     }
 
     pub fn run() {
-        let mut c_tsqr = VectorF64::new(P).expect("VectorF64::new failed");
-        let mut c_normal = VectorF64::new(P).expect("VectorF64::new failed");
+        let mut c_tsqr = VecF64::new(P);
+        let mut c_normal = VecF64::new(P);
 
         // solve system with TSQR method
         solve_system(true, MultilargeLinearType::tsqr(), &mut c_tsqr);
@@ -153,7 +137,7 @@ mod example {
         solve_system(false, MultilargeLinearType::normal(), &mut c_normal);
 
         // output solution
-        let mut v = VectorF64::new(P).expect("VectorF64::new failed");
+        let mut v = VecF64::new(P);
         let mut t = 0.;
 
         while t <= 1. {

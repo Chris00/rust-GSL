@@ -6,7 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{MatrixF64, MultifitLinearWorkspace, Rng, RngType, VectorF64, multifit};
+    use rgsl::{MatF64, MultifitLinearWorkspace, Rng, RngType, VecF64, multifit};
 
     const N: usize = 1000; // number of observations
     const P: usize = 2; // number of model parameters
@@ -14,8 +14,8 @@ mod example {
 
     pub fn run() {
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
-        let mut x = MatrixF64::new(N, P).expect("MatrixF64::new failed");
-        let mut y = VectorF64::new(N).expect("MatrixF64::new failed");
+        let mut x = MatF64::new(N, P);
+        let mut y = VecF64::new(N);
 
         for i in 0..N {
             // generate first random variable u
@@ -38,19 +38,19 @@ mod example {
         let mut w =
             MultifitLinearWorkspace::new(N, P).expect("MultifitLinearWorkspace::new failed");
         // OLS solution
-        let mut c = VectorF64::new(P).expect("VectorF64::new failed");
+        let mut c = VecF64::new(P);
         // regularized solution (L-curve)
-        let mut c_lcurve = VectorF64::new(P).expect("VectorF64::new failed");
+        let mut c_lcurve = VecF64::new(P);
         // regularized solution (GCV)
-        let mut c_gcv = VectorF64::new(P).expect("VectorF64::new failed");
+        let mut c_gcv = VecF64::new(P);
 
-        let mut reg_param = VectorF64::new(NPOINTS).expect("VectorF64::new failed");
+        let mut reg_param = VecF64::new(NPOINTS);
         // residual norms
-        let mut rho = VectorF64::new(NPOINTS).expect("VectorF64::new failed");
+        let mut rho = VecF64::new(NPOINTS);
         // solution norms
-        let mut eta = VectorF64::new(NPOINTS).expect("VectorF64::new failed");
+        let mut eta = VecF64::new(NPOINTS);
         // GCV function values
-        let mut g = VectorF64::new(NPOINTS).expect("VectorF64::new failed");
+        let mut g = VecF64::new(NPOINTS);
 
         // compute SVD of X
         w.linear_svd(&mut x).unwrap();

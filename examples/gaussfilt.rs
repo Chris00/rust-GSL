@@ -6,7 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{FilterEnd, FilterGaussianWorkspace, Rng, RngType, VectorF64, filter};
+    use rgsl::{FilterEnd, FilterGaussianWorkspace, Rng, RngType, VecF64, filter};
 
     const N: usize = 500; // length of time series
     const K: usize = 51; // window size
@@ -14,19 +14,19 @@ mod example {
 
     pub fn run() {
         // input vector
-        let mut x = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut x = VecF64::new(N);
         // filtered output vector for alpha1
-        let mut y1 = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y1 = VecF64::new(N);
         // filtered output vector for alpha2
-        let mut y2 = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y2 = VecF64::new(N);
         // filtered output vector for alpha3
-        let mut y3 = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y3 = VecF64::new(N);
         // Gaussian kernel for alpha1
-        let mut k1 = VectorF64::new(K).expect("VectorF64::new failed");
+        let mut k1 = VecF64::new(K);
         // Gaussian kernel for alpha2
-        let mut k2 = VectorF64::new(K).expect("VectorF64::new failed");
+        let mut k2 = VecF64::new(K);
         // Gaussian kernel for alpha3
-        let mut k3 = VectorF64::new(K).expect("VectorF64::new failed");
+        let mut k3 = VecF64::new(K);
 
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
         let mut gauss_p =

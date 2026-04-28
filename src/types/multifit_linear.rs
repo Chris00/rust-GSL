@@ -3,7 +3,7 @@
 //
 
 use crate::ffi::FFI;
-use crate::{Error, MatrixF64, VectorF64};
+use crate::{Error, MatrixF64, vector::VecF64};
 
 ffi_wrapper!(
     MultifitLinearWorkspace,
@@ -27,8 +27,8 @@ impl MultifitLinearWorkspace {
     pub fn linear(
         &mut self,
         x: &MatrixF64,
-        y: &VectorF64,
-        c: &mut VectorF64,
+        y: &VecF64,
+        c: &mut VecF64,
         cov: &mut MatrixF64,
     ) -> Result<f64, Error> {
         let mut chisq = 0.;
@@ -52,9 +52,9 @@ impl MultifitLinearWorkspace {
     pub fn linear_tsvd(
         &mut self,
         x: &MatrixF64,
-        y: &VectorF64,
+        y: &VecF64,
         tol: f64,
-        c: &mut VectorF64,
+        c: &mut VecF64,
         cov: &mut MatrixF64,
     ) -> Result<(f64, usize), Error> {
         let mut chisq = 0.;
@@ -99,8 +99,8 @@ impl MultifitLinearWorkspace {
         &mut self,
         lambda: f64,
         x: &MatrixF64,
-        y: &VectorF64,
-        c: &mut VectorF64,
+        y: &VecF64,
+        c: &mut VecF64,
     ) -> Result<(f64, f64), Error> {
         let mut rnorm = 0.;
         let mut snorm = 0.;
@@ -121,11 +121,11 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_stdform1")]
     pub fn linear_stdform1(
         &mut self,
-        l: &VectorF64,
+        l: &VecF64,
         x: &MatrixF64,
-        y: &VectorF64,
+        y: &VecF64,
         xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        ys: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_stdform1(
@@ -143,12 +143,12 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_wstdform1")]
     pub fn linear_wstdform1(
         &mut self,
-        l: &VectorF64,
+        l: &VecF64,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
+        w: &VecF64,
+        y: &VecF64,
         xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        ys: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_wstdform1(
@@ -168,11 +168,11 @@ impl MultifitLinearWorkspace {
     pub fn linear_stdform2(
         &mut self,
         lqr: &MatrixF64,
-        ltau: &VectorF64,
+        ltau: &VecF64,
         x: &MatrixF64,
-        y: &VectorF64,
+        y: &VecF64,
         xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        ys: &mut VecF64,
         m: &mut MatrixF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
@@ -194,12 +194,12 @@ impl MultifitLinearWorkspace {
     pub fn linear_wstdform2(
         &mut self,
         lqr: &MatrixF64,
-        ltau: &VectorF64,
+        ltau: &VecF64,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
+        w: &VecF64,
+        y: &VecF64,
         xs: &mut MatrixF64,
-        ys: &mut VectorF64,
+        ys: &mut VecF64,
         m: &mut MatrixF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
@@ -221,9 +221,9 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_genform1")]
     pub fn linear_genform1(
         &mut self,
-        l: &VectorF64,
-        cs: &VectorF64,
-        c: &mut VectorF64,
+        l: &VecF64,
+        cs: &VecF64,
+        c: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_genform1(
@@ -240,12 +240,12 @@ impl MultifitLinearWorkspace {
     pub fn linear_genform2(
         &mut self,
         lqr: &MatrixF64,
-        ltau: &VectorF64,
+        ltau: &VecF64,
         x: &MatrixF64,
-        y: &VectorF64,
-        cs: &VectorF64,
+        y: &VecF64,
+        cs: &VecF64,
         m: &MatrixF64,
-        c: &mut VectorF64,
+        c: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_genform2(
@@ -266,13 +266,13 @@ impl MultifitLinearWorkspace {
     pub fn linear_wgenform2(
         &mut self,
         lqr: &MatrixF64,
-        ltau: &VectorF64,
+        ltau: &VecF64,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
-        cs: &VectorF64,
+        w: &VecF64,
+        y: &VecF64,
+        cs: &VecF64,
         m: &MatrixF64,
-        c: &mut VectorF64,
+        c: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_wgenform2(
@@ -293,10 +293,10 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_lcurve")]
     pub fn linear_lcurve(
         &mut self,
-        y: &VectorF64,
-        reg_param: &mut VectorF64,
-        rho: &mut VectorF64,
-        eta: &mut VectorF64,
+        y: &VecF64,
+        reg_param: &mut VecF64,
+        rho: &mut VecF64,
+        eta: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_lcurve(
@@ -315,7 +315,7 @@ impl MultifitLinearWorkspace {
         &mut self,
         p: usize,
         kmax: usize,
-        alpha: &VectorF64,
+        alpha: &VecF64,
         l: &mut MatrixF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
@@ -335,9 +335,9 @@ impl MultifitLinearWorkspace {
     pub fn wlinear(
         &mut self,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
-        c: &mut VectorF64,
+        w: &VecF64,
+        y: &VecF64,
+        c: &mut VecF64,
         cov: &mut MatrixF64,
     ) -> Result<f64, Error> {
         let mut chisq = 0.;
@@ -362,10 +362,10 @@ impl MultifitLinearWorkspace {
     pub fn wlinear_tsvd(
         &mut self,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
+        w: &VecF64,
+        y: &VecF64,
         tol: f64,
-        c: &mut VectorF64,
+        c: &mut VecF64,
         cov: &mut MatrixF64,
     ) -> Result<(f64, usize), Error> {
         let mut chisq = 0.;
@@ -391,10 +391,10 @@ impl MultifitLinearWorkspace {
     pub fn wlinear_svd(
         &mut self,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
+        w: &VecF64,
+        y: &VecF64,
         tol: f64,
-        c: &mut VectorF64,
+        c: &mut VecF64,
         cov: &mut MatrixF64,
     ) -> Result<(usize, f64), Error> {
         let mut rank = 0;
@@ -420,10 +420,10 @@ impl MultifitLinearWorkspace {
     pub fn wlinear_usvd(
         &mut self,
         x: &MatrixF64,
-        w: &VectorF64,
-        y: &VectorF64,
+        w: &VecF64,
+        y: &VecF64,
         tol: f64,
-        c: &mut VectorF64,
+        c: &mut VecF64,
         cov: &mut MatrixF64,
     ) -> Result<(usize, f64), Error> {
         let mut rank = 0;
@@ -455,9 +455,9 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_gcv_init")]
     pub fn linear_gcv_init(
         &mut self,
-        y: &VectorF64,
-        reg_param: &mut VectorF64,
-        UTy: &mut VectorF64,
+        y: &VecF64,
+        reg_param: &mut VecF64,
+        UTy: &mut VecF64,
     ) -> Result<f64, Error> {
         let mut delta0 = 0.;
         let ret = unsafe {
@@ -475,10 +475,10 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_gcv_curve")]
     pub fn linear_gcv_curve(
         &mut self,
-        reg_param: &VectorF64,
-        UTy: &VectorF64,
+        reg_param: &VecF64,
+        UTy: &VecF64,
         delta0: f64,
-        g: &mut VectorF64,
+        g: &mut VecF64,
     ) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_linear_gcv_curve(
@@ -496,9 +496,9 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_gcv_min")]
     pub fn linear_gcv_min(
         &mut self,
-        reg_param: &VectorF64,
-        UTy: &VectorF64,
-        g: &VectorF64,
+        reg_param: &VecF64,
+        UTy: &VecF64,
+        g: &VecF64,
         delta0: f64,
     ) -> Result<f64, Error> {
         let mut lambda = 0.;
@@ -516,7 +516,7 @@ impl MultifitLinearWorkspace {
     }
 
     #[doc(alias = "gsl_multifit_linear_gcv_calc")]
-    pub fn linear_gcv_calc(&mut self, lambda: f64, UTy: &VectorF64, delta0: f64) -> f64 {
+    pub fn linear_gcv_calc(&mut self, lambda: f64, UTy: &VecF64, delta0: f64) -> f64 {
         unsafe {
             sys::gsl_multifit_linear_gcv_calc(
                 lambda,
@@ -531,9 +531,9 @@ impl MultifitLinearWorkspace {
     #[doc(alias = "gsl_multifit_linear_gcv")]
     pub fn linear_gcv(
         &mut self,
-        y: &VectorF64,
-        reg_param: &mut VectorF64,
-        g: &mut VectorF64,
+        y: &VecF64,
+        reg_param: &mut VecF64,
+        g: &mut VecF64,
     ) -> Result<(f64, f64), Error> {
         let mut lambda = 0.;
         let mut g_lambda = 0.;

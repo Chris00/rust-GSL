@@ -51,13 +51,11 @@ macro_rules! ffi_wrapper {
             $($extra_id: $extra_ty,)*
         }
 
-        impl$(<$($lt),*>)? FFI<$ty> for $name$(<$($lt),*>)? {
+        unsafe impl$(<$($lt),*>)? FFI for $name$(<$($lt),*>)? {
+            type Sys = $ty;
+
             fn wrap(inner: *mut $ty) -> Self {
                 Self { inner $(, $extra_id: $extra_expr)* }
-            }
-
-            fn soft_wrap(r: *mut $ty) -> Self {
-                Self::wrap(r)
             }
 
             #[inline]
@@ -79,12 +77,10 @@ macro_rules! ffi_wrapper {
             $($extra_id: $extra_ty,)*
         }
 
-        impl$(<$($lt),*>)? FFI<$ty> for $name$(<$($lt),*>)? {
-            fn wrap(inner: *mut $ty) -> Self {
-                Self { inner $(, $extra_id: $extra_expr)* }
-            }
+        unsafe impl$(<$($lt),*>)? FFI for $name$(<$($lt),*>)? {
+            type Sys = $ty;
 
-            fn soft_wrap(inner: *mut $ty) -> Self {
+            fn wrap(inner: *mut $ty) -> Self {
                 Self { inner $(, $extra_id: $extra_expr)* }
             }
 

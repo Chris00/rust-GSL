@@ -4,9 +4,9 @@
 
 extern crate rgsl;
 
-use rgsl::{EigenSymmetricVWorkspace, MatrixF64, MatrixF64View, VectorF64, eigen};
+use rgsl::{EigenSymmetricVWorkspace, MatF64, VecF64, eigen};
 
-fn main() {
+fn main() -> Result<(), rgsl::Error> {
     let data = &mut [
         1.,
         1. / 2.,
@@ -25,26 +25,21 @@ fn main() {
         1. / 6.,
         1. / 7.,
     ];
-    let mut m = MatrixF64View::from_array(data, 4, 4);
-    let mut eval = VectorF64::new(4).expect("VectorF64::new");
-    let mut evec = MatrixF64::new(4, 4).expect("MatrixF64::new failed...");
+    let mut m = MatF64::from_mut_slice(data, 4, 4);
+    let mut eval = VecF64::new(4);
+    let mut evec = MatF64::new(4, 4);
     let mut w = EigenSymmetricVWorkspace::new(4).expect("EigenSymmetricVWorkspace::new failed...");
 
-    m.matrix_mut(|m| {
-        w.symmv(m.expect("Failed to get matrix"), &mut eval, &mut evec)
-            .unwrap();
-    });
+    w.symmv(&mut m, &mut eval, &mut evec)?;
 
-    eigen::symmv_sort(&mut eval, &mut evec, eigen::Sort::AbsAsc).unwrap();
+    eigen::symmv_sort(&mut eval, &mut evec, eigen::Sort::AbsAsc)?;
 
     for i in 0..4 {
         let eval_i = eval.get(i);
-        evec.column(i, |evec_i| {
-            println!("eigenvalue = {}", eval_i);
-            evec_i.expect("Failed to get get column").vector(|v| {
-                let v = v.expect("Failed to get vector from column");
-                println!("eigenvector = {:?}", v);
-            });
-        });
+        let evec_i = evec.column(i);
+        println!("eigenvalue: {}", eval_i);
+        println!("eigenvector: {:?}", evec_i);
     }
+
+    Ok(())
 }

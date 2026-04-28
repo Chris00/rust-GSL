@@ -15,12 +15,16 @@
 
 pub use self::types::*;
 
-pub use self::elementary::Elementary;
-pub use self::pow::Pow;
-pub use self::trigonometric::Trigonometric;
-pub use self::types::rng;
-pub use self::utilities::IOStream;
-pub use self::view::View;
+pub use elementary::Elementary;
+pub use matrix::{MatF32, MatF64, MatI32, MatU32};
+pub use matrix_complex::{MatC32, MatC64};
+pub use pow::Pow;
+pub use trigonometric::Trigonometric;
+pub use types::rng;
+pub use utilities::IOStream;
+pub use vector::{VecF32, VecF64, VecI32, VecU32};
+pub use vector_complex::{VecC32, VecC64};
+pub use view::{AsView, View, ViewMut};
 
 // enums part
 pub use self::enums::*;
@@ -31,7 +35,7 @@ pub use error::Error;
 mod enums;
 mod macros;
 mod utilities;
-mod view;
+pub mod view;
 
 #[doc(hidden)]
 pub mod ffi;
@@ -51,6 +55,8 @@ pub mod fit;
 pub mod integration;
 pub mod interpolation;
 pub mod linear_algebra;
+pub mod matrix;
+pub mod matrix_complex;
 pub mod minimizer;
 pub mod multifit;
 #[cfg(feature = "v2_1")]

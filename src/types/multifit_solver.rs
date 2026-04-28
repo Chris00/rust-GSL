@@ -213,13 +213,17 @@ int main(void) {
 ```
 */
 
-use crate::ffi::{self, FFI};
-use crate::{Error, MatrixF64, VectorF64, View};
+use crate::ffi::FFI;
+use crate::{
+    Error, MatF64,
+    vector::VecF64,
+    view::{AsView, View},
+};
 use std::os::raw::{c_int, c_void};
 
 ffi_wrapper!(MultiFitFSolverType, *mut sys::gsl_multifit_fsolver_type);
 
-// pub struct MultiFitFunction<F: Fn(x: &crate::VectorF64, f: &mut crate::VectorF64)> {
+// pub struct MultiFitFunction<F: Fn(x: &crate::VecF64, f: &mut crate::VecF64)> {
 //     pub f: Box<F>,
 //     /// Number of functions.
 //     pub n: usize,
@@ -255,7 +259,7 @@ impl MultiFitFSolver {
 
     #[doc(alias = "gsl_multifit_fsolver_set")]
     #[allow(unknown_lints, clippy::needless_pass_by_ref_mut)]
-    pub fn set(&mut self, f: &mut MultiFitFunction, x: &mut VectorF64) -> Result<(), Error> {
+    pub fn set(&mut self, f: &mut MultiFitFunction, x: &mut VecF64) -> Result<(), Error> {
         // unsafe {
         //     let func = (*self.0).function;
         //     if !func.is_null() {
@@ -284,8 +288,8 @@ impl MultiFitFSolver {
     }
 
     #[doc(alias = "gsl_multifit_fsolver_position")]
-    pub fn position(&self) -> View<'_, VectorF64> {
-        unsafe { View::new(sys::gsl_multifit_fsolver_position(self.unwrap_shared())) }
+    pub fn position(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multifit_fsolver_position(self.unwrap_shared()) })
     }
 }
 
@@ -312,31 +316,31 @@ impl MultiFitFdfSolver {
     /// This function initializes, or reinitializes, an existing solver s to use the function f and
     /// the initial guess x.
     #[doc(alias = "gsl_multifit_fdfsolver_set")]
-    pub fn set(&mut self, f: &mut MultiFitFunctionFdf, x: &VectorF64) -> Result<(), Error> {
+    pub fn set(&mut self, f: &mut MultiFitFunctionFdf, x: &VecF64) -> Result<(), Error> {
         let ret = unsafe {
             sys::gsl_multifit_fdfsolver_set(self.unwrap_unique(), f.to_raw(), x.unwrap_shared())
         };
         Error::handle(ret, ())
     }
 
-    pub fn x(&self) -> View<'_, VectorF64> {
-        unsafe { View::new((*self.unwrap_shared()).x) }
+    pub fn x(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { (*self.unwrap_shared()).x })
     }
 
-    pub fn f(&self) -> View<'_, VectorF64> {
-        unsafe { View::new((*self.unwrap_shared()).f) }
+    pub fn f(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { (*self.unwrap_shared()).f })
     }
 
-    pub fn dx(&self) -> View<'_, VectorF64> {
-        unsafe { View::new((*self.unwrap_shared()).dx) }
+    pub fn dx(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { (*self.unwrap_shared()).dx })
     }
 
-    pub fn g(&self) -> View<'_, VectorF64> {
-        unsafe { View::new((*self.unwrap_shared()).g) }
+    pub fn g(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { (*self.unwrap_shared()).g })
     }
 
-    pub fn sqrt_wts(&self) -> View<'_, VectorF64> {
-        unsafe { View::new((*self.unwrap_shared()).sqrt_wts) }
+    pub fn sqrt_wts(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { (*self.unwrap_shared()).sqrt_wts })
     }
 
     #[doc(alias = "gsl_multifit_fdfsolver_name")]
@@ -359,8 +363,8 @@ impl MultiFitFdfSolver {
 
     /// This function returns the current position (i.e. best-fit parameters) s->x of the solver s.
     #[doc(alias = "gsl_multifit_fdfsolver_position")]
-    pub fn position(&self) -> View<'_, VectorF64> {
-        unsafe { View::new(sys::gsl_multifit_fdfsolver_position(self.unwrap_shared())) }
+    pub fn position(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multifit_fdfsolver_position(self.unwrap_shared()) })
     }
 
     /// These functions iterate the solver s for a maximum of maxiter iterations. After each
@@ -409,9 +413,9 @@ impl MultiFitFdfSolverType {
 }
 
 pub struct MultiFitFunctionFdf {
-    pub f: Option<Box<dyn Fn(VectorF64, VectorF64) -> Result<(), Error>>>,
-    pub df: Option<Box<dyn Fn(VectorF64, MatrixF64) -> Result<(), Error>>>,
-    pub fdf: Option<Box<dyn Fn(VectorF64, VectorF64, MatrixF64) -> Result<(), Error>>>,
+    pub f: Option<Box<dyn Fn(&VecF64, &mut VecF64) -> Result<(), Error>>>,
+    pub df: Option<Box<dyn Fn(&VecF64, &mut MatF64) -> Result<(), Error>>>,
+    pub fdf: Option<Box<dyn Fn(&VecF64, &mut VecF64, &mut MatF64) -> Result<(), Error>>>,
     pub n: usize,
     pub p: usize,
     intern: sys::gsl_multifit_function_fdf,
@@ -456,10 +460,9 @@ unsafe extern "C" fn f(
     let t = params as *mut MultiFitFunctionFdf;
     Error::to_c(unsafe {
         if let Some(ref i_f) = (*t).f {
-            i_f(
-                ffi::FFI::soft_wrap(x as usize as *mut _),
-                ffi::FFI::soft_wrap(pf),
-            )
+            let vx = VecF64::as_view(x);
+            let mut vp = VecF64::as_view_mut(pf);
+            i_f(&vx, &mut vp)
         } else {
             Ok(())
         }
@@ -474,10 +477,9 @@ unsafe extern "C" fn df(
     let t = params as *mut MultiFitFunctionFdf;
     Error::to_c(unsafe {
         if let Some(ref i_df) = (*t).df {
-            i_df(
-                ffi::FFI::soft_wrap(x as usize as *mut _),
-                ffi::FFI::soft_wrap(pdf),
-            )
+            let vx = VecF64::as_view(x);
+            let mut vp = MatF64::as_view_mut(pdf);
+            i_df(&vx, &mut vp)
         } else {
             Ok(())
         }
@@ -493,11 +495,10 @@ unsafe extern "C" fn fdf(
     let t = params as *mut MultiFitFunctionFdf;
     Error::to_c(unsafe {
         if let Some(ref i_fdf) = (*t).fdf {
-            i_fdf(
-                ffi::FFI::soft_wrap(x as usize as *mut _),
-                ffi::FFI::soft_wrap(pf),
-                ffi::FFI::soft_wrap(pdf),
-            )
+            let vx = VecF64::as_view(x);
+            let mut vpf = VecF64::as_view_mut(pf);
+            let mut vpdf = MatF64::as_view_mut(pdf);
+            i_fdf(&vx, &mut vpf, &mut vpdf)
         } else {
             Ok(())
         }

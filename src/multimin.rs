@@ -78,8 +78,19 @@ TODO
  */
 
 use crate::ffi::FFI;
-use crate::{Error, VectorF64, View};
+use crate::{
+    Error,
+    vector::VecF64,
+    view::{AsView, View},
+};
 use std::ffi::c_void;
+
+/// Type of minimizer without derivatives.
+pub enum Type {
+    Simplex,
+    Simplex2,
+    Simplex2Rand,
+}
 
 ffi_wrapper!(
     /// Minimization without derivatives.
@@ -87,7 +98,7 @@ ffi_wrapper!(
     *mut sys::gsl_multimin_fminimizer,
     gsl_multimin_fminimizer_free
     ;inner_call: sys::gsl_multimin_function_struct => sys::gsl_multimin_function_struct { f: None, n: 0_usize, params: std::ptr::null_mut() };
-    ;inner_closure: Option<Box<dyn Fn(&VectorF64) -> f64 + 'a>> => None;
+    ;inner_closure: Option<Box<dyn Fn(&VecF64) -> f64 + 'a>> => None;
 );
 
 impl<'a> Minimizer<'a> {
@@ -109,19 +120,19 @@ impl<'a> Minimizer<'a> {
     /// The size of the initial trial steps is given in vector `step_size`. The precise meaning of this
     /// parameter depends on the method used.
     #[doc(alias = "gsl_multimin_fminimizer_set")]
-    pub fn set<F: Fn(&VectorF64) -> f64 + 'a>(
+    pub fn set<F: Fn(&VecF64) -> f64 + 'a>(
         &mut self,
         f: F,
-        x: &VectorF64,
-        step_size: &VectorF64,
+        x: &VecF64,
+        step_size: &VecF64,
     ) -> Result<(), Error> {
-        unsafe extern "C" fn inner_f<F: Fn(&VectorF64) -> f64>(
+        unsafe extern "C" fn inner_f<F: Fn(&VecF64) -> f64>(
             x: *const sys::gsl_vector,
             params: *mut c_void,
         ) -> f64 {
-            let f: &F = unsafe { &*(params as *const F) };
-            let x_new = VectorF64::soft_wrap(x as *const _ as *mut _);
-            f(&x_new)
+            let f = unsafe { &mut *params.cast::<F>() };
+            let vx = VecF64::as_view(x);
+            f(&vx)
         }
         self.inner_call = sys::gsl_multimin_function_struct {
             f: Some(inner_f::<F>),
@@ -161,8 +172,8 @@ impl<'a> Minimizer<'a> {
     }
 
     #[doc(alias = "gsl_multimin_fminimizer_x")]
-    pub fn x(&self) -> View<'_, VectorF64> {
-        unsafe { View::new(sys::gsl_multimin_fminimizer_x(self.unwrap_shared())) }
+    pub fn x(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multimin_fminimizer_x(self.unwrap_shared()) })
     }
 
     #[doc(alias = "gsl_multimin_fminimizer_minimum")]
@@ -206,9 +217,9 @@ impl MinimizerType {
 }
 
 pub struct MultiMinFdfFunction<'a> {
-    pub f: Box<dyn Fn(&VectorF64) -> f64 + 'a>,
-    pub df: Box<dyn Fn(&VectorF64, &mut VectorF64) + 'a>,
-    pub fdf: Box<dyn Fn(&VectorF64, &mut VectorF64) -> f64 + 'a>,
+    pub f: Box<dyn Fn(&VecF64) -> f64 + 'a>,
+    pub df: Box<dyn Fn(&VecF64, &mut VecF64) + 'a>,
+    pub fdf: Box<dyn Fn(&VecF64, &mut VecF64) -> f64 + 'a>,
     pub n: usize,
     intern: sys::gsl_multimin_function_fdf,
 }
@@ -216,9 +227,9 @@ pub struct MultiMinFdfFunction<'a> {
 impl<'a> MultiMinFdfFunction<'a> {
     #[doc(alias = "gsl_multimin_function_fdf")]
     pub fn new<
-        F: Fn(&VectorF64) -> f64 + 'a,
-        DF: Fn(&VectorF64, &mut VectorF64) + 'a,
-        FDF: Fn(&VectorF64, &mut VectorF64) -> f64 + 'a,
+        F: Fn(&VecF64) -> f64 + 'a,
+        DF: Fn(&VecF64, &mut VecF64) + 'a,
+        FDF: Fn(&VecF64, &mut VecF64) -> f64 + 'a,
     >(
         f: F,
         df: DF,
@@ -228,7 +239,8 @@ impl<'a> MultiMinFdfFunction<'a> {
         unsafe extern "C" fn inner_f(x: *const sys::gsl_vector, params: *mut c_void) -> f64 {
             let t = unsafe { &*(params as *mut MultiMinFdfFunction) };
             let i_f = &t.f;
-            i_f(&VectorF64::soft_wrap(x as *const _ as *mut _))
+            let vx = VecF64::as_view(x);
+            i_f(&vx)
         }
 
         unsafe extern "C" fn inner_df(
@@ -238,10 +250,9 @@ impl<'a> MultiMinFdfFunction<'a> {
         ) {
             let t = unsafe { &*(params as *mut MultiMinFdfFunction) };
             let i_df = &t.df;
-            i_df(
-                &VectorF64::soft_wrap(x as *const _ as *mut _),
-                &mut VectorF64::soft_wrap(g as *const _ as *mut _),
-            );
+            let vx = VecF64::as_view(x);
+            let mut vg = VecF64::as_view_mut(g);
+            i_df(&vx, &mut vg);
         }
 
         unsafe extern "C" fn inner_fdf(
@@ -253,10 +264,9 @@ impl<'a> MultiMinFdfFunction<'a> {
             unsafe {
                 let t = &*(params as *mut MultiMinFdfFunction);
                 let i_fdf = &t.fdf;
-                *f = i_fdf(
-                    &VectorF64::soft_wrap(x as *const _ as *mut _),
-                    &mut VectorF64::soft_wrap(g as *const _ as *mut _),
-                );
+                let vx = VecF64::as_view(x);
+                let mut vg = VecF64::as_view_mut(g);
+                *f = i_fdf(&vx, &mut vg);
             }
         }
 
@@ -314,7 +324,7 @@ impl MinimizerFdf {
     pub fn set(
         &mut self,
         f: &mut MultiMinFdfFunction,
-        x: &VectorF64,
+        x: &VecF64,
         step_size: f64,
         tol: f64,
     ) -> Result<(), Error> {
@@ -350,8 +360,8 @@ impl MinimizerFdf {
 
     /// Returns the current best estimate of the location of the minimum.
     #[doc(alias = "gsl_multimin_fdfminimizer_x")]
-    pub fn x(&self) -> VectorF64 {
-        unsafe { VectorF64::soft_wrap(sys::gsl_multimin_fdfminimizer_x(self.unwrap_shared())) }
+    pub fn x(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_x(self.unwrap_shared()) })
     }
 
     /// Returns the value of the function at the minimum.
@@ -362,18 +372,14 @@ impl MinimizerFdf {
 
     /// Returns the gradient of the function at the minimum.
     #[doc(alias = "gsl_multimin_fdfminimizer_gradient")]
-    pub fn gradient(&self) -> VectorF64 {
-        unsafe {
-            VectorF64::soft_wrap(sys::gsl_multimin_fdfminimizer_gradient(
-                self.unwrap_shared(),
-            ))
-        }
+    pub fn gradient(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_gradient(self.unwrap_shared()) })
     }
 
     /// Returns the last step increment of the estimate.
     #[doc(alias = "gsl_multimin_fdfminimizer_dx")]
-    pub fn dx(&self) -> VectorF64 {
-        unsafe { VectorF64::soft_wrap(sys::gsl_multimin_fdfminimizer_dx(self.unwrap_shared())) }
+    pub fn dx(&self) -> View<'_, VecF64> {
+        VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_dx(self.unwrap_shared()) })
     }
 
     /// This function performs a single iteration of the minimizer s. If the iteration encounters
@@ -434,7 +440,7 @@ pub fn test_size(size: f64, epsabs: f64) -> Result<(), Error> {
 /// and returns `crate::Error::Continue` otherwise. A suitable choice of `epsabs` can be made from the desired accuracy in the function for small variations in `x`.
 /// The relationship between these quantities is given by \delta{f} = g\,\delta{x}.
 #[doc(alias = "gsl_multimin_test_gradient")]
-pub fn test_gradient(g: &crate::VectorF64, epsabs: f64) -> Result<(), Error> {
+pub fn test_gradient(g: &VecF64, epsabs: f64) -> Result<(), Error> {
     Error::handle(
         unsafe { sys::gsl_multimin_test_gradient(g.unwrap_shared(), epsabs) },
         (),
@@ -454,8 +460,8 @@ mod test {
     ///     m.set(|x| {
     ///     println!("==> {:?}", dummy);
     ///     x.get(0) + x.get(1)},
-    ///     &rgsl::VectorF64::from_slice(&[-10.0, 1.0]).unwrap(),
-    ///     &rgsl::VectorF64::from_slice(&[1.0, 1.0]).unwrap()).unwrap();
+    ///     &rgsl::VecF64::from_slice(&[-10.0, 1.0]).unwrap(),
+    ///     &rgsl::VecF64::from_slice(&[1.0, 1.0]).unwrap()).unwrap();
     ///
     ///     let mut mint = Minimizer::new(MinimizerType::nm_simplex(), 2).unwrap();
     ///     set(&mut mint);
@@ -472,8 +478,8 @@ mod test {
     /// fn set(m: &mut Minimizer) {
     ///     m.set(|x| {
     ///     x.get(0) + x.get(1)},
-    ///     &rgsl::VectorF64::from_slice(&[-10.0, 1.0]).unwrap(),
-    ///     &rgsl::VectorF64::from_slice(&[1.0, 1.0]).unwrap()).unwrap();
+    ///     &rgsl::VecF64::from_slice(&[-10.0, 1.0]),
+    ///     &rgsl::VecF64::from_slice(&[1.0, 1.0])).unwrap();
     ///
     ///     let mut mint = Minimizer::new(MinimizerType::nm_simplex(), 2).unwrap();
     ///     set(&mut mint);
@@ -512,7 +518,7 @@ mod test {
     const SCALE: (f64, f64) = (10.0, 20.0);
     const MINIMUM: f64 = 30.0;
 
-    fn paraboloid(v: &VectorF64) -> f64 {
+    fn paraboloid(v: &VecF64) -> f64 {
         let x = v.get(0);
         let y = v.get(1);
         let result =
@@ -523,8 +529,8 @@ mod test {
     #[test]
     fn test_multi_min() {
         let mut min = Minimizer::new(MinimizerType::nm_simplex2(), 2).unwrap();
-        let guess_value = VectorF64::from_slice(&[5.0, 7.0]).unwrap();
-        let step_size = VectorF64::from_slice(&[1.0, 1.0]).unwrap();
+        let guess_value = VecF64::from_slice(&[5.0, 7.0]);
+        let step_size = VecF64::from_slice(&[1.0, 1.0]);
 
         min.set(paraboloid, &guess_value, &step_size).unwrap();
 
@@ -559,18 +565,18 @@ mod test {
     #[test]
     fn test_multi_fdf_min() {
         let mut min = MinimizerFdf::new(MinimizerFdfType::conjugate_fr(), 2).unwrap();
-        let guess_value = VectorF64::from_slice(&[5.0, 7.0]).unwrap();
+        let guess_value = VecF64::from_slice(&[5.0, 7.0]);
         let step_size = 0.01;
         let tol = 1e-4;
 
-        fn df(v: &VectorF64, g: &mut VectorF64) {
+        fn df(v: &VecF64, g: &mut VecF64) {
             let x = v.get(0);
             let y = v.get(1);
             g.set(0, 2.0 * SCALE.0 * (x - CENTER.0));
             g.set(1, 2.0 * SCALE.1 * (y - CENTER.1));
         }
 
-        fn fdf(v: &VectorF64, g: &mut VectorF64) -> f64 {
+        fn fdf(v: &VecF64, g: &mut VecF64) -> f64 {
             df(v, g);
             paraboloid(v)
         }

@@ -6,9 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{
-        FilterEnd, FilterImpulseWorkspace, FilterScale, Rng, RngType, VectorF64, VectorI32,
-    };
+    use rgsl::{FilterEnd, FilterImpulseWorkspace, FilterScale, Rng, RngType, VecF64, VectorI32};
     use std::f64::consts::PI;
 
     const N: usize = 1000; // length of time series
@@ -17,15 +15,15 @@ mod example {
 
     pub fn run() {
         // input vector
-        let mut x = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut x = VecF64::new(N);
         // filtered output vector
-        let mut y = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y = VecF64::new(N);
         // window medians
-        let mut xmedian = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut xmedian = VecF64::new(N);
         // window scale estimates
-        let mut xsigma = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut xsigma = VecF64::new(N);
         // outlier detected?
-        let mut ioutlier = VectorI32::new(N).expect("VectorF64::new failed");
+        let mut ioutlier = VectorI32::new(N);
         let mut w = FilterImpulseWorkspace::new(K).expect("FilterImpulseWorkspace::new failed");
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
 

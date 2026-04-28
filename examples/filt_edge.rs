@@ -6,7 +6,7 @@ extern crate rgsl;
 
 #[cfg(feature = "v2_5")]
 mod example {
-    use rgsl::{FilterEnd, FilterMedianWorkspace, FilterRMedianWorkspace, Rng, RngType, VectorF64};
+    use rgsl::{FilterEnd, FilterMedianWorkspace, FilterRMedianWorkspace, Rng, RngType, VecF64};
     use std::f64::consts::PI;
 
     const N: usize = 1000; // length of time series
@@ -17,13 +17,13 @@ mod example {
         let mut median_p = FilterMedianWorkspace::new(K).expect("FilterMedianWorkspace::new");
         let mut rmedian_p = FilterRMedianWorkspace::new(K).expect("FilterRMedianWorkspace::new");
         // time
-        let mut t = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut t = VecF64::new(N);
         // input vector
-        let mut x = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut x = VecF64::new(N);
         // median filtered output
-        let mut y_median = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y_median = VecF64::new(N);
         // recursive median filtered output
-        let mut y_rmedian = VectorF64::new(N).expect("VectorF64::new failed");
+        let mut y_rmedian = VecF64::new(N);
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
 
         // generate input signal

@@ -23,8 +23,7 @@ The LAPACK source code can be found at the website above along with an online co
 use crate::Error;
 use crate::ffi::FFI;
 #[cfg(feature = "complex")]
-use crate::types::{MatrixComplexF64, VectorComplexF64};
-use crate::types::{MatrixF64, VectorF64};
+use crate::{matrix::MatF64, matrix_complex::MatC64, vector::VecF64, vector_complex::VecC64};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
 pub enum Sort {
@@ -69,7 +68,7 @@ impl From<sys::gsl_eigen_sort_t> for Sort {
 /// columns of the matrix evec into ascending or descending order
 /// according to the value of the parameter `sort`.
 #[doc(alias = "gsl_eigen_symmv_sort")]
-pub fn symmv_sort(eval: &mut VectorF64, evec: &mut MatrixF64, sort: Sort) -> Result<(), Error> {
+pub fn symmv_sort(eval: &mut VecF64, evec: &mut MatF64, sort: Sort) -> Result<(), Error> {
     let ret = unsafe {
         sys::gsl_eigen_symmv_sort(eval.unwrap_unique(), evec.unwrap_unique(), sort.into())
     };
@@ -82,11 +81,7 @@ pub fn symmv_sort(eval: &mut VectorF64, evec: &mut MatrixF64, sort: Sort) -> Res
 /// according to the value of the parameter `sort`.
 #[doc(alias = "gsl_eigen_hermv_sort")]
 #[cfg(feature = "complex")]
-pub fn hermv_sort(
-    eval: &mut VectorF64,
-    evec: &mut MatrixComplexF64,
-    sort: Sort,
-) -> Result<(), Error> {
+pub fn hermv_sort(eval: &mut VecF64, evec: &mut MatC64, sort: Sort) -> Result<(), Error> {
     let ret = unsafe {
         sys::gsl_eigen_hermv_sort(eval.unwrap_unique(), evec.unwrap_unique(), sort.into())
     };
@@ -101,11 +96,7 @@ pub fn hermv_sort(
 /// eigenvalues being complex.
 #[doc(alias = "gsl_eigen_nonsymmv_sort")]
 #[cfg(feature = "complex")]
-pub fn nonsymmv_sort(
-    eval: &mut VectorComplexF64,
-    evec: &mut MatrixComplexF64,
-    sort: Sort,
-) -> Result<(), Error> {
+pub fn nonsymmv_sort(eval: &mut VecC64, evec: &mut MatC64, sort: Sort) -> Result<(), Error> {
     let ret = unsafe {
         sys::gsl_eigen_nonsymmv_sort(eval.unwrap_unique(), evec.unwrap_unique(), sort.into())
     };
@@ -117,7 +108,7 @@ pub fn nonsymmv_sort(
 /// columns of the matrix evec into ascending or descending order
 /// according to the value of the parameter `sort`.
 #[doc(alias = "gsl_eigen_gensymmv_sort")]
-pub fn gensymmv_sort(eval: &mut VectorF64, evec: &mut MatrixF64, sort: Sort) -> Result<(), Error> {
+pub fn gensymmv_sort(eval: &mut VecF64, evec: &mut MatF64, sort: Sort) -> Result<(), Error> {
     let ret = unsafe {
         sys::gsl_eigen_gensymmv_sort(eval.unwrap_unique(), evec.unwrap_unique(), sort.into())
     };
@@ -130,11 +121,7 @@ pub fn gensymmv_sort(eval: &mut VectorF64, evec: &mut MatrixF64, sort: Sort) -> 
 /// according to the value of the parameter `sort`.
 #[doc(alias = "gsl_eigen_genhermv_sort")]
 #[cfg(feature = "complex")]
-pub fn genhermv_sort(
-    eval: &mut VectorF64,
-    evec: &mut MatrixComplexF64,
-    sort: Sort,
-) -> Result<(), Error> {
+pub fn genhermv_sort(eval: &mut VecF64, evec: &mut MatC64, sort: Sort) -> Result<(), Error> {
     let ret = unsafe {
         sys::gsl_eigen_genhermv_sort(eval.unwrap_unique(), evec.unwrap_unique(), sort.into())
     };
@@ -150,9 +137,9 @@ pub fn genhermv_sort(
 #[doc(alias = "gsl_eigen_genv_sort")]
 #[cfg(feature = "complex")]
 pub fn genv_sort(
-    alpha: &mut VectorComplexF64,
-    beta: &mut VectorF64,
-    evec: &mut MatrixComplexF64,
+    alpha: &mut VecC64,
+    beta: &mut VecF64,
+    evec: &mut MatC64,
     sort: Sort,
 ) -> Result<(), Error> {
     let ret = unsafe {
