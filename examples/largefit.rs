@@ -5,7 +5,9 @@
 #[cfg(feature = "v2_2")]
 mod example {
     use rgsl::{
-        MatF64, MultilargeLinearType, MultilargeLinearWorkspace, Rng, RngType, VecF64, blas,
+        Error,
+        MatF64, MultilargeLinearType, MultilargeLinearWorkspace,
+        Rng, RngType, VecF64, blas,
     };
 
     // number of observations
@@ -36,7 +38,11 @@ mod example {
         }
     }
 
-    fn solve_system(print_data: bool, t: MultilargeLinearType, c: &mut VecF64) {
+    fn solve_system(
+        print_data: bool,
+        t: MultilargeLinearType,
+        c: &mut VecF64,
+    ) -> Result<(), Error> {
         let mut w =
             MultilargeLinearWorkspace::new(t, P).expect("MultilargeLinearWorkspace::new failed");
         let mut x = MatF64::new(NROWS, P);
@@ -81,7 +87,7 @@ mod example {
             }
 
             // accumulate (X,y) block into LS system
-            w.accumulate(&mut xv, &mut yv);
+            w.accumulate(&mut xv, &mut yv)?;
 
             rowidx += nr;
         }
@@ -98,14 +104,14 @@ mod example {
                 w.name().expect("Failed to get name")
             );
             eprintln!("error: {:?}", e);
-            return;
+            return Ok(());
         }
 
         // solve large LS system and store solution in c
-        let (rnorm, snorm) = w.solve(LAMBDA, c).unwrap();
+        let (rnorm, snorm) = w.solve(LAMBDA, c)?;
 
         // compute reciprocal condition number
-        let rcond = w.rcond().unwrap();
+        let rcond = w.rcond()?;
 
         eprintln!("=== Method {} ===\n", w.name().expect("Failed to get name"));
         eprintln!("condition number = {}", 1. / rcond);
@@ -121,20 +127,21 @@ mod example {
                 eta.get(i)
             );
         }
+        Ok(())
     }
 
-    pub fn run() {
+    pub fn run() -> Result<(), Error> {
         let mut c_tsqr = VecF64::new(P);
         let mut c_normal = VecF64::new(P);
 
         // solve system with TSQR method
-        solve_system(true, MultilargeLinearType::tsqr(), &mut c_tsqr);
+        solve_system(true, MultilargeLinearType::tsqr(), &mut c_tsqr)?;
 
         println!();
         println!();
 
         // solve system with Normal equations method
-        solve_system(false, MultilargeLinearType::normal(), &mut c_normal);
+        solve_system(false, MultilargeLinearType::normal(), &mut c_normal)?;
 
         // output solution
         let mut v = VecF64::new(P);
@@ -144,19 +151,20 @@ mod example {
             let f_exact = func(t);
             build_row(t, &mut v);
 
-            let f_tsqr = blas::d::dot(&v, &c_tsqr).unwrap();
-            let f_normal = blas::d::dot(&v, &c_normal).unwrap();
+            let f_tsqr = blas::d::dot(&v, &c_tsqr)?;
+            let f_normal = blas::d::dot(&v, &c_normal)?;
 
             println!("{} {:.6} {:.6} {:.6}", t, f_exact, f_tsqr, f_normal);
 
             t += 0.01;
         }
+        Ok(())
     }
 }
 
 #[cfg(feature = "v2_2")]
-fn main() {
-    crate::example::run();
+fn main() -> Result<(), rgsl::Error> {
+    crate::example::run()
 }
 
 #[cfg(not(feature = "v2_2"))]
