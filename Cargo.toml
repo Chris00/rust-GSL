@@ -9,7 +9,7 @@ documentation = "https://docs.rs/GSL/latest/rgsl/"
 readme = "README.md"
 keywords = ["mathematics", "library", "GSL"]
 license = "GPL-3.0-or-later"
-edition = "2021"
+edition = "2024"
 rust-version = "1.92"
 
 [dependencies]
