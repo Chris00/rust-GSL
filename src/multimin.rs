@@ -50,8 +50,8 @@ a high-level driver for the algorithms, and the library provides the
 individual functions necessary for each of the steps.  There are three
 main phases of the iteration. The steps are,
 
-- initialize minimizer state, `s`, for algorithm `T`,
-- update `s` using the iteration `T`,
+- initialize minimizer state, `s`, for algorithm `t`,
+- update `s` using the iteration `t`,
 - test `s` for convergence, and repeat iteration if necessary.
 
 Each iteration step consists either of an improvement to the
@@ -116,9 +116,10 @@ impl<'a> Minimizer<'a> {
         }
     }
 
-    /// This function initializes the minimizer to minimize the function `f`, starting from the initial point `x`.
-    /// The size of the initial trial steps is given in vector `step_size`. The precise meaning of this
-    /// parameter depends on the method used.
+    /// Initialize the minimizer to minimize the function `f`,
+    /// starting from the initial point `x`.  The size of the initial
+    /// trial steps is given in vector `step_size`. The precise
+    /// meaning of this parameter depends on the method used.
     #[doc(alias = "gsl_multimin_fminimizer_set")]
     pub fn set<F: Fn(&VecF64) -> f64 + 'a>(
         &mut self,
@@ -176,20 +177,24 @@ impl<'a> Minimizer<'a> {
         VecF64::as_view(unsafe { sys::gsl_multimin_fminimizer_x(self.unwrap_shared()) })
     }
 
+    /// Value of the minimum at the current point of iteration.
     #[doc(alias = "gsl_multimin_fminimizer_minimum")]
     pub fn minimum(&self) -> f64 {
         unsafe { sys::gsl_multimin_fminimizer_minimum(self.unwrap_shared()) }
     }
 
+    /// Return the specific characteristic size for the minimizer.
     #[doc(alias = "gsl_multimin_fminimizer_size")]
     pub fn size(&self) -> f64 {
         unsafe { sys::gsl_multimin_fminimizer_size(self.unwrap_shared()) }
     }
 
-    /// This function performs a single iteration of the minimizer s. If the iteration encounters
-    /// an unexpected problem then an error code will be returned. The error code `Error::NoProgress`
-    /// signifies that the minimizer is unable to improve on its current estimate, either due
-    /// to numerical difficulty or because a genuine local minimum has been reached.
+    /// Perform a single iteration of the minimizer `self`.  If the
+    /// iteration encounters an unexpected problem then an error code
+    /// will be returned.  The error code [`Error::NoProgress`]
+    /// signifies that the minimizer is unable to improve on its
+    /// current estimate, either due to numerical difficulty or
+    /// because a genuine local minimum has been reached.
     #[doc(alias = "gsl_multimin_fminimizer_iterate")]
     pub fn iterate(&mut self) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_multimin_fminimizer_iterate(self.unwrap_unique()) };

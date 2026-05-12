@@ -22,11 +22,8 @@ extern crate num_complex;
 use self::num_complex::Complex;
 
 #[allow(clippy::len_without_is_empty)]
-/// Trait implemented by types that are considered vectors by this crate.
-/// Elements of the vector are of type `F` (e.g., `f32` or `f64`).
-///
-/// Bring this trait into scope in order to add methods to specify
-/// strides to the types implementing `Vector`.
+/// Used to specify types that are considered vectors by this crate.
+/// Elements of the vector are of type `F` (e.g., [`f32`] or [`f64`]).
 ///
 /// # Safety
 /// One must make sore that `(len - 1) * stride` does not exceed the
@@ -62,12 +59,9 @@ pub unsafe trait Vector<F> {
 /// by this crate.  Elements of the vector are of type `F`
 /// (e.g. `f32` or `f64`).
 ///
-/// Bring this trait into scope in order to add methods to specify
-/// strides to the types implementing `Vector`.
-///
 /// # Safety
-/// One must make sure that `(len - 1) * stride` does not exceed the
-/// length of the underlying slice.
+/// One must make sure that the length of the underlying slice is at
+/// least `1 + (len - 1) * stride`.
 pub unsafe trait VectorMut<F>: Vector<F> {
     /// Same as [`Vector::as_slice`] but mutable.
     fn as_mut_slice(x: &mut Self) -> &mut [F];

@@ -26,7 +26,6 @@ pub unsafe trait AsView {
         Self: 'a;
 
     /// Return a view of `ptr`.
-    //fn view(len: usize, stride: usize, data: &[T]) -> Self::View<'_>;
     fn as_view<'a>(ptr: *const Self::Sys) -> Self::View<'a>
     where
         Self: 'a;
@@ -41,7 +40,8 @@ pub unsafe trait AsView {
 // - wrap raw pointers to gls_vector passed to callbacks;
 // - wrap pointers to internal gsl_vectors — e.g. matrix rows —
 //   (similar to the first case);
-// - hold slices of vector and arrays.
+// - convert gsl_vector_..._view (struct on the stack not owning the
+//   data).
 
 unsafe impl<T: FFI> AsView for T {
     type Sys = <T as FFI>::Sys;
