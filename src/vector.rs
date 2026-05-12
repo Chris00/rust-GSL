@@ -181,6 +181,34 @@ paste! {
         }
     }
 
+    impl PartialEq<$rust_name> for $rust_name {
+        #[inline]
+        fn eq(&self, other: &Self) -> bool {
+            self.as_slice() == other.as_slice()
+        }
+    }
+
+    impl<'a> PartialEq<View<'a, $rust_name>> for $rust_name {
+        #[inline]
+        fn eq(&self, other: &View<'a, $rust_name>) -> bool {
+            self.as_slice() == other.as_slice()
+        }
+    }
+
+    impl<'a> PartialEq<$rust_name> for View<'a, $rust_name> {
+        #[inline]
+        fn eq(&self, other: &$rust_name) -> bool {
+            self.as_slice() == other.as_slice()
+        }
+    }
+
+    impl<'a> PartialEq<View<'a, $rust_name>> for View<'a, $rust_name> {
+        #[inline]
+        fn eq(&self, other: &Self) -> bool {
+            self.as_slice() == other.as_slice()
+        }
+    }
+
     impl $rust_name {
         #[doc = "Create a new `" $rust_name "` with all elements set to zero."]
         ///
