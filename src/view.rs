@@ -10,7 +10,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// Used to express that the type offers views from `gsl_vector`.
+/// Used to express that the type offers views from pointers to
+/// `gsl_vector`, `gsl_matrix`,...
 ///
 /// # Safety
 ///
@@ -58,19 +59,19 @@ unsafe impl<T: FFI> AsView for T {
     where
         T: 'a,
     {
-        View::new(ptr, false)
+        View::from_ptr(ptr, false)
     }
 
     fn as_view_mut<'a>(ptr: *mut Self::Sys) -> Self::ViewMut<'a>
     where
         T: 'a,
     {
-        ViewMut::new(ptr, false)
+        ViewMut::from_ptr(ptr, false)
     }
 }
 
 /// An immutable view to `T`.
-pub struct View<'a, T: FFI> {
+pub struct View<'a, T> {
     // `T` will wrap a pointer.
     inner: ManuallyDrop<T>,
     // - In case of callbacks, the given `gsl_vector...` pointer must
@@ -82,7 +83,7 @@ pub struct View<'a, T: FFI> {
     phantom: PhantomData<&'a T>,
 }
 
-impl<T: FFI> Drop for View<'_, T> {
+impl<T> Drop for View<'_, T> {
     fn drop(&mut self) {
         if self.must_drop {
             unsafe { ManuallyDrop::drop(&mut self.inner) };
@@ -90,7 +91,7 @@ impl<T: FFI> Drop for View<'_, T> {
     }
 }
 
-impl<T: FFI> Deref for View<'_, T> {
+impl<T> Deref for View<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -104,62 +105,20 @@ impl<T: FFI + Debug> Debug for View<'_, T> {
     }
 }
 
+impl<'a, T> View<'a, T> {
+    pub(crate) fn new(t: T, must_drop: bool) -> Self {
+        Self {
+            inner: ManuallyDrop::new(t),
+            must_drop,
+            phantom: PhantomData,
+        }
+    }
+}
+
 impl<'a, T: FFI + 'a> View<'a, T> {
-    pub(crate) fn new(ptr: *const T::Sys, must_drop: bool) -> Self {
-        // SAFETY: The conversion to a mutable pointer is fine because
-        // `View` will not allow mutable access.
-        let t = FFI::wrap(ptr as *mut T::Sys);
-        Self {
-            inner: ManuallyDrop::new(t),
-            must_drop,
-            phantom: PhantomData,
-        }
-    }
-}
-
-/// A mutable view to `T`.
-pub struct ViewMut<'a, T: FFI> {
-    inner: ManuallyDrop<T>,
-    must_drop: bool,
-    phantom: PhantomData<&'a ()>,
-}
-
-impl<T: FFI> Drop for ViewMut<'_, T> {
-    fn drop(&mut self) {
-        if self.must_drop {
-            unsafe { ManuallyDrop::drop(&mut self.inner) };
-        }
-    }
-}
-
-impl<T: FFI> Deref for ViewMut<'_, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<T: FFI> DerefMut for ViewMut<'_, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl<T: FFI + Debug> Debug for ViewMut<'_, T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
-        <T as Debug>::fmt(self, f)
-    }
-}
-
-impl<'a, T: FFI + 'a> ViewMut<'a, T> {
-    pub(crate) fn new(ptr: *mut T::Sys, must_drop: bool) -> Self {
-        let t = FFI::wrap(ptr);
-        Self {
-            inner: ManuallyDrop::new(t),
-            must_drop,
-            phantom: PhantomData,
-        }
+    pub(crate) fn from_ptr(ptr: *const T::Sys, must_drop: bool) -> Self {
+        // SAFETY: View only allows read-only access so the cast is OK.
+        Self::new(FFI::wrap(ptr as *mut _), must_drop)
     }
 
     /// `malloc` a C-struct and fill it with `c`.  Beware that the
@@ -173,6 +132,71 @@ impl<'a, T: FFI + 'a> ViewMut<'a, T> {
         }
         unsafe { ptr.write(c) }
         // Need to drop the value for the C-struct to be freed.
-        Self::new(ptr, true)
+        Self::from_ptr(ptr, true)
+    }
+}
+
+/// A mutable view to `T`.
+pub struct ViewMut<'a, T> {
+    inner: ManuallyDrop<T>,
+    must_drop: bool,
+    phantom: PhantomData<&'a ()>,
+}
+
+impl<T> Drop for ViewMut<'_, T> {
+    fn drop(&mut self) {
+        if self.must_drop {
+            unsafe { ManuallyDrop::drop(&mut self.inner) };
+        }
+    }
+}
+
+impl<T> Deref for ViewMut<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> DerefMut for ViewMut<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<T: FFI + Debug> Debug for ViewMut<'_, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        <T as Debug>::fmt(self, f)
+    }
+}
+
+impl<'a, T> ViewMut<'a, T> {
+    pub(crate) fn new(t: T, must_drop: bool) -> Self {
+        Self {
+            inner: ManuallyDrop::new(t),
+            must_drop,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<'a, T: FFI + 'a> ViewMut<'a, T> {
+    pub(crate) fn from_ptr(ptr: *mut T::Sys, must_drop: bool) -> Self {
+        Self::new(FFI::wrap(ptr), must_drop)
+    }
+
+    /// `malloc` a C-struct and fill it with `c`.  Beware that the
+    /// value of type `T` will be dropped when the returned value is
+    /// so be careful about the resources it owns.
+    pub(crate) fn alloc(fn_name: &str, c: T::Sys) -> Self {
+        let size = mem::size_of::<T::Sys>();
+        let ptr = unsafe { libc::malloc(size) as *mut T::Sys };
+        if ptr.is_null() {
+            panic!("rgsl::{}: cannot allocate", fn_name);
+        }
+        unsafe { ptr.write(c) }
+        // Need to drop the value for the C-struct to be freed.
+        Self::from_ptr(ptr, true)
     }
 }

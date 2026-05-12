@@ -11,8 +11,17 @@ slice of a memory block.  A vector slice is a set of equally-spaced
 elements of an area of memory.
 !*/
 
-use crate::{Error, ffi::FFI, view::ViewMut};
-use std::fmt::{self, Debug, Formatter};
+use crate::{
+    Error,
+    ffi::FFI,
+    view::{View, ViewMut},
+};
+use std::{
+    cmp::PartialEq,
+    fmt::{self, Debug, Formatter},
+    ops::{Deref, DerefMut},
+    ptr,
+};
 
 use pastey::paste;
 
@@ -67,17 +76,74 @@ pub unsafe trait VectorMut<F>: Vector<F> {
     fn as_mut_slice(x: &mut Self) -> &mut [F];
 }
 
+/// Used to present GSL vectors "borrowed" from the C side as "views"
+/// of the vector type `Self`.
+pub trait AsVector: Vector<f64> {
+    /// Immutable view of a vector (with borrowed data).
+    type View<'a>: Deref<Target = Self>;
+    /// Mutable view of a vector (with borrowed data).
+    type ViewMut<'a>: DerefMut<Target = Self>;
+
+    fn view_from_slice(x: &[f64], len: usize, stride: usize) -> Self::View<'_>;
+
+    fn view_from_mut_slice(x: &mut [f64], len: usize, stride: usize) -> Self::ViewMut<'_>;
+
+    /// Convert the GSL pointer as a vector view.
+    ///
+    /// # Safety
+    ///
+    /// The GSL vector is not owned and neither the C struct nor the
+    /// data block must be freed.
+    ///
+    /// It is important to ensure that the view lifetime is bound to
+    /// the lifetime of the vector or matrix that underlies `view`.
+    unsafe fn view_from_ptr<'a>(ptr: *const sys::gsl_vector) -> Self::View<'a> {
+        debug_assert!(!ptr.is_null());
+        let v = unsafe { ptr.as_ref_unchecked() };
+        let len = 1 + (v.size - 1) * v.stride;
+        let x = unsafe { std::slice::from_raw_parts(v.data, len) };
+        Self::view_from_slice(x, v.size, v.stride)
+    }
+
+    unsafe fn view_from_gsl_view<'a>(view: sys::gsl_vector_view) -> Self::ViewMut<'a> {
+        let v = view.vector;
+        let len = 1 + (v.size - 1) * v.stride;
+        let x = unsafe { std::slice::from_raw_parts_mut(v.data, len) };
+        Self::view_from_mut_slice(x, v.size, v.stride)
+    }
+
+    /// Convert a vector to a GSL vector (borrowing the data from `Self`).
+    ///
+    /// # Safety
+    ///
+    /// The resulting value must bot be mutated if `x` is not mutably
+    /// borrowed.  It's lifetime should not be longer than the one of
+    /// `x`.
+    #[doc(hidden)]
+    fn as_gsl_vector(x: &Self) -> View<'_, sys::gsl_vector> {
+        let v = sys::gsl_vector {
+            size: Vector::len(x),
+            stride: Vector::stride(x),
+            // `View` only offers read-only access so the cast is OK.
+            data: Vector::as_slice(x).as_ptr() as *mut _,
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        // The struct `gsl_vector` is stored in `View` so will be
+        // freed.  It does not implement `Drop` but, even if it did,
+        // `drop` must not be run because the data is not ours.
+        View::new(v, false)
+    }
+}
+
 // Implement the `Vector` trait on standard vectors.
 
-macro_rules! impl_AsRef {
-    ($ty: ty) => {
-        unsafe impl<T> Vector<$ty> for T
-        where
-            T: AsRef<[$ty]> + ?Sized,
-        {
+macro_rules! impl_Vector {
+    ($ty:ty, $T:ty $(,$($p:tt)+)?) => {
+        unsafe impl$(<$($p)+>)? Vector<$ty> for $T {
             #[inline]
             fn len(x: &Self) -> usize {
-                x.as_ref().len()
+                x.len()
             }
             #[inline]
             fn stride(_: &Self) -> usize {
@@ -85,28 +151,104 @@ macro_rules! impl_AsRef {
             }
             #[inline]
             fn as_slice(x: &Self) -> &[$ty] {
-                x.as_ref()
+                x
             }
         }
 
-        unsafe impl<T> VectorMut<$ty> for T
-        where
-            T: Vector<$ty> + AsMut<[$ty]> + ?Sized,
-        {
+        unsafe impl$(<$($p)+>)? VectorMut<$ty> for $T {
             #[inline]
             fn as_mut_slice(x: &mut Self) -> &mut [$ty] {
-                x.as_mut()
+                x
             }
         }
     };
 }
 
-impl_AsRef!(f32);
-impl_AsRef!(f64);
+impl_Vector!(f32, [f32]);
+impl_Vector!(f32, Vec<f32>);
+impl_Vector!(f32, [f32; N], const N: usize);
+impl_Vector!(f64, [f64]);
+impl_Vector!(f64, Vec<f64>);
+impl_Vector!(f64, [f64; N], const N: usize);
 #[cfg(feature = "complex")]
-impl_AsRef!(Complex<f32>);
+impl_Vector!(Complex<f32>, [Complex<f32>]);
 #[cfg(feature = "complex")]
-impl_AsRef!(Complex<f64>);
+impl_Vector!(Complex<f32>, Vec<Complex<f32>>);
+#[cfg(feature = "complex")]
+impl_Vector!(Complex<f32>, [Complex<f32>; N], const N: usize);
+#[cfg(feature = "complex")]
+impl_Vector!(Complex<f64>, [Complex<f64>]);
+#[cfg(feature = "complex")]
+impl_Vector!(Complex<f64>, Vec<Complex<f64>>);
+#[cfg(feature = "complex")]
+impl_Vector!(Complex<f64>, [Complex<f64>; N], const N: usize);
+
+#[cfg(feature = "ndarray")]
+macro_rules! impl_Vector_ndarray {
+    ($ty:ty, $T:ty) => {
+        unsafe impl Vector<$ty> for $T {
+            fn len(x: &Self) -> usize {
+                x.dim()
+            }
+
+            /// Panic if the stride is negative.
+            fn stride(x: &Self) -> usize {
+                usize::try_from(x.strides()[0]).expect(&format!(
+                    "rgsl::vector::Vector for {}: negative stride",
+                    stringify!($T)
+                ))
+            }
+
+            /// Panic if the stride is negative.
+            fn as_slice(x: &Self) -> &[$ty] {
+                let len = 1 + (Self::len(x) - 1) * Self::stride(x);
+                unsafe { std::slice::from_raw_parts(x.as_ptr(), len) }
+            }
+        }
+    };
+}
+
+#[cfg(feature = "ndarray")]
+impl_Vector_ndarray!(f32, ndarray::ArrayRef1<f32>);
+#[cfg(feature = "ndarray")]
+impl_Vector_ndarray!(f32, ndarray::Array1<f32>);
+#[cfg(feature = "ndarray")]
+impl_Vector_ndarray!(f64, ndarray::ArrayRef1<f64>);
+#[cfg(feature = "ndarray")]
+impl_Vector_ndarray!(f64, ndarray::Array1<f64>);
+
+impl AsVector for [f64] {
+    type View<'a> = &'a [f64];
+    type ViewMut<'a> = &'a mut [f64];
+
+    fn view_from_slice(x: &[f64], len: usize, stride: usize) -> Self::View<'_> {
+        assert_eq!(stride, 1);
+        &x[..len]
+    }
+
+    fn view_from_mut_slice(x: &mut [f64], len: usize, stride: usize) -> Self::ViewMut<'_> {
+        assert_eq!(stride, 1);
+        &mut x[..len]
+    }
+}
+
+#[cfg(feature = "ndarray")]
+impl AsVector for ndarray::ArrayRef1<f64> {
+    type View<'a> = ndarray::ArrayView1<'a, f64>;
+    type ViewMut<'a> = ndarray::ArrayViewMut1<'a, f64>;
+
+    fn view_from_slice(x: &[f64], len: usize, stride: usize) -> Self::View<'_> {
+        use ndarray::{ShapeBuilder, StrideShape};
+        let shape: StrideShape<_> = len.strides(stride);
+        ndarray::ArrayView1::from_shape(shape, x).unwrap()
+    }
+
+    fn view_from_mut_slice(x: &mut [f64], len: usize, stride: usize) -> Self::ViewMut<'_> {
+        use ndarray::{ShapeBuilder, StrideShape};
+        let shape: StrideShape<_> = len.strides(stride);
+        ndarray::ArrayViewMut1::from_shape(shape, x).unwrap()
+    }
+}
 
 /// Return the length of `x` as a `i32` value (to use in CBLAS calls).
 #[inline]
@@ -581,6 +723,51 @@ gsl_vec!(VecF32, gsl_vector_float, f32);
 gsl_vec!(VecF64, gsl_vector, f64);
 gsl_vec!(VecI32, gsl_vector_int, i32);
 gsl_vec!(VecU32, gsl_vector_uint, u32);
+
+impl AsVector for VecF64 {
+    type View<'a> = View<'a, VecF64>;
+    type ViewMut<'a> = ViewMut<'a, VecF64>;
+
+    fn view_from_slice(x: &[f64], len: usize, stride: usize) -> Self::View<'_> {
+        let c = sys::gsl_vector {
+            size: len,
+            stride,
+            // The mut pointer is fine because `View` only allows
+            // immutable access.
+            data: x.as_ptr() as *mut _,
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        View::alloc("VecF64::view_from_slice", c)
+    }
+
+    fn view_from_mut_slice(x: &mut [f64], len: usize, stride: usize) -> Self::ViewMut<'_> {
+        let c = sys::gsl_vector {
+            size: len,
+            stride,
+            data: x.as_mut_ptr(),
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        ViewMut::alloc("VecF64::view_from_mut_slice", c)
+    }
+
+    unsafe fn view_from_ptr<'a>(ptr: *const sys::gsl_vector) -> Self::View<'a> {
+        View::from_ptr(ptr, false)
+    }
+
+    unsafe fn view_from_gsl_view<'a>(view: sys::gsl_vector_view) -> ViewMut<'a, Self> {
+        // The view contains a stack allocated `gsl_vector`.  Since we
+        // want to Deref to `VecF64`, we reallocate it on the heap.
+        ViewMut::alloc("VecF64::view_from_gsl_view", view.vector)
+    }
+
+    #[inline]
+    fn as_gsl_vector(x: &VecF64) -> View<'_, sys::gsl_vector> {
+        let t = unsafe { *x.unwrap_shared() };
+        View::new(t, false)
+    }
+}
 
 // https://doc.rust-lang.org/std/primitive.f128.html
 //gsl_vec!(VecU128, gsl_vector_long_double, f128);
