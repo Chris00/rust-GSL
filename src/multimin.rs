@@ -77,43 +77,67 @@ global minimum of the function in question.
 TODO
  */
 
-use crate::ffi::FFI;
 use crate::{
     Error,
-    vector::VecF64,
+    ffi::FFI,
+    vector::{AsVector, VecF64},
     view::{AsView, View},
 };
-use std::ffi::c_void;
+use std::{ffi::c_void, marker::PhantomData};
 
 /// Type of minimizer without derivatives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Type {
     Simplex,
     Simplex2,
     Simplex2Rand,
 }
 
+impl Type {
+    #[inline]
+    fn to_c(self) -> *const sys::gsl_multimin_fminimizer_type {
+        unsafe {
+            match self {
+                Type::Simplex => sys::gsl_multimin_fminimizer_nmsimplex,
+                Type::Simplex2 => sys::gsl_multimin_fminimizer_nmsimplex2,
+                Type::Simplex2Rand => sys::gsl_multimin_fminimizer_nmsimplex2rand,
+            }
+        }
+    }
+}
+
 ffi_wrapper!(
     /// Minimization without derivatives.
-    Minimizer<'a>,
+    Minimizer<'a, V: AsVector + ?Sized>,
     *mut sys::gsl_multimin_fminimizer,
     gsl_multimin_fminimizer_free
     ;inner_call: sys::gsl_multimin_function_struct => sys::gsl_multimin_function_struct { f: None, n: 0_usize, params: std::ptr::null_mut() };
-    ;inner_closure: Option<Box<dyn Fn(&VecF64) -> f64 + 'a>> => None;
+    ;inner_closure: Option<Box<dyn FnMut(&V) -> f64 + 'a>> => None;
+    ;marker: PhantomData<V> => PhantomData;
 );
 
-impl<'a> Minimizer<'a> {
-    /// Creates a minimizer of type `t` for an n-dimensional function.
-    /// If there is insufficient memory to create the minimizer then
-    /// the function returns `None`.
+impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
+    /// Creates a minimizer of type `t` for an `n`-dimensional function.
+    /// Panic if there is insufficient memory.
     #[doc(alias = "gsl_multimin_fminimizer_alloc")]
-    pub fn new(t: MinimizerType, n: usize) -> Option<Minimizer<'a>> {
-        let ptr = unsafe { sys::gsl_multimin_fminimizer_alloc(t.unwrap_shared(), n) };
-
+    pub fn new(t: Type, n: usize) -> Self {
+        let ptr = unsafe { sys::gsl_multimin_fminimizer_alloc(t.to_c(), n) };
         if ptr.is_null() {
-            None
-        } else {
-            Some(Self::wrap(ptr))
+            panic!("rgsl::multimin::Minimizer::new: out of memory");
         }
+        Self::wrap(ptr)
+    }
+
+    pub fn simplex(n: usize) -> Self {
+        Self::new(Type::Simplex, n)
+    }
+
+    pub fn simplex2(n: usize) -> Self {
+        Self::new(Type::Simplex2, n)
+    }
+
+    pub fn simplex2_rand(n: usize) -> Self {
+        Self::new(Type::Simplex2Rand, n)
     }
 
     /// Initialize the minimizer to minimize the function `f`,
@@ -121,60 +145,64 @@ impl<'a> Minimizer<'a> {
     /// trial steps is given in vector `step_size`. The precise
     /// meaning of this parameter depends on the method used.
     #[doc(alias = "gsl_multimin_fminimizer_set")]
-    pub fn set<F: Fn(&VecF64) -> f64 + 'a>(
+    pub fn set<F: FnMut(&V) -> f64 + 'a>(
         &mut self,
         f: F,
-        x: &VecF64,
-        step_size: &VecF64,
+        x: &V,
+        step_size: &V,
     ) -> Result<(), Error> {
-        unsafe extern "C" fn inner_f<F: Fn(&VecF64) -> f64>(
+        unsafe extern "C" fn inner_f<V: AsVector + ?Sized, F: FnMut(&V) -> f64>(
             x: *const sys::gsl_vector,
             params: *mut c_void,
         ) -> f64 {
             let f = unsafe { &mut *params.cast::<F>() };
-            let vx = VecF64::as_view(x);
+            let vx = unsafe { V::view_from_ptr(x) };
             f(&vx)
         }
         self.inner_call = sys::gsl_multimin_function_struct {
-            f: Some(inner_f::<F>),
-            n: x.len(),
-            params: &f as *const _ as *mut _,
+            f: Some(inner_f::<V, F>),
+            n: V::len(x),
+            params: &f as *const F as *mut _,
         };
 
         self.inner_closure = Some(Box::new(f));
 
+        let x = V::as_gsl_vector(x);
+        let step_size = V::as_gsl_vector(step_size);
         let ret = unsafe {
             sys::gsl_multimin_fminimizer_set(
                 self.unwrap_unique(),
                 &mut self.inner_call,
-                x.unwrap_shared(),
-                step_size.unwrap_shared(),
+                &*x,
+                &*step_size,
             )
         };
         Error::handle(ret, ())
     }
 
-    /// This function returns a pointer to the name of the minimizer.
+    /// This function returns the type of the minimizer.
     #[doc(alias = "gsl_multimin_fminimizer_name")]
-    pub fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Type {
         let n = unsafe { sys::gsl_multimin_fminimizer_name(self.unwrap_shared()) };
-        if n.is_null() {
-            return None;
-        }
-        let mut len = 0;
-        loop {
-            if unsafe { *n.offset(len) } == 0 {
-                break;
-            }
-            len += 1;
-        }
-        let slice = unsafe { std::slice::from_raw_parts(n as _, len as _) };
-        std::str::from_utf8(slice).ok().map(|x| x.to_owned())
+        map_name!(
+            rgsl::multimin::Minimizer,
+            [
+                (c"nmsimplex", Type::Simplex),
+                (c"nmsimplex2", Type::Simplex2),
+                (c"nmsimplex2rand", Type::Simplex2Rand)
+            ],
+            n,
+            Type
+        )
     }
 
+    /// Location of the minimum at the current point of iteration.
     #[doc(alias = "gsl_multimin_fminimizer_x")]
-    pub fn x(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multimin_fminimizer_x(self.unwrap_shared()) })
+    pub fn x(&self) -> V::View<'_> {
+        unsafe {
+            let ptr = sys::gsl_multimin_fminimizer_x(self.unwrap_shared());
+            V::view_from_ptr(ptr)
+        }
     }
 
     /// Value of the minimum at the current point of iteration.
@@ -199,25 +227,6 @@ impl<'a> Minimizer<'a> {
     pub fn iterate(&mut self) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_multimin_fminimizer_iterate(self.unwrap_unique()) };
         Error::handle(ret, ())
-    }
-}
-
-ffi_wrapper!(MinimizerType, *const sys::gsl_multimin_fminimizer_type);
-
-impl MinimizerType {
-    #[doc(alias = "gsl_multimin_fminimizer_nmsimplex2")]
-    pub fn nm_simplex2() -> Self {
-        ffi_wrap!(gsl_multimin_fminimizer_nmsimplex2)
-    }
-
-    #[doc(alias = "gsl_multimin_fminimizer_nmsimplex")]
-    pub fn nm_simplex() -> Self {
-        ffi_wrap!(gsl_multimin_fminimizer_nmsimplex)
-    }
-
-    #[doc(alias = "gsl_multimin_fminimizer_nmsimplex2rand")]
-    pub fn nm_simplex2_rand() -> Self {
-        ffi_wrap!(gsl_multimin_fminimizer_nmsimplex2rand)
     }
 }
 
@@ -454,21 +463,21 @@ pub fn test_gradient(g: &VecF64, epsabs: f64) -> Result<(), Error> {
 
 #[cfg(any(test, doctest))]
 mod test {
-    /// This doc block will be used to ensure that the closure can't be set everywhere!
+    /// This doc block will be used to ensure that the closure can't
+    /// be set everywhere!
     ///
     /// ```compile_fail
-    /// extern crate rgsl;
-    /// use crate::rgsl::multimin::{Minimizer,MinimizerType};
+    /// use crate::rgsl::{VecF64, multimin::{Minimizer,Type}};
     ///
-    /// fn set(m: &mut Minimizer) {
+    /// fn set(m: &mut Minimizer<VecF64>) {
     ///     let dummy = "lalal".to_owned();
     ///     m.set(|x| {
-    ///     println!("==> {:?}", dummy);
-    ///     x.get(0) + x.get(1)},
-    ///     &rgsl::VecF64::from_slice(&[-10.0, 1.0]).unwrap(),
-    ///     &rgsl::VecF64::from_slice(&[1.0, 1.0]).unwrap()).unwrap();
+    ///         println!("==> {:?}", dummy);
+    ///         x.get(0) + x.get(1)},
+    ///         &VecF64::from_slice(&[-10.0, 1.0]),
+    ///         &VecF64::from_slice(&[1.0, 1.0]));
     ///
-    ///     let mut mint = Minimizer::new(MinimizerType::nm_simplex(), 2).unwrap();
+    ///     let mut mint = Minimizer::new(Type::Simplex, 2);
     ///     set(&mut mint);
     ///     let _status = mint.iterate();
     /// }
@@ -477,25 +486,62 @@ mod test {
     /// Same but a working version:
     ///
     /// ```
-    /// extern crate rgsl;
-    /// use crate::rgsl::multimin::{Minimizer,MinimizerType};
+    /// use crate::rgsl::{VecF64, multimin::{Minimizer,Type}};
     ///
-    /// fn set(m: &mut Minimizer) {
+    /// fn set(m: &mut Minimizer<VecF64>) {
     ///     m.set(|x| {
-    ///     x.get(0) + x.get(1)},
-    ///     &rgsl::VecF64::from_slice(&[-10.0, 1.0]),
-    ///     &rgsl::VecF64::from_slice(&[1.0, 1.0])).unwrap();
+    ///         x.get(0) + x.get(1)},
+    ///         &VecF64::from_slice(&[-10.0, 1.0]),
+    ///         &VecF64::from_slice(&[1.0, 1.0]));
     ///
-    ///     let mut mint = Minimizer::new(MinimizerType::nm_simplex(), 2).unwrap();
+    ///     let mut mint = Minimizer::new(Type::Simplex, 2);
     ///     set(&mut mint);
     ///     let _status = mint.iterate();
     /// }
     /// ```
     use super::*;
-    use crate::multimin::test_gradient;
-    use crate::multimin::test_size;
 
-    fn print_f_state(min: &Minimizer, iter: usize) {
+    #[test]
+    fn test_multimin_VecF64() -> Result<(), Error> {
+        let x = VecF64::from_slice(&[0., 0.]);
+        let step_size = VecF64::from_slice(&[0.1, 0.1]);
+        let mut solver = Minimizer::simplex(x.len());
+        let f = |x: &VecF64| (x.get(0) - 1.).powi(2) + (x.get(1) - 1.).powi(2);
+        solver.set(f, &x, &step_size)?;
+        for _ in 0 .. 120 {
+            solver.iterate()?;
+        }
+        assert_eq!(solver.x(), VecF64::from_slice(&[1., 1.]));
+        Ok(())
+    }
+
+    #[test]
+     fn test_multimin_slices() -> Result<(), Error> {
+        let x = [0., 0.].as_slice();
+        let step_size = [0.1, 0.1].as_slice();
+        let mut solver = Minimizer::simplex(x.len());
+        let f = |x: &[f64]| (x[0] - 1.).powi(2) + (x[1] - 1.).powi(2);
+        solver.set(f, x, step_size)?;
+        for _ in 0 .. 120 {
+            solver.iterate()?;
+        }
+        assert_eq!(solver.x(), &[1., 1.]);
+        Ok(())
+    }
+
+    #[cfg(feature = "ndarray")]
+    #[test]
+    fn test_multimin_ndarray() -> Result<(), Error> {
+        use ndarray::prelude::*;
+        let x = Array1::from_vec(vec![0., 0.]);
+        let step_size = Array1::from_vec(vec![0.1, 0.1]);
+        let mut solver = Minimizer::simplex(x.len());
+        let f = |x: &ArrayRef1<f64>| (x[0] - 1.).powi(2) + (x[1] - 1.).powi(2);
+        solver.set(f, &x, &step_size)?;
+        Ok(())
+    }
+
+    fn print_f_state(min: &Minimizer<VecF64>, iter: usize) {
         let f = min.minimum();
         let x = min.x();
         println!(
@@ -532,12 +578,13 @@ mod test {
     }
 
     #[test]
-    fn test_multi_min() {
-        let mut min = Minimizer::new(MinimizerType::nm_simplex2(), 2).unwrap();
+    fn test_multi_min() -> Result<(), Error> {
+        let mut min = Minimizer::new(Type::Simplex2, 2);
+        assert_eq!(min.name(), Type::Simplex2);
         let guess_value = VecF64::from_slice(&[5.0, 7.0]);
         let step_size = VecF64::from_slice(&[1.0, 1.0]);
 
-        min.set(paraboloid, &guess_value, &step_size).unwrap();
+        min.set(paraboloid, &guess_value, &step_size)?;
 
         let max_iter = 100_usize;
         let eps_abs = 0.01;
@@ -547,7 +594,7 @@ mod test {
 
         while matches!(status, Error::Continue) && iter < max_iter {
             // iterate for next value
-            min.iterate().unwrap(); // fails here w/ segfault
+            min.iterate()?; // fails here w/ segfault
 
             // test for convergence
             let size = min.size();
@@ -565,11 +612,13 @@ mod test {
 
             iter += 1;
         }
+        Ok(())
     }
 
     #[test]
     fn test_multi_fdf_min() {
-        let mut min = MinimizerFdf::new(MinimizerFdfType::conjugate_fr(), 2).unwrap();
+        let mut min = MinimizerFdf::new(TypeFdf::Conjugate_fr, 2);
+        assert_eq!(min.name(), TypeFdf::Conjugate_fr);
         let guess_value = VecF64::from_slice(&[5.0, 7.0]);
         let step_size = 0.01;
         let tol = 1e-4;
