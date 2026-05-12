@@ -5,9 +5,7 @@
 #[cfg(feature = "v2_2")]
 mod example {
     use rgsl::{
-        Error,
-        MatF64, MultilargeLinearType, MultilargeLinearWorkspace,
-        Rng, RngType, VecF64, blas,
+        Error, MatF64, MultilargeLinearType, MultilargeLinearWorkspace, Rng, RngType, VecF64, blas,
     };
 
     // number of observations
