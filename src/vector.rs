@@ -105,6 +105,31 @@ pub trait AsVector: Vector<f64> {
         Self::view_from_slice(x, v.size, v.stride)
     }
 
+    /// Convert the mutable GSL pointer as a mutable vector view.
+    ///
+    /// # Safety
+    ///
+    /// The GSL vector is not owned and neither the C struct nor the
+    /// data block must be freed.
+    ///
+    /// It is important to ensure that the view lifetime is bound to
+    /// the lifetime of the vector or matrix that underlies `view`.
+    unsafe fn view_from_mut_ptr<'a>(
+        ptr: *mut sys::gsl_vector,
+    ) -> Self::ViewMut<'a> {
+        debug_assert!(!ptr.is_null());
+        let v = unsafe { ptr.as_mut_unchecked() };
+        let len = 1 + (v.size - 1) * v.stride;
+        let x = unsafe { std::slice::from_raw_parts_mut(v.data, len) };
+        Self::view_from_mut_slice(x, v.size, v.stride)
+    }
+
+    /// Convert a GSL vector view to a view for the type `Self`.
+    ///
+    /// # Safety
+    ///
+    /// Make sure that the lifetime `'a` does not exceed the lifetime
+    /// of the value that `view` borrows from.
     unsafe fn view_from_gsl_view<'a>(view: sys::gsl_vector_view) -> Self::ViewMut<'a> {
         let v = view.vector;
         let len = 1 + (v.size - 1) * v.stride;
@@ -754,6 +779,12 @@ impl AsVector for VecF64 {
 
     unsafe fn view_from_ptr<'a>(ptr: *const sys::gsl_vector) -> Self::View<'a> {
         View::from_ptr(ptr, false)
+    }
+
+    unsafe fn view_from_mut_ptr<'a>(
+        ptr: *mut sys::gsl_vector,
+    ) -> Self::ViewMut<'a> {
+        ViewMut::from_ptr(ptr, false)
     }
 
     unsafe fn view_from_gsl_view<'a>(view: sys::gsl_vector_view) -> ViewMut<'a, Self> {

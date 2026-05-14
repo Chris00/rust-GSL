@@ -83,7 +83,7 @@ use crate::{
     vector::{AsVector, VecF64},
     view::{AsView, View},
 };
-use std::{ffi::c_void, marker::PhantomData};
+use std::{ffi::c_void};
 
 /// Type of minimizer without derivatives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,9 +111,8 @@ ffi_wrapper!(
     Minimizer<'a, V: AsVector + ?Sized>,
     *mut sys::gsl_multimin_fminimizer,
     gsl_multimin_fminimizer_free
-    ;inner_call: sys::gsl_multimin_function_struct => sys::gsl_multimin_function_struct { f: None, n: 0_usize, params: std::ptr::null_mut() };
     ;inner_closure: Option<Box<dyn FnMut(&V) -> f64 + 'a>> => None;
-    ;marker: PhantomData<V> => PhantomData;
+    ;inner_call: sys::gsl_multimin_function_struct => sys::gsl_multimin_function_struct { f: None, n: 0_usize, params: std::ptr::null_mut() };
 );
 
 impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
@@ -147,7 +146,7 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
     #[doc(alias = "gsl_multimin_fminimizer_set")]
     pub fn set<F: FnMut(&V) -> f64 + 'a>(
         &mut self,
-        f: F,
+        mut f: F,
         x: &V,
         step_size: &V,
     ) -> Result<(), Error> {
@@ -162,7 +161,7 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
         self.inner_call = sys::gsl_multimin_function_struct {
             f: Some(inner_f::<V, F>),
             n: V::len(x),
-            params: &f as *const F as *mut _,
+            params: &mut f as *mut F as *mut _,
         };
 
         self.inner_closure = Some(Box::new(f));
@@ -173,8 +172,8 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
             sys::gsl_multimin_fminimizer_set(
                 self.unwrap_unique(),
                 &mut self.inner_call,
-                &*x,
-                &*step_size,
+                &*x, // Copied inside the GSL value in `self`
+                &*step_size, // Used by the C fn (can be discarded after).
             )
         };
         Error::handle(ret, ())
@@ -230,123 +229,280 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
     }
 }
 
-pub struct MultiMinFdfFunction<'a> {
-    pub f: Box<dyn Fn(&VecF64) -> f64 + 'a>,
-    pub df: Box<dyn Fn(&VecF64, &mut VecF64) + 'a>,
-    pub fdf: Box<dyn Fn(&VecF64, &mut VecF64) -> f64 + 'a>,
-    pub n: usize,
-    intern: sys::gsl_multimin_function_fdf,
+/// Specify which data-types may be used in minimization with derivatives.
+pub trait Fdf<V: AsVector + ?Sized> {
+    /// Return the value of the function $f$ to be minimized.
+    fn f(&mut self, x: &V) -> f64;
+    /// Set `g` to the gradient of $f$: `g[i]`$= ∂f/∂xᵢ$.
+    fn df(&mut self, x: &V, g: &mut V);
+    /// Return the value of the function $f$ to be minimized and set
+    /// `g` to its gradient.
+    fn fdf(&mut self, x: &V, g: &mut V) -> f64;
 }
 
-impl<'a> MultiMinFdfFunction<'a> {
-    #[doc(alias = "gsl_multimin_function_fdf")]
-    pub fn new<
-        F: Fn(&VecF64) -> f64 + 'a,
-        DF: Fn(&VecF64, &mut VecF64) + 'a,
-        FDF: Fn(&VecF64, &mut VecF64) -> f64 + 'a,
-    >(
-        f: F,
-        df: DF,
-        fdf: FDF,
-        n: usize,
-    ) -> MultiMinFdfFunction<'a> {
-        unsafe extern "C" fn inner_f(x: *const sys::gsl_vector, params: *mut c_void) -> f64 {
-            let t = unsafe { &*(params as *mut MultiMinFdfFunction) };
-            let i_f = &t.f;
-            let vx = VecF64::as_view(x);
-            i_f(&vx)
-        }
+impl<V, F, G> Fdf<V> for (F, G)
+where
+    V: AsVector + ?Sized,
+    F: FnMut(&V) -> f64,
+    G: FnMut(&V, &mut V),
+{
+    #[inline]
+    fn f(&mut self, x: &V) -> f64 {
+        self.0(x)
+    }
+    #[inline]
+    fn df(&mut self, x: &V, g: &mut V) {
+        self.1(x, g)
+    }
+    #[inline]
+    fn fdf(&mut self, x: &V, g: &mut V) -> f64 {
+        self.1(x, g);
+        self.0(x)
+    }
+}
 
-        unsafe extern "C" fn inner_df(
-            x: *const sys::gsl_vector,
-            params: *mut c_void,
-            g: *mut sys::gsl_vector,
-        ) {
-            let t = unsafe { &*(params as *mut MultiMinFdfFunction) };
-            let i_df = &t.df;
-            let vx = VecF64::as_view(x);
-            let mut vg = VecF64::as_view_mut(g);
-            i_df(&vx, &mut vg);
-        }
+impl<V, FG> Fdf<V> for FG
+where
+    V: AsVector + ?Sized,
+    FG: FnMut(&V, Option<&mut V>) -> f64,
+{
+    #[inline]
+    fn f(&mut self, x: &V) -> f64 {
+        self(x, None)
+    }
+    #[inline]
+    fn df(&mut self, x: &V, g: &mut V) {
+        self(x, Some(g));
+    }
+    #[inline]
+    fn fdf(&mut self, x: &V, g: &mut V) -> f64 {
+        self(x, Some(g))
+    }
+}
 
-        unsafe extern "C" fn inner_fdf(
-            x: *const sys::gsl_vector,
-            params: *mut c_void,
-            f: *mut f64,
-            g: *mut sys::gsl_vector,
-        ) {
-            unsafe {
-                let t = &*(params as *mut MultiMinFdfFunction);
-                let i_fdf = &t.fdf;
-                let vx = VecF64::as_view(x);
-                let mut vg = VecF64::as_view_mut(g);
-                *f = i_fdf(&vx, &mut vg);
+impl<V, F, G, FG> Fdf<V> for (F, G, FG)
+where
+    V: AsVector + ?Sized,
+    F: FnMut(&V) -> f64,
+    G: FnMut(&V, &mut V),
+    FG: FnMut(&V, &mut V) -> f64,
+{
+    #[inline]
+    fn f(&mut self, x: &V) -> f64 {
+        self.0(x)
+    }
+    #[inline]
+    fn df(&mut self, x: &V, g: &mut V) {
+        self.1(x, g)
+    }
+    #[inline]
+    fn fdf(&mut self, x: &V, g: &mut V) -> f64 {
+        self.2(x, g)
+    }
+}
+
+/// Minimization algorithm using gradients.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TypeFdf {
+    /// Fletcher-Reeves conjugate gradient algorithm.  See
+    /// [`MinimizerFdf::conjugate_fr`] for more details.
+    Conjugate_fr,
+    /// Polak-Ribiere conjugate gradient algorithm.  See
+    /// [`MinimizerFdf::conjugate_pr`] for more details.
+    Conjugate_pr,
+    /// Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm.  See
+    /// [`MinimizerFdf::bfgs`] for more details.
+    BFGS,
+    /// Most efficient version of the Broyden-Fletcher-Goldfarb-Shanno
+    /// (BFGS) algorithm.  See [`MinimizerFdf::bfgs2`] for more details.
+    BFGS2,
+    /// Steepest descent algorithm.  See
+    /// [`MinimizerFdf::steepest_descent`] for more details.
+    Steepest_descent,
+}
+
+impl TypeFdf {
+    #[inline]
+    fn to_c(self) -> *const sys::gsl_multimin_fdfminimizer_type {
+        unsafe {
+            match self {
+                TypeFdf::Conjugate_fr => sys::gsl_multimin_fdfminimizer_conjugate_fr,
+                TypeFdf::Conjugate_pr => sys::gsl_multimin_fdfminimizer_conjugate_pr,
+                TypeFdf::BFGS => sys::gsl_multimin_fdfminimizer_vector_bfgs,
+                TypeFdf::BFGS2 => sys::gsl_multimin_fdfminimizer_vector_bfgs2,
+                TypeFdf::Steepest_descent => sys::gsl_multimin_fdfminimizer_steepest_descent,
             }
         }
-
-        MultiMinFdfFunction {
-            f: Box::new(f),
-            df: Box::new(df),
-            fdf: Box::new(fdf),
-            n,
-            intern: sys::gsl_multimin_function_fdf {
-                f: Some(inner_f),
-                df: Some(inner_df),
-                fdf: Some(inner_fdf),
-                n,
-                params: std::ptr::null_mut(),
-            },
-        }
-    }
-
-    #[allow(clippy::wrong_self_convention)]
-    fn to_raw(&mut self) -> *mut sys::gsl_multimin_function_fdf {
-        self.intern.n = self.n;
-        self.intern.params = self as *mut MultiMinFdfFunction as *mut c_void;
-        &mut self.intern
     }
 }
 
 ffi_wrapper!(
     /// Minimization using derivatives.
-    MinimizerFdf,
+    MinimizerFdf<'a, V: AsVector + ?Sized>,
     *mut sys::gsl_multimin_fdfminimizer,
     gsl_multimin_fdfminimizer_free
+    ;inner_closure: Option<Box<dyn Fdf<V> + 'a>> => None;
+    ;inner_call: sys::gsl_multimin_function_fdf_struct => sys::gsl_multimin_function_fdf_struct {
+        f: None,
+        df: None,
+        fdf: None,
+        n: 0,
+        params: std::ptr::null_mut(),
+    };
 );
 
-impl MinimizerFdf {
+impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     /// Creates a minimizer of type `t` for an `n`-dimensional function.
     /// If there is insufficient memory to create the minimizer then
     /// the function returns a `None`.
     #[doc(alias = "gsl_multimin_fdfminimizer_alloc")]
-    pub fn new(t: MinimizerFdfType, n: usize) -> Option<MinimizerFdf> {
-        let ptr = unsafe { sys::gsl_multimin_fdfminimizer_alloc(t.unwrap_shared(), n) };
-
+    pub fn new(t: TypeFdf, n: usize) -> Self {
+        let ptr = unsafe { sys::gsl_multimin_fdfminimizer_alloc(t.to_c(), n) };
         if ptr.is_null() {
-            None
-        } else {
-            Some(Self::wrap(ptr))
+            panic!("rgsl::multimin::MinimizerFdf::new: cannot allocate");
         }
+        Self::wrap(ptr)
     }
 
-    /// This function initializes the minimizer to minimize the function `fdf` starting from the initial point `x`.
-    /// The size of the first trial step is given by `step_size`. The accuracy of the line minimization is specified by `tol`.
-    /// The precise meaning of this parameter depends on the method used. Typically the line minimization is considered successful if the gradient of the function `g` is orthogonal
-    /// to the current search direction `p` to a relative accuracy of `tol`, where p . g < tol |p| |g|. A `tol` value of 0.1 is suitable for most purposes,
-    /// since line minimization only needs to be carried out approximately. Note that setting tol to zero will force the use of “exact” line-searches, which are extremely expensive.
+    /// This is the Fletcher-Reeves conjugate gradient algorithm. The
+    /// conjugate gradient algorithm proceeds as a succession of line
+    /// minimizations. The sequence of search directions is used to
+    /// build up an approximation to the curvature of the function in
+    /// the neighborhood of the minimum.
+    ///
+    /// An initial search direction $p$ is chosen using the gradient,
+    /// and line minimization is carried out in that direction.  The
+    /// accuracy of the line minimization is specified by the
+    /// parameter `tol`.  The minimum along this line occurs when the
+    /// function gradient $g$ and the search direction $p$ are
+    /// orthogonal.  The line minimization terminates when $p\cdot g
+    /// < \tol |p| |g|$.  The search direction is updated using the
+    /// Fletcher-Reeves formula $p' = g' - \beta p$ where
+    /// $\beta=-|g'|^2/|g|^2$, and the line minimization is then
+    /// repeated for the new search direction.
+    #[doc(alias = "gsl_multimin_fdfminimizer_conjugate_fr")]
+    pub fn conjugate_fr(n: usize) -> Self {
+        Self::new(TypeFdf::Conjugate_fr, n)
+    }
+
+    /// This is the Polak-Ribiere conjugate gradient algorithm.  It is
+    /// similar to the Fletcher-Reeves method (see
+    /// [`Self::conjugate_fr`]), differing only in the choice of the
+    /// coefficient $\beta$.  Both methods work well when the
+    /// evaluation point is close enough to the minimum of the
+    /// objective function that it is well approximated by a quadratic
+    /// hypersurface.
+    #[doc(alias = "gsl_multimin_fdfminimizer_conjugate_pr")]
+    pub fn conjugate_pr(n: usize) -> Self {
+        Self::new(TypeFdf::Conjugate_pr, n)
+    }
+
+    /// This method uses the vector Broyden-Fletcher-Goldfarb-Shanno
+    /// (BFGS) algorithm.  This is a quasi-Newton method which builds
+    /// up an approximation to the second derivatives of the function
+    /// $f$ using the difference between successive gradient vectors.
+    /// By combining the first and second derivatives the algorithm is
+    /// able to take Newton-type steps towards the function minimum,
+    /// assuming quadratic behavior in that region.
+    #[doc(alias = "gsl_multimin_fdfminimizer_vector_bfgs")]
+    pub fn bfgs(n: usize) -> Self {
+        Self::new(TypeFdf::BFGS, n)
+    }
+
+    /// Version of the BFGS minimizer that is the most efficient
+    /// version available, and is a faithful implementation of the
+    /// line minimization scheme described in Fletcher’s Practical
+    /// Methods of Optimization, Algorithms 2.6.2 and 2.6.4.  It
+    /// supersedes the original bfgs routine and requires
+    /// substantially fewer function and gradient evaluations.  The
+    /// user-supplied tolerance tol corresponds to the parameter
+    /// $\sigma$ used by Fletcher.  A value of 0.1 is recommended for
+    /// typical use (larger values correspond to less accurate line
+    /// searches).
+    #[doc(alias = "gsl_multimin_fdfminimizer_vector_bfgs2")]
+    pub fn bfgs2(n: usize) -> Self {
+        Self::new(TypeFdf::BFGS2, n)
+    }
+
+    /// The steepest descent algorithm follows the downhill gradient
+     /// of the function at each step.  When a downhill step is
+    /// successful the step-size is increased by a factor of two.  If
+    /// the downhill step leads to a higher function value then the
+    /// algorithm backtracks and the step size is decreased using the
+    /// parameter `tol`.  A suitable value of tol for most
+    /// applications is 0.1.  The steepest descent method is
+    /// inefficient and is included only for demonstration purposes.
+    #[doc(alias = "gsl_multimin_fdfminimizer_steepest_descent")]
+    pub fn steepest_descent(n: usize) -> Self {
+        Self::new(TypeFdf::Steepest_descent, n)
+    }
+
+    /// This function initializes the minimizer to minimize the
+    /// function `fdf` starting from the initial point `x`.  The size
+    /// of the first trial step is given by `step_size`. The accuracy
+    /// of the line minimization is specified by `tol`.  The precise
+    /// meaning of this parameter depends on the method used.
+    /// Typically the line minimization is considered successful if
+    /// the gradient of the function $g$ is orthogonal to the current
+    /// search direction $p$ to a relative accuracy of `tol`, where $p
+    /// · g < tol |p| |g|$.  A `tol` value of 0.1 is suitable for most
+    /// purposes, since line minimization only needs to be carried out
+    /// approximately.  Note that setting `tol` to zero will force the
+    /// use of “exact” line-searches, which are extremely expensive.
     #[doc(alias = "gsl_multimin_fdfminimizer_set")]
-    pub fn set(
+    pub fn set<F: Fdf<V> + 'a>(
         &mut self,
-        f: &mut MultiMinFdfFunction,
-        x: &VecF64,
+        mut fdf: F,
+        x: &V,
         step_size: f64,
         tol: f64,
     ) -> Result<(), Error> {
+        unsafe extern "C" fn inner_f<V: AsVector + ?Sized, F: Fdf<V>>(
+            x: *const sys::gsl_vector,
+            params: *mut c_void,
+        ) -> f64 {
+            let t = unsafe { &mut *params.cast::<F>() };
+            let vx = unsafe { V::view_from_ptr(x) };
+            t.f(&vx)
+        }
+
+        unsafe extern "C" fn inner_df<V: AsVector + ?Sized, F: Fdf<V>>(
+            x: *const sys::gsl_vector,
+            params: *mut c_void,
+            g: *mut sys::gsl_vector,
+        ) { unsafe {
+            let t = &mut *params.cast::<F>();
+            let vx = V::view_from_ptr(x);
+            let mut vg = V::view_from_mut_ptr(g);
+            t.df(&vx, &mut vg);
+        }}
+        unsafe extern "C" fn inner_fdf<V: AsVector + ?Sized, F: Fdf<V>>(
+            x: *const sys::gsl_vector,
+            params: *mut c_void,
+            f: *mut f64,
+            g: *mut sys::gsl_vector,
+        ) { unsafe {
+            let t = &mut *params.cast::<F>();
+            let vx = V::view_from_ptr(x);
+            let mut vg = V::view_from_mut_ptr(g);
+            *f = t.fdf(&vx, &mut vg);
+        }}
+        self.inner_call = sys::gsl_multimin_function_fdf_struct {
+            f: Some(inner_f::<V, F>),
+            df: Some(inner_df::<V, F>),
+            fdf: Some(inner_fdf::<V, F>),
+            n: V::len(x),
+            params: &mut fdf as *mut F as *mut _,
+        };
+
+        self.inner_closure = Some(Box::new(fdf));
+
+        let x = V::as_gsl_vector(x);
         let ret = unsafe {
             sys::gsl_multimin_fdfminimizer_set(
-                self.unwrap_unique(), // Copied inside C struct
-                f.to_raw(),
-                x.unwrap_shared(),
+                self.unwrap_unique(),
+                &mut self.inner_call,
+                &*x, //
                 step_size,
                 tol,
             )
@@ -354,22 +510,21 @@ impl MinimizerFdf {
         Error::handle(ret, ())
     }
 
-    /// This function returns a pointer to the name of the minimizer.
+    /// This function returns the type of the minimizer.
     #[doc(alias = "gsl_multimin_fdfminimizer_name")]
-    pub fn name(&self) -> Option<String> {
+    pub fn name(&self) -> TypeFdf {
         let n = unsafe { sys::gsl_multimin_fdfminimizer_name(self.unwrap_shared()) };
-        if n.is_null() {
-            return None;
-        }
-        let mut len = 0;
-        loop {
-            if unsafe { *n.offset(len) } == 0 {
-                break;
-            }
-            len += 1;
-        }
-        let slice = unsafe { std::slice::from_raw_parts(n as _, len as _) };
-        std::str::from_utf8(slice).ok().map(|x| x.to_owned())
+        map_name!(
+            rgsl::multimin::MinimizerFdf,
+            [
+                (c"conjugate_fr", TypeFdf::Conjugate_fr),
+                (c"vector_bfgs", TypeFdf::BFGS),
+                (c"vector_bfgs2", TypeFdf::BFGS2),
+                (c"steepest_descent", TypeFdf::Steepest_descent),
+            ],
+            n,
+            TypeFdf
+        )
     }
 
     /// Returns the current best estimate of the location of the minimum.
@@ -396,63 +551,43 @@ impl MinimizerFdf {
         VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_dx(self.unwrap_shared()) })
     }
 
-    /// This function performs a single iteration of the minimizer s. If the iteration encounters
-    /// an unexpected problem then an error code will be returned. The error code `Error::NoProgress`
-    /// signifies that the minimizer is unable to improve on its current estimate, either due
-    /// to numerical difficulty or because a genuine local minimum has been reached.
+    /// Perform a single iteration of the minimizer `self`.  If the
+    /// iteration encounters an unexpected problem then an error code
+    /// will be returned. The error code `Error::NoProgress` signifies
+    /// that the minimizer is unable to improve on its current
+    /// estimate, either due to numerical difficulty or because a
+    /// genuine local minimum has been reached.
     #[doc(alias = "gsl_multimin_fdfminimizer_iterate")]
     pub fn iterate(&mut self) -> Result<(), Error> {
         let ret = unsafe { sys::gsl_multimin_fdfminimizer_iterate(self.unwrap_unique()) };
         Error::handle(ret, ())
     }
 
-    /// This function resets the minimizer to use the current point as a new starting point.
+    /// This function resets the minimizer to use the current point as
+    /// a new starting point.
     #[doc(alias = "gsl_multimin_fdfminimizer_restart")]
     pub fn restart(&mut self) -> i32 {
         unsafe { sys::gsl_multimin_fdfminimizer_restart(self.unwrap_unique()) }
     }
 }
 
-ffi_wrapper!(MinimizerFdfType, *const sys::gsl_multimin_fdfminimizer_type);
-
-impl MinimizerFdfType {
-    #[doc(alias = "gsl_multimin_fdfminimizer_conjugate_fr")]
-    pub fn conjugate_fr() -> Self {
-        ffi_wrap!(gsl_multimin_fdfminimizer_conjugate_fr)
-    }
-
-    #[doc(alias = "gsl_multimin_fdfminimizer_conjugate_pr")]
-    pub fn conjugate_pr() -> Self {
-        ffi_wrap!(gsl_multimin_fdfminimizer_conjugate_pr)
-    }
-
-    #[doc(alias = "gsl_multimin_fdfminimizer_vector_bfgs")]
-    pub fn vector_bfgs() -> Self {
-        ffi_wrap!(gsl_multimin_fdfminimizer_vector_bfgs)
-    }
-
-    #[doc(alias = "gsl_multimin_fdfminimizer_vector_bfgs2")]
-    pub fn vector_bfgs2() -> Self {
-        ffi_wrap!(gsl_multimin_fdfminimizer_vector_bfgs2)
-    }
-
-    #[doc(alias = "gsl_multimin_fdfminimizer_steepest_descent")]
-    pub fn steepest_descent() -> Self {
-        ffi_wrap!(gsl_multimin_fdfminimizer_steepest_descent)
-    }
-}
-
-/// This function tests the minimizer specific characteristic size (if applicable to the used minimizer) against absolute tolerance `epsabs`.
-/// The test returns `crate::Error::Success` if the size is smaller than tolerance, otherwise crate::Error::Continue is returned.
+/// Test the minimizer specific characteristic size (if applicable to
+/// the used minimizer) against absolute tolerance `epsabs`.  The test
+/// returns `Ok(())` if the size is smaller than tolerance, otherwise
+/// `Err(crate::Error::Continue)` is returned.
 #[doc(alias = "gsl_multimin_test_size")]
 pub fn test_size(size: f64, epsabs: f64) -> Result<(), Error> {
     Error::handle(unsafe { sys::gsl_multimin_test_size(size, epsabs) }, ())
 }
 
-/// This function tests the norm of the gradient `g` against the absolute tolerance `epsabs`.
-/// The gradient of a multidimensional function goes to zero at a minimum. The test returns `crate::Error::Success` if the following condition is achieved, |g| < epsabs
-/// and returns `crate::Error::Continue` otherwise. A suitable choice of `epsabs` can be made from the desired accuracy in the function for small variations in `x`.
-/// The relationship between these quantities is given by \delta{f} = g\,\delta{x}.
+/// Test the norm of the gradient `g` against the absolute tolerance
+/// `epsabs`.  The gradient of a multidimensional function goes to
+/// zero at a minimum.  The test returns `Ok(())` if the following
+/// condition is achieved, |g| < `epsabs` and returns
+/// `Err(crate::Error::Continue)` otherwise.  A suitable choice of
+/// `epsabs` can be made from the desired accuracy in the function for
+/// small variations in `x`.  The relationship between these
+/// quantities is given by $\delta{f} = g\,\delta{x}$.
 #[doc(alias = "gsl_multimin_test_gradient")]
 pub fn test_gradient(g: &VecF64, epsabs: f64) -> Result<(), Error> {
     Error::handle(
@@ -553,7 +688,7 @@ mod test {
         )
     }
 
-    fn print_fdf_state(min: &MinimizerFdf, iter: usize) {
+    fn print_fdf_state(min: &MinimizerFdf<VecF64>, iter: usize) {
         let f = min.minimum();
         let x = min.x();
         println!(
@@ -635,9 +770,7 @@ mod test {
             paraboloid(v)
         }
 
-        let mut fs = MultiMinFdfFunction::new(paraboloid, df, fdf, 2);
-
-        min.set(&mut fs, &guess_value, step_size, tol).unwrap();
+        min.set((paraboloid, df, fdf), &guess_value, step_size, tol).unwrap();
 
         let max_iter = 100_usize;
         let eps_abs = 0.01;
