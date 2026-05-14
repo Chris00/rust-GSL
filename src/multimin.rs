@@ -380,17 +380,39 @@ impl TypeFdf {
 
 ffi_wrapper!(
     /// Minimization using derivatives.
+    ///
+    /// # Example
+    ///
+    /// Minimize the function $(x₀, x₁) ↦ (x₀ - 1)² + (x₁ - 1)²$ using
+    /// [`VecF64`] to represent vectors.
+    ///
+    /// ```
+    /// use rgsl::{Error, VecF64, multimin::MinimizerFdf};
+    /// let x = VecF64::from_slice(&[0., 0.]);
+    /// let mut solver = MinimizerFdf::bfgs2(x.len());
+    /// let f = |x: &VecF64| (x.get(0) - 1.).powi(2) + (x.get(1) - 1.).powi(2);
+    /// let df = |x: &VecF64, g: &mut VecF64| {
+    ///     g.set(0, 2. * (x.get(0) - 1.));
+    ///     g.set(1, 2. * (x.get(1) - 1.));
+    /// };
+    /// solver.set((f, df), &x, 0.1, 1e-3)?;
+    /// loop {
+    ///     if let Err(e) = solver.iterate() {
+    ///         match e {
+    ///             Error::Continue => continue,
+    ///             Error::NoProgress => break,
+    ///             _ => (),
+    ///         }
+    ///     }
+    /// }
+    /// assert_eq!(solver.x(), VecF64::from_slice(&[1., 1.]));
+    /// # Ok::<(), rgsl::Error>(())
+    /// ```
     MinimizerFdf<'a, V: AsVector + ?Sized>,
     *mut sys::gsl_multimin_fdfminimizer,
     gsl_multimin_fdfminimizer_free
-    ;inner_closure: Option<Box<dyn Fdf<V> + 'a>> => None;
-    ;inner_call: sys::gsl_multimin_function_fdf_struct => sys::gsl_multimin_function_fdf_struct {
-        f: None,
-        df: None,
-        fdf: None,
-        n: 0,
-        params: std::ptr::null_mut(),
-    };
+    ;fdf_struct: Option<Box<sys::gsl_multimin_function_fdf_struct>> => None;
+    ;fdf: Option<Box<dyn Fdf<V> + 'a>> => None;
 );
 
 impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
@@ -467,7 +489,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     }
 
     /// The steepest descent algorithm follows the downhill gradient
-     /// of the function at each step.  When a downhill step is
+    /// of the function at each step.  When a downhill step is
     /// successful the step-size is increased by a factor of two.  If
     /// the downhill step leads to a higher function value then the
     /// algorithm backtracks and the step size is decreased using the
@@ -506,7 +528,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     #[doc(alias = "gsl_multimin_fdfminimizer_set")]
     pub fn set<F: Fdf<V> + 'a>(
         &mut self,
-        mut fdf: F,
+        fdf: F,
         x: &V,
         step_size: f64,
         tol: f64,
@@ -541,26 +563,27 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
             let mut vg = V::view_from_mut_ptr(g);
             *f = t.fdf(&vx, &mut vg);
         }}
-        self.inner_call = sys::gsl_multimin_function_fdf_struct {
+        let mut fdf = Box::new(fdf);
+        let mut fdf_struct = Box::new(sys::gsl_multimin_function_fdf_struct {
             f: Some(inner_f::<V, F>),
             df: Some(inner_df::<V, F>),
             fdf: Some(inner_fdf::<V, F>),
             n: V::len(x),
-            params: &mut fdf as *mut F as *mut _,
-        };
-
-        self.inner_closure = Some(Box::new(fdf));
+            params: &mut *fdf as *mut F as *mut _,
+        });
+        self.fdf = Some(fdf);
 
         let x = V::as_gsl_vector(x);
         let ret = unsafe {
             sys::gsl_multimin_fdfminimizer_set(
                 self.unwrap_unique(),
-                &mut self.inner_call,
-                &*x, //
+                &mut *fdf_struct,
+                &*x, // Copied inside the GSL value in `self`
                 step_size,
                 tol,
             )
         };
+        self.fdf_struct = Some(fdf_struct);
         Error::handle(ret, ())
     }
 
@@ -703,7 +726,7 @@ mod test {
     }
 
     #[test]
-    fn test_inner_pointers() -> Result<(), Error> {
+    fn test_minimizer_pointers() -> Result<(), Error> {
         // This function will move the `Minimizer`, testing that its
         // inner pointers stay valid.
         fn create() -> Result<Minimizer<'static, VecF64>, Error> {
@@ -711,6 +734,26 @@ mod test {
             let x = VecF64::from_slice(&[1.]);
             let step_size = VecF64::from_slice(&[0.1]);
             m.set(|x| x.get(0), &x, &step_size)?;
+            Ok(m)
+        }
+        let mut m = create()?;
+        m.iterate()?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_minimizerfdf_pointers() -> Result<(), Error> {
+        // This function will move the `Minimizer`, testing that its
+        // inner pointers stay valid.
+        fn create() -> Result<MinimizerFdf<'static, VecF64>, Error> {
+            let mut m = MinimizerFdf::bfgs(1);
+            let x = VecF64::from_slice(&[1.]);
+            m.set(|x: &VecF64, g: Option<&mut VecF64>| {
+                if let Some(g) = g {
+                    g.set(0, 1.);
+                }
+                x.get(0)
+            }, &x, 0.1, 1e-3)?;
             Ok(m)
         }
         let mut m = create()?;
