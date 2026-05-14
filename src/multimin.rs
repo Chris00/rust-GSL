@@ -83,7 +83,7 @@ use crate::{
     vector::{AsVector, VecF64},
     view::{AsView, View},
 };
-use std::{ffi::c_void};
+use std::ffi::c_void;
 
 /// Type of minimizer without derivatives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -108,11 +108,52 @@ impl Type {
 
 ffi_wrapper!(
     /// Minimization without derivatives.
+    ///
+    /// # Examples
+    ///
+    /// Minimize the function $(x₀, x₁) ↦ (x₀ - 1)² + (x₁ - 1)²$ using
+    /// [`VecF64`] to represent vectors.
+    ///
+    /// ```
+    /// use rgsl::{VecF64, multimin::Minimizer};
+    /// let x = VecF64::from_slice(&[0., 0.]);
+    /// let step_size = VecF64::from_slice(&[0.1, 0.1]);
+    /// let mut solver = Minimizer::simplex(x.len());
+    /// let f = |x: &VecF64| (x.get(0) - 1.).powi(2) + (x.get(1) - 1.).powi(2);
+    /// solver.set(f, &x, &step_size)?;
+    /// for _ in 0 .. 120 {
+    ///     solver.iterate()?;
+    /// }
+    /// assert_eq!(solver.x(), VecF64::from_slice(&[1., 1.]));
+    /// # Ok::<(), rgsl::Error>(())
+    /// ```
+    ///
+    /// Here is the minimization of the same function using slices
+    /// `&[f64]` to represent vectors.
+    ///
+    /// ```
+    /// use rgsl::{VecF64, multimin::Minimizer};
+    /// let x = [0., 0.].as_slice();
+    /// let step_size = [0.1, 0.1].as_slice();
+    /// let mut solver = Minimizer::simplex(x.len());
+    /// let f = |x: &[f64]| (x[0] - 1.).powi(2) + (x[1] - 1.).powi(2);
+    /// solver.set(f, x, step_size)?;
+    /// for _ in 0 .. 120 {
+    ///     solver.iterate()?;
+    /// }
+    /// assert_eq!(solver.x(), &[1., 1.]);
+    /// # Ok::<(), rgsl::Error>(())
+    /// ```
+    ///
+    /// With the feature `ndarray`, `Array1<f64>` may also be used for
+    /// vectors.  To enable it for you vector type, implement the
+    /// trait [`AsVector`].
     Minimizer<'a, V: AsVector + ?Sized>,
     *mut sys::gsl_multimin_fminimizer,
     gsl_multimin_fminimizer_free
-    ;inner_closure: Option<Box<dyn FnMut(&V) -> f64 + 'a>> => None;
-    ;inner_call: sys::gsl_multimin_function_struct => sys::gsl_multimin_function_struct { f: None, n: 0_usize, params: std::ptr::null_mut() };
+    // These fields hold the GSL structure and function with stable address.
+    ;f_struct: Option<Box<sys::gsl_multimin_function_struct>> => None;
+    ;f: Option<Box<dyn FnMut(&V) -> f64 + 'a>> => None;
 );
 
 impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
@@ -146,7 +187,7 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
     #[doc(alias = "gsl_multimin_fminimizer_set")]
     pub fn set<F: FnMut(&V) -> f64 + 'a>(
         &mut self,
-        mut f: F,
+        f: F,
         x: &V,
         step_size: &V,
     ) -> Result<(), Error> {
@@ -158,24 +199,25 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
             let vx = unsafe { V::view_from_ptr(x) };
             f(&vx)
         }
-        self.inner_call = sys::gsl_multimin_function_struct {
+        let mut f = Box::new(f);
+        let mut f_struct = Box::new(sys::gsl_multimin_function_struct {
             f: Some(inner_f::<V, F>),
             n: V::len(x),
-            params: &mut f as *mut F as *mut _,
-        };
-
-        self.inner_closure = Some(Box::new(f));
+            params: &mut *f as *mut F as *mut _,
+        });
+        self.f = Some(f);
 
         let x = V::as_gsl_vector(x);
         let step_size = V::as_gsl_vector(step_size);
         let ret = unsafe {
             sys::gsl_multimin_fminimizer_set(
                 self.unwrap_unique(),
-                &mut self.inner_call,
+                &mut *f_struct,
                 &*x, // Copied inside the GSL value in `self`
-                &*step_size, // Used by the C fn (can be discarded after).
+                &*step_size, // Only used by this C fn
             )
         };
+        self.f_struct = Some(f_struct);
         Error::handle(ret, ())
     }
 
@@ -437,11 +479,23 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
         Self::new(TypeFdf::Steepest_descent, n)
     }
 
-    /// This function initializes the minimizer to minimize the
-    /// function `fdf` starting from the initial point `x`.  The size
-    /// of the first trial step is given by `step_size`. The accuracy
-    /// of the line minimization is specified by `tol`.  The precise
-    /// meaning of this parameter depends on the method used.
+    /// Initialize the minimizer to minimize the function `fdf`
+    /// starting from the initial point `x`.
+    ///
+    /// The argument `fdf` may be:
+    /// - a couple of functions `(f, df)` where `f(x: &V) -> f64`
+    ///   computes the function to minimize and `df(x: &V, g: &mut g)`
+    ///   stores the gradient of `f` at `x` in `g`;
+    /// - a function `df(x: &V, g: Option<&mut V>) -> f64` that
+    ///   returns the value at `x` of the function to minimize and
+    ///   stores its gradient in `g` if provided;
+    /// - a triplet `(f, df, fdf)` where `(f, df)` is as in the first
+    ///   case and `fdf(x: &V, g: &mut V) -> f64` is as in the second
+    ///   point where the `g` to store the gradient is provided.
+    ///
+    /// The size of the first trial step is given by `step_size`.  The
+    /// accuracy of the line minimization is specified by `tol`.  The
+    /// precise meaning of this parameter depends on the method used.
     /// Typically the line minimization is considered successful if
     /// the gradient of the function $g$ is orthogonal to the current
     /// search direction $p$ to a relative accuracy of `tol`, where $p
@@ -636,34 +690,6 @@ mod test {
     /// ```
     use super::*;
 
-    #[test]
-    fn test_multimin_VecF64() -> Result<(), Error> {
-        let x = VecF64::from_slice(&[0., 0.]);
-        let step_size = VecF64::from_slice(&[0.1, 0.1]);
-        let mut solver = Minimizer::simplex(x.len());
-        let f = |x: &VecF64| (x.get(0) - 1.).powi(2) + (x.get(1) - 1.).powi(2);
-        solver.set(f, &x, &step_size)?;
-        for _ in 0 .. 120 {
-            solver.iterate()?;
-        }
-        assert_eq!(solver.x(), VecF64::from_slice(&[1., 1.]));
-        Ok(())
-    }
-
-    #[test]
-     fn test_multimin_slices() -> Result<(), Error> {
-        let x = [0., 0.].as_slice();
-        let step_size = [0.1, 0.1].as_slice();
-        let mut solver = Minimizer::simplex(x.len());
-        let f = |x: &[f64]| (x[0] - 1.).powi(2) + (x[1] - 1.).powi(2);
-        solver.set(f, x, step_size)?;
-        for _ in 0 .. 120 {
-            solver.iterate()?;
-        }
-        assert_eq!(solver.x(), &[1., 1.]);
-        Ok(())
-    }
-
     #[cfg(feature = "ndarray")]
     #[test]
     fn test_multimin_ndarray() -> Result<(), Error> {
@@ -673,6 +699,22 @@ mod test {
         let mut solver = Minimizer::simplex(x.len());
         let f = |x: &ArrayRef1<f64>| (x[0] - 1.).powi(2) + (x[1] - 1.).powi(2);
         solver.set(f, &x, &step_size)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_inner_pointers() -> Result<(), Error> {
+        // This function will move the `Minimizer`, testing that its
+        // inner pointers stay valid.
+        fn create() -> Result<Minimizer<'static, VecF64>, Error> {
+            let mut m = Minimizer::simplex(1);
+            let x = VecF64::from_slice(&[1.]);
+            let step_size = VecF64::from_slice(&[0.1]);
+            m.set(|x| x.get(0), &x, &step_size)?;
+            Ok(m)
+        }
+        let mut m = create()?;
+        m.iterate()?;
         Ok(())
     }
 
