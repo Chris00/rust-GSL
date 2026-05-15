@@ -83,7 +83,7 @@ use crate::{
     vector::{AsVector, VecF64},
     view::{AsView, View},
 };
-use std::ffi::c_void;
+use std::{ffi::c_void, ops::ControlFlow};
 
 /// Type of minimizer without derivatives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -387,25 +387,25 @@ ffi_wrapper!(
     /// [`VecF64`] to represent vectors.
     ///
     /// ```
-    /// use rgsl::{Error, VecF64, multimin::MinimizerFdf};
+    /// use rgsl::{Error, VecF64, multimin::{self as mmin, MinimizerFdf}};
+    /// use std::ops::ControlFlow;
     /// let x = VecF64::from_slice(&[0., 0.]);
     /// let mut solver = MinimizerFdf::bfgs2(x.len());
-    /// let f = |x: &VecF64| (x.get(0) - 1.).powi(2) + (x.get(1) - 1.).powi(2);
+    /// let f = |x: &VecF64| (x.get(0) - 1.).powi(2) + (x.get(1) - 2.).powi(2);
     /// let df = |x: &VecF64, g: &mut VecF64| {
     ///     g.set(0, 2. * (x.get(0) - 1.));
-    ///     g.set(1, 2. * (x.get(1) - 1.));
+    ///     g.set(1, 2. * (x.get(1) - 2.));
     /// };
     /// solver.set((f, df), &x, 0.1, 1e-3)?;
-    /// loop {
-    ///     if let Err(e) = solver.iterate() {
-    ///         match e {
-    ///             Error::Continue => continue,
-    ///             Error::NoProgress => break,
-    ///             _ => (),
-    ///         }
+    /// for _ in 0 .. 100 {
+    ///     solver.iterate()?;
+    ///     let status = mmin::test_gradient(&*solver.gradient(), 1e-6);
+    ///     if matches!(status, ControlFlow::Break(())) {
+    ///         break
     ///     }
     /// }
-    /// assert_eq!(solver.x(), VecF64::from_slice(&[1., 1.]));
+    /// assert!((solver.x().get(0) - 1.).abs() < 1e-12);
+    /// assert!((solver.x().get(1) - 2.).abs() < 1e-12);
     /// # Ok::<(), rgsl::Error>(())
     /// ```
     MinimizerFdf<'a, V: AsVector + ?Sized>,
@@ -650,27 +650,26 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
 
 /// Test the minimizer specific characteristic size (if applicable to
 /// the used minimizer) against absolute tolerance `epsabs`.  The test
-/// returns `Ok(())` if the size is smaller than tolerance, otherwise
-/// `Err(crate::Error::Continue)` is returned.
+/// returns `ControlFlow::Break(())` if the size is smaller than
+/// tolerance, otherwise `ControlFlow::Continue(())` is returned.
 #[doc(alias = "gsl_multimin_test_size")]
-pub fn test_size(size: f64, epsabs: f64) -> Result<(), Error> {
-    Error::handle(unsafe { sys::gsl_multimin_test_size(size, epsabs) }, ())
+pub fn test_size(size: f64, epsabs: f64) -> ControlFlow<()> {
+    Error::control_flow(unsafe {sys::gsl_multimin_test_size(size, epsabs)})
 }
 
 /// Test the norm of the gradient `g` against the absolute tolerance
 /// `epsabs`.  The gradient of a multidimensional function goes to
-/// zero at a minimum.  The test returns `Ok(())` if the following
-/// condition is achieved, |g| < `epsabs` and returns
-/// `Err(crate::Error::Continue)` otherwise.  A suitable choice of
+/// zero at a minimum.  The test returns `ControlFlow::Break(())` if
+/// the following condition is achieved, $|g| < $`epsabs` and returns
+/// `ControlFlow::Continue(())` otherwise.  A suitable choice of
 /// `epsabs` can be made from the desired accuracy in the function for
 /// small variations in `x`.  The relationship between these
-/// quantities is given by $\delta{f} = g\,\delta{x}$.
+/// quantities is given by $δf = g \, δx$.
 #[doc(alias = "gsl_multimin_test_gradient")]
-pub fn test_gradient(g: &VecF64, epsabs: f64) -> Result<(), Error> {
-    Error::handle(
-        unsafe { sys::gsl_multimin_test_gradient(g.unwrap_shared(), epsabs) },
-        (),
-    )
+pub fn test_gradient<V>(g: &V, epsabs: f64) -> ControlFlow<()>
+where V: AsVector + ?Sized {
+    let g = V::as_gsl_vector(g);
+    Error::control_flow(unsafe {sys::gsl_multimin_test_gradient(&*g, epsabs)})
 }
 
 #[cfg(any(test, doctest))]
@@ -809,12 +808,9 @@ mod test {
         let max_iter = 100_usize;
         let eps_abs = 0.01;
 
-        let mut status = Error::Continue;
-        let mut iter = 0_usize;
-
-        while matches!(status, Error::Continue) && iter < max_iter {
+        for iter in 0..max_iter {
             // iterate for next value
-            min.iterate()?; // fails here w/ segfault
+            min.iterate()?;
 
             // test for convergence
             let size = min.size();
@@ -822,21 +818,17 @@ mod test {
             // print current iteration
             print_f_state(&min, iter);
 
-            match test_size(size, eps_abs) {
-                Ok(()) => {
-                    println!("Converged");
-                    break;
-                }
-                Err(e) => status = e,
+            let status = test_size(size, eps_abs);
+            if matches!(status, ControlFlow::Break(())) {
+                println!("Converged");
+                break;
             }
-
-            iter += 1;
         }
         Ok(())
     }
 
     #[test]
-    fn test_multi_fdf_min() {
+    fn test_multi_fdf_min() -> Result<(), Error> {
         let mut min = MinimizerFdf::new(TypeFdf::Conjugate_fr, 2);
         assert_eq!(min.name(), TypeFdf::Conjugate_fr);
         let guess_value = VecF64::from_slice(&[5.0, 7.0]);
@@ -855,30 +847,24 @@ mod test {
             paraboloid(v)
         }
 
-        min.set((paraboloid, df, fdf), &guess_value, step_size, tol).unwrap();
+        min.set((paraboloid, df, fdf), &guess_value, step_size, tol)?;
 
         let max_iter = 100_usize;
         let eps_abs = 0.01;
 
-        let mut status = Error::Continue;
-        let mut iter = 0_usize;
-
-        while matches!(status, Error::Continue) && iter < max_iter {
+        for iter in 0..max_iter {
             // iterate for next value
-            min.iterate().unwrap(); // fails here w/ segfault
+            min.iterate()?;
 
             // print current iteration
             print_fdf_state(&min, iter);
 
-            match test_gradient(&min.gradient(), eps_abs) {
-                Ok(()) => {
-                    println!("Converged");
-                    break;
-                }
-                Err(e) => status = e,
+            let status = test_gradient(&*min.gradient(), eps_abs);
+            if matches!(status, ControlFlow::Break(())) {
+                println!("Converged");
+                break;
             }
-
-            iter += 1;
         }
+        Ok(())
     }
 }

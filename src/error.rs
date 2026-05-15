@@ -1,7 +1,7 @@
 //! Error handling.
 
 use ctor::ctor;
-use std::os::raw::c_int;
+use std::{ops::ControlFlow, os::raw::c_int};
 
 /// GSL errors.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Copy)]
@@ -216,6 +216,14 @@ impl Error {
             Err(Error::ToleranceG) => sys::GSL_ETOLG,
             Err(Error::EOF) => sys::GSL_EOF,
             Err(Error::Unknown(x)) => x,
+        }
+    }
+
+    pub(crate) fn control_flow(status: c_int) -> ControlFlow<()> {
+        match status {
+            sys::GSL_SUCCESS => ControlFlow::Break(()),
+            sys::GSL_CONTINUE => ControlFlow::Continue(()),
+            _ => panic!("Status {status} should not occur.  Please report."),
         }
     }
 }
