@@ -213,7 +213,7 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
             sys::gsl_multimin_fminimizer_set(
                 self.unwrap_unique(),
                 &mut *f_struct,
-                &*x, // Copied inside the GSL value in `self`
+                &*x,         // Copied inside the GSL value in `self`
                 &*step_size, // Only used by this C fn
             )
         };
@@ -383,7 +383,7 @@ ffi_wrapper!(
     ///
     /// # Example
     ///
-    /// Minimize the function $(x₀, x₁) ↦ (x₀ - 1)² + (x₁ - 1)²$ using
+    /// Minimize the function $(x₀, x₁) ↦ (x₀ - 1)² + (x₁ - 2)²$ using
     /// [`VecF64`] to represent vectors.
     ///
     /// ```
@@ -439,11 +439,11 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     /// accuracy of the line minimization is specified by the
     /// parameter `tol`.  The minimum along this line occurs when the
     /// function gradient $g$ and the search direction $p$ are
-    /// orthogonal.  The line minimization terminates when $p\cdot g
-    /// < \tol |p| |g|$.  The search direction is updated using the
-    /// Fletcher-Reeves formula $p' = g' - \beta p$ where
-    /// $\beta=-|g'|^2/|g|^2$, and the line minimization is then
-    /// repeated for the new search direction.
+    /// orthogonal.  The line minimization terminates when $p·g < \tol
+    /// |p| |g|$.  The search direction is updated using the
+    /// Fletcher-Reeves formula $p′ = g′ - β p$ where $β = -|g′|²/|g|²$,
+    /// and the line minimization is then repeated for the new search
+    /// direction.
     #[doc(alias = "gsl_multimin_fdfminimizer_conjugate_fr")]
     pub fn conjugate_fr(n: usize) -> Self {
         Self::new(TypeFdf::Conjugate_fr, n)
@@ -452,10 +452,9 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     /// This is the Polak-Ribiere conjugate gradient algorithm.  It is
     /// similar to the Fletcher-Reeves method (see
     /// [`Self::conjugate_fr`]), differing only in the choice of the
-    /// coefficient $\beta$.  Both methods work well when the
-    /// evaluation point is close enough to the minimum of the
-    /// objective function that it is well approximated by a quadratic
-    /// hypersurface.
+    /// coefficient $β$.  Both methods work well when the evaluation
+    /// point is close enough to the minimum of the objective function
+    /// that it is well approximated by a quadratic hypersurface.
     #[doc(alias = "gsl_multimin_fdfminimizer_conjugate_pr")]
     pub fn conjugate_pr(n: usize) -> Self {
         Self::new(TypeFdf::Conjugate_pr, n)
@@ -479,10 +478,10 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     /// Methods of Optimization, Algorithms 2.6.2 and 2.6.4.  It
     /// supersedes the original bfgs routine and requires
     /// substantially fewer function and gradient evaluations.  The
-    /// user-supplied tolerance tol corresponds to the parameter
-    /// $\sigma$ used by Fletcher.  A value of 0.1 is recommended for
-    /// typical use (larger values correspond to less accurate line
-    /// searches).
+    /// user-supplied tolerance `tol` (see [`Self::set`]) corresponds
+    /// to the parameter $σ$ used by Fletcher.  A value of 0.1 is
+    /// recommended for typical use (larger values correspond to less
+    /// accurate line searches).
     #[doc(alias = "gsl_multimin_fdfminimizer_vector_bfgs2")]
     pub fn bfgs2(n: usize) -> Self {
         Self::new(TypeFdf::BFGS2, n)
@@ -501,8 +500,8 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
         Self::new(TypeFdf::Steepest_descent, n)
     }
 
-    /// Initialize the minimizer to minimize the function `fdf`
-    /// starting from the initial point `x`.
+    /// Initialize the minimizer to minimize the function (and its
+    /// derivative) `fdf` starting from the initial point `x`.
     ///
     /// The argument `fdf` may be:
     /// - a couple of functions `(f, df)` where `f(x: &V) -> f64`
@@ -513,7 +512,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     ///   stores its gradient in `g` if provided;
     /// - a triplet `(f, df, fdf)` where `(f, df)` is as in the first
     ///   case and `fdf(x: &V, g: &mut V) -> f64` is as in the second
-    ///   point where the `g` to store the gradient is provided.
+    ///   point where the gradient storage `g` is provided.
     ///
     /// The size of the first trial step is given by `step_size`.  The
     /// accuracy of the line minimization is specified by `tol`.  The
@@ -521,7 +520,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     /// Typically the line minimization is considered successful if
     /// the gradient of the function $g$ is orthogonal to the current
     /// search direction $p$ to a relative accuracy of `tol`, where $p
-    /// · g < tol |p| |g|$.  A `tol` value of 0.1 is suitable for most
+    /// · g < \tol |p| |g|$.  A `tol` value of 0.1 is suitable for most
     /// purposes, since line minimization only needs to be carried out
     /// approximately.  Note that setting `tol` to zero will force the
     /// use of “exact” line-searches, which are extremely expensive.
@@ -546,23 +545,27 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
             x: *const sys::gsl_vector,
             params: *mut c_void,
             g: *mut sys::gsl_vector,
-        ) { unsafe {
-            let t = &mut *params.cast::<F>();
-            let vx = V::view_from_ptr(x);
-            let mut vg = V::view_from_mut_ptr(g);
-            t.df(&vx, &mut vg);
-        }}
+        ) {
+            unsafe {
+                let t = &mut *params.cast::<F>();
+                let vx = V::view_from_ptr(x);
+                let mut vg = V::view_from_mut_ptr(g);
+                t.df(&vx, &mut vg);
+            }
+        }
         unsafe extern "C" fn inner_fdf<V: AsVector + ?Sized, F: Fdf<V>>(
             x: *const sys::gsl_vector,
             params: *mut c_void,
             f: *mut f64,
             g: *mut sys::gsl_vector,
-        ) { unsafe {
-            let t = &mut *params.cast::<F>();
-            let vx = V::view_from_ptr(x);
-            let mut vg = V::view_from_mut_ptr(g);
-            *f = t.fdf(&vx, &mut vg);
-        }}
+        ) {
+            unsafe {
+                let t = &mut *params.cast::<F>();
+                let vx = V::view_from_ptr(x);
+                let mut vg = V::view_from_mut_ptr(g);
+                *f = t.fdf(&vx, &mut vg);
+            }
+        }
         let mut fdf = Box::new(fdf);
         let mut fdf_struct = Box::new(sys::gsl_multimin_function_fdf_struct {
             f: Some(inner_f::<V, F>),
@@ -654,7 +657,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
 /// tolerance, otherwise `ControlFlow::Continue(())` is returned.
 #[doc(alias = "gsl_multimin_test_size")]
 pub fn test_size(size: f64, epsabs: f64) -> ControlFlow<()> {
-    Error::control_flow(unsafe {sys::gsl_multimin_test_size(size, epsabs)})
+    Error::control_flow(unsafe { sys::gsl_multimin_test_size(size, epsabs) })
 }
 
 /// Test the norm of the gradient `g` against the absolute tolerance
@@ -667,9 +670,11 @@ pub fn test_size(size: f64, epsabs: f64) -> ControlFlow<()> {
 /// quantities is given by $δf = g \, δx$.
 #[doc(alias = "gsl_multimin_test_gradient")]
 pub fn test_gradient<V>(g: &V, epsabs: f64) -> ControlFlow<()>
-where V: AsVector + ?Sized {
+where
+    V: AsVector + ?Sized,
+{
     let g = V::as_gsl_vector(g);
-    Error::control_flow(unsafe {sys::gsl_multimin_test_gradient(&*g, epsabs)})
+    Error::control_flow(unsafe { sys::gsl_multimin_test_gradient(&*g, epsabs) })
 }
 
 #[cfg(any(test, doctest))]
@@ -747,12 +752,17 @@ mod test {
         fn create() -> Result<MinimizerFdf<'static, VecF64>, Error> {
             let mut m = MinimizerFdf::bfgs(1);
             let x = VecF64::from_slice(&[1.]);
-            m.set(|x: &VecF64, g: Option<&mut VecF64>| {
-                if let Some(g) = g {
-                    g.set(0, 1.);
-                }
-                x.get(0)
-            }, &x, 0.1, 1e-3)?;
+            m.set(
+                |x: &VecF64, g: Option<&mut VecF64>| {
+                    if let Some(g) = g {
+                        g.set(0, 1.);
+                    }
+                    x.get(0)
+                },
+                &x,
+                0.1,
+                1e-3,
+            )?;
             Ok(m)
         }
         let mut m = create()?;

@@ -114,9 +114,7 @@ pub trait AsVector: Vector<f64> {
     ///
     /// It is important to ensure that the view lifetime is bound to
     /// the lifetime of the vector or matrix that underlies `view`.
-    unsafe fn view_from_mut_ptr<'a>(
-        ptr: *mut sys::gsl_vector,
-    ) -> Self::ViewMut<'a> {
+    unsafe fn view_from_mut_ptr<'a>(ptr: *mut sys::gsl_vector) -> Self::ViewMut<'a> {
         debug_assert!(!ptr.is_null());
         let v = unsafe { ptr.as_mut_unchecked() };
         let len = 1 + (v.size - 1) * v.stride;
@@ -781,9 +779,7 @@ impl AsVector for VecF64 {
         View::from_ptr(ptr, false)
     }
 
-    unsafe fn view_from_mut_ptr<'a>(
-        ptr: *mut sys::gsl_vector,
-    ) -> Self::ViewMut<'a> {
+    unsafe fn view_from_mut_ptr<'a>(ptr: *mut sys::gsl_vector) -> Self::ViewMut<'a> {
         ViewMut::from_ptr(ptr, false)
     }
 
