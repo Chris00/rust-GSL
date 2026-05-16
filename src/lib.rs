@@ -77,7 +77,6 @@ pub use sf::*;
 pub mod sort;
 pub mod statistics;
 pub mod stats;
-pub mod util;
 pub mod vector;
 pub mod vector_complex;
 pub mod wavelet_transforms;
