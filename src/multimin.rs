@@ -51,8 +51,10 @@ individual functions necessary for each of the steps.  There are three
 main phases of the iteration. The steps are,
 
 - initialize minimizer state, `s`, for algorithm `t`,
-- update `s` using the iteration `t`,
-- test `s` for convergence, and repeat iteration if necessary.
+- update `s` using the iteration `t` with [`Minimizer::iterate`]
+  or [`MinimizerFdf::iterate`],
+- test `s` for convergence (with [`test_size`] or [`test_gradient`]),
+  and repeat iteration if necessary.
 
 Each iteration step consists either of an improvement to the
 line-minimisation in the current direction or an update to the search
@@ -71,10 +73,6 @@ area where there is more than one.
 It is also important to note that the minimization algorithms find
 local minima; there is no way to determine whether a minimum is a
 global minimum of the function in question.
-
-## Example
-
-TODO
  */
 
 use crate::{
@@ -88,8 +86,14 @@ use std::{ffi::c_void, ops::ControlFlow};
 /// Type of minimizer without derivatives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Type {
+    /// $O(N^2)$ operations simplex algorithm.  See
+    /// [`Minimizer::simplex2`] for more details.
     Simplex,
+    /// Simplex algorithm of Nelder and Mead, new $O(N)$ version.
+    /// See [`Minimizer::simplex2`] for more details.
     Simplex2,
+    /// Variant of the [`Self::Simplex2`] algorithm.
+    /// See [`Minimizer::simplex2_rand`] for more information.
     Simplex2Rand,
 }
 
@@ -158,6 +162,8 @@ ffi_wrapper!(
 
 impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
     /// Creates a minimizer of type `t` for an `n`-dimensional function.
+    ///
+    /// # Panic
     /// Panic if there is insufficient memory.
     #[doc(alias = "gsl_multimin_fminimizer_alloc")]
     pub fn new(t: Type, n: usize) -> Self {
@@ -168,14 +174,64 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
         Self::wrap(ptr)
     }
 
+    /// $O(N^2)$ operations simplex algorithm.  See [`Self::simplex2`]
+    /// for more details.
     pub fn simplex(n: usize) -> Self {
         Self::new(Type::Simplex, n)
     }
 
+    /// Minimizer using the simplex algorithm of Nelder and Mead.
+    /// Starting from the initial vector $x = p₀$, the algorithm
+    /// constructs an additional n vectors $p_i$ using the step size
+    /// vector $s = \stepsize$ as follows:
+    ///
+    /// $$p₀ = (x₀, x₁,…, xₙ)$$
+    /// $$p₁ = (x₀ + s₀, x₁,…, xₙ)$$
+    /// $$p₁ = (x₀, x₁ + s₁,…, xₙ)$$
+    /// $$⋯ = ⋯$$
+    /// $$pₙ = (x₀, x₁,…, xₙ + sₙ)$$
+    ///
+    /// These vectors form the $n+1$ vertices of a simplex in $n$
+    /// dimensions.  On each iteration the algorithm uses simple
+    /// geometrical transformations to update the vector corresponding
+    /// to the highest function value.  The geometric transformations
+    /// are reflection, reflection followed by expansion, contraction
+    /// and multiple contraction.  Using these transformations the
+    /// simplex moves through the space towards the minimum, where it
+    /// contracts itself.
+    ///
+    /// After each iteration, the best vertex is returned.  Note, that
+    /// due to the nature of the algorithm not every step improves the
+    /// current best parameter vector.  Usually several iterations are
+    /// required.
+    ///
+    /// The minimizer-specific characteristic size is calculated as
+    /// the average distance from the geometrical center of the
+    /// simplex to all its vertices.  This size can be used as a
+    /// stopping criteria, as the simplex contracts itself near the
+    /// minimum.  The size is returned by the function
+    /// [`Minimizer::size`].
+    ///
+    /// The [`Type::Simplex2`] is a new $O(N)$ operations minimiser
+    /// (compared to the older [`Type::Simplex`]).  It uses the same
+    /// underlying algorithm, but the simplex updates are computed
+    /// more efficiently for high-dimensional problems.  In addition,
+    /// the size of simplex is calculated as the RMS distance of each
+    /// vertex from the center rather than the mean distance, allowing
+    /// a linear update of this quantity on each step.  The memory
+    /// usage is $O(N²)$ for both algorithms.
     pub fn simplex2(n: usize) -> Self {
         Self::new(Type::Simplex2, n)
     }
 
+    /// This method is a variant of [`Self::simplex2`] which
+    /// initialises the simplex around the starting point $x$ using a
+    /// randomly-oriented set of basis vectors instead of the fixed
+    /// coordinate axes.  The final dimensions of the simplex are
+    /// scaled along the coordinate axes by the vector step_size.  The
+    /// randomisation uses a simple deterministic generator so that
+    /// repeated calls to [`Minimizer::set`] for a given solver object
+    /// will vary the orientation in a well-defined way.
     pub fn simplex2_rand(n: usize) -> Self {
         Self::new(Type::Simplex2Rand, n)
     }
@@ -417,13 +473,14 @@ ffi_wrapper!(
 
 impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
     /// Creates a minimizer of type `t` for an `n`-dimensional function.
-    /// If there is insufficient memory to create the minimizer then
-    /// the function returns a `None`.
+    ///
+    /// # Panic
+    /// Panic if there is insufficient memory to create the minimizer.
     #[doc(alias = "gsl_multimin_fdfminimizer_alloc")]
     pub fn new(t: TypeFdf, n: usize) -> Self {
         let ptr = unsafe { sys::gsl_multimin_fdfminimizer_alloc(t.to_c(), n) };
         if ptr.is_null() {
-            panic!("rgsl::multimin::MinimizerFdf::new: cannot allocate");
+            panic!("rgsl::multimin::MinimizerFdf::new: out of memory");
         }
         Self::wrap(ptr)
     }
@@ -633,7 +690,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
 
     /// Perform a single iteration of the minimizer `self`.  If the
     /// iteration encounters an unexpected problem then an error code
-    /// will be returned. The error code `Error::NoProgress` signifies
+    /// will be returned. The error code [`Error::NoProgress`] signifies
     /// that the minimizer is unable to improve on its current
     /// estimate, either due to numerical difficulty or because a
     /// genuine local minimum has been reached.
