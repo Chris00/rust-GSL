@@ -240,6 +240,20 @@ impl_Vector_ndarray!(f64, ndarray::ArrayRef1<f64>);
 #[cfg(feature = "ndarray")]
 impl_Vector_ndarray!(f64, ndarray::Array1<f64>);
 
+// Views<'_, T> deref to T, so a &*t is enough but these
+// implementations make the user code more straightforward.
+unsafe impl<T, V: Vector<T>> Vector<T> for View<'_, V> {
+    fn len(x: &Self) -> usize {
+        V::len(&**x)
+    }
+    fn stride(x: &Self) -> usize {
+        V::stride(&**x)
+    }
+    fn as_slice(x: &Self) -> &[T] {
+        V::as_slice(&**x)
+    }
+}
+
 impl AsVector for [f64] {
     type View<'a> = &'a [f64];
     type ViewMut<'a> = &'a mut [f64];
