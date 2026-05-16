@@ -29,7 +29,6 @@ pub use self::filter::{
 };
 pub use self::histograms::{Histogram, Histogram2D, Histogram2DPdf, HistogramPdf};
 pub use self::interpolation::{Interp, InterpAccel, InterpType, Spline};
-pub use self::minimizer::{Minimizer, MinimizerType};
 pub use self::monte_carlo::{
     MiserMonteCarlo, MiserParams, PlainMonteCarlo, VegasMonteCarlo, VegasParams,
 };
@@ -59,6 +58,8 @@ pub use crate::matrix::{
 #[cfg(feature = "complex")]
 #[deprecated(since = "8.0.0", note = "Use rgsl::matrix_complex::*")]
 pub use crate::matrix_complex::{MatC32 as MatrixComplexF32, MatC64 as MatrixComplexF64};
+#[deprecated(since = "8.0.0", note = "Use rgsl::minimizer::*")]
+pub use crate::minimizer::{Minimizer, Type as MinimizerType};
 #[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
 pub use crate::permutation::Permutation;
 #[deprecated(since = "8.0.0", note = "Use rgsl::vector::*")]
@@ -81,7 +82,6 @@ pub mod fast_fourier_transforms;
 pub mod filter;
 pub mod histograms;
 pub mod interpolation;
-pub mod minimizer;
 pub mod monte_carlo;
 pub mod multifit_linear;
 pub mod multifit_solver;

@@ -126,7 +126,7 @@ macro_rules! map_name {
         }
         let name: &CStr = unsafe { CStr::from_ptr($name) };
         *MAP.get(name).expect(&format!(
-            "{}::name: \"{:?}\" unknown",
+            "{}::name: {:?} unknown",
             stringify!($fn_name),
             name
         ))
