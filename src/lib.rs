@@ -45,6 +45,7 @@ pub mod types;
 
 pub mod blas;
 pub mod cblas;
+pub mod chebyshev;
 pub mod eigen;
 pub mod elementary;
 pub mod fft;

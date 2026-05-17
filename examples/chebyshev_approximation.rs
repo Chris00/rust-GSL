@@ -16,7 +16,7 @@ fn f(x: f64) -> f64 {
 
 fn main() {
     let n = 10000i32;
-    let mut cs = ChebSeries::new(40).unwrap();
+    let mut cs = ChebSeries::new(40);
 
     cs.init(f, 0., 1.).unwrap();
     for i in 0..n {

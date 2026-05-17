@@ -6,7 +6,6 @@
 
 pub use self::basis_spline::BSpLineWorkspace;
 
-pub use self::chebyshev::ChebSeries;
 pub use self::combination::Combination;
 #[allow(deprecated)]
 #[cfg(feature = "complex")]
@@ -51,6 +50,8 @@ pub use self::rstat::{RStatQuantileWorkspace, RStatWorkspace};
 pub use self::series_acceleration::{LevinUTruncWorkspace, LevinUWorkspace};
 pub use self::siman::{SimAnnealing, SimAnnealingParams};
 pub use self::wavelet_transforms::{Wavelet, WaveletType, WaveletWorkspace};
+#[deprecated(since = "8.0.0", note = "Use rgsl::chebyshev::ChebSeries")]
+pub use crate::chebyshev::ChebSeries;
 #[deprecated(since = "8.0.0", note = "Use rgsl::matrix::*")]
 pub use crate::matrix::{
     MatF32 as MatrixF32, MatF64 as MatrixF64, MatI32 as MatrixI32, MatU32 as MatrixU32,
@@ -71,7 +72,6 @@ pub use crate::vector::{
 pub use crate::vector_complex::{VecC32 as VectorComplexF32, VecC64 as VectorComplexF64};
 
 pub mod basis_spline;
-pub mod chebyshev;
 pub mod combination;
 pub mod complex;
 pub mod discrete_hankel;
