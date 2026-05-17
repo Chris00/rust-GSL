@@ -27,6 +27,13 @@ pub(crate) unsafe fn wrap_callback<F: FnMut(f64) -> f64>(f: &mut F) -> sys::gsl_
     }
 }
 
+/// Return a GSL callback struct that is allocated on the heap.  This
+/// is necessary in order to pass a pointer to
+/// `sys::gsl_function_struct` as an argument, as the address must
+/// remain fixed across several calls during which the object holding
+/// the returned value of this function (so it is not dropped) may be
+/// moved.
+///
 /// # Safety
 /// The caller must ensure that `f` lives for as long at the return
 /// value is used.

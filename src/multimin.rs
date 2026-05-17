@@ -456,7 +456,7 @@ ffi_wrapper!(
     /// for _ in 0 .. 100 {
     ///     solver.iterate()?;
     ///     let status = mmin::test_gradient(&*solver.gradient(), 1e-6);
-    ///     if matches!(status, ControlFlow::Break(())) {
+    ///     if status.is_break() {
     ///         break
     ///     }
     /// }
@@ -886,7 +886,7 @@ mod test {
             print_f_state(&min, iter);
 
             let status = test_size(size, eps_abs);
-            if matches!(status, ControlFlow::Break(())) {
+            if status.is_break() {
                 println!("Converged");
                 break;
             }
@@ -927,7 +927,7 @@ mod test {
             print_fdf_state(&min, iter);
 
             let status = test_gradient(&*min.gradient(), eps_abs);
-            if matches!(status, ControlFlow::Break(())) {
+            if status.is_break() {
                 println!("Converged");
                 break;
             }
