@@ -5,21 +5,23 @@
 /*!
 # Chebyshev Approximations
 
-This chapter describes routines for computing Chebyshev approximations to univariate functions. A
-Chebyshev approximation is a truncation of the series f(x) = \sum c_n T_n(x), where the Chebyshev
-polynomials T_n(x) = \cos(n \arccos x) provide an orthogonal basis of polynomials on the interval
-[-1,1] with the weight function 1 / \sqrt{1-x^2}. The first few Chebyshev polynomials are,
-T_0(x) = 1, T_1(x) = x, T_2(x) = 2 x^2 - 1.
+This module describes routines for computing Chebyshev approximations
+to univariate functions.  A Chebyshev approximation is a truncation of
+the series $f(x) = ∑ cₙ Tₙn(x)$, where the Chebyshev polynomials
+$Tₙ(x) = \cos(n \arccos x)$ provide an orthogonal basis of polynomials
+on the interval $[-1,1]$ with the weight function $1 / √{1-x^2}$.  The
+first few Chebyshev polynomials are, $T₀(x) = 1$, $T₁(x) = x$, $T₂(x)
+= 2 x^2 - 1$.
 
 For further information see Abramowitz & Stegun, Chapter 22.
 
 ## Definitions
 
-The approximation is made over the range \[a,b\] using order+1 terms,
+The approximation is made over the range $[a,b]$ using order+1 terms,
 including the coefficient `c[0]`.  The series is computed using the
 following convention,
 
-f(x) = (c_0 / 2) + \sum_{n=1} c_n T_n(x)
+$$f(x) = (c₀ / 2) + ∑_{n=1} cₙ Tₙ(x)$$
 
 which is needed when accessing the coefficients directly.
 
@@ -27,12 +29,13 @@ which is needed when accessing the coefficients directly.
 
 The following paper describes the use of Chebyshev series,
 
-R. Broucke, `Ten Subroutines for the Manipulation of Chebyshev Series [C1] (Algorithm 446)`.
-Communications of the ACM 16(4), 254–256 (1973)
-!*/
+R. Broucke, `Ten Subroutines for the Manipulation of Chebyshev Series
+[C1] (Algorithm 446)`.  Communications of the ACM 16(4), 254–256
+(1973)
+*/
 
 use crate::Error;
-use crate::ffi::FFI;
+use crate::{ffi::FFI, utilities::wrap_callback};
 
 ffi_wrapper!(ChebSeries, *mut sys::gsl_cheb_series, gsl_cheb_free);
 
@@ -48,12 +51,13 @@ impl ChebSeries {
         }
     }
 
-    /// This function computes the Chebyshev approximation cs for the function f over the range
-    /// (a,b) to the previously specified order. The computation of the Chebyshev approximation is
-    /// an O(n^2) process, and requires n function evaluations.
+    /// Compute the Chebyshev approximation cs for the function `f`
+    /// over the range (`a`, `b`) to the order specified in
+    /// [`Self::new`].  The computation of the Chebyshev approximation
+    /// is an $O(n²)$ process, and requires $n$ function evaluations.
     #[doc(alias = "gsl_cheb_init")]
-    pub fn init<F: Fn(f64) -> f64>(&mut self, f: F, a: f64, b: f64) -> Result<(), Error> {
-        let function = wrap_callback!(f, F);
+    pub fn init<F: FnMut(f64) -> f64>(&mut self, mut f: F, a: f64, b: f64) -> Result<(), Error> {
+        let function = unsafe { wrap_callback(&mut f) };
 
         let ret = unsafe { sys::gsl_cheb_init(self.unwrap_unique(), &function, a, b) };
         Error::handle(ret, ())

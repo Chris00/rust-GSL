@@ -41,8 +41,7 @@ solvers is held in a gsl_root_fdfsolver struct. The updates require both the fun
 its derivative (hence the name fdf) to be supplied by the user.
 !*/
 
-use crate::Error;
-use crate::ffi::FFI;
+use crate::{Error, ffi::FFI, utilities::wrap_callback};
 use std::ffi::{c_double, c_void};
 
 ffi_wrapper!(
@@ -117,7 +116,7 @@ ffi_wrapper!(
     *mut sys::gsl_root_fsolver,
     gsl_root_fsolver_free
     ;inner_call: sys::gsl_function_struct => sys::gsl_function_struct { function: None, params: std::ptr::null_mut() };
-    ;inner_closure: Option<Box<dyn Fn(f64) -> f64 + 'a>> => None;);
+    ;inner_closure: Option<Box<dyn FnMut(f64) -> f64 + 'a>> => None;);
 
 impl<'a> RootFSolver<'a> {
     /// This function returns a pointer to a newly allocated instance of a solver of type T.
@@ -138,13 +137,14 @@ impl<'a> RootFSolver<'a> {
     /// This function initializes, or reinitializes, an existing solver s to use the function f and
     /// the initial search interval [x lower, x upper].
     #[doc(alias = "gsl_root_fsolver_set")]
-    pub fn set<F: Fn(f64) -> f64 + 'a>(
+    pub fn set<F: FnMut(f64) -> f64 + 'a>(
         &mut self,
-        f: F,
+        mut f: F,
         x_lower: f64,
         x_upper: f64,
     ) -> Result<(), Error> {
-        self.inner_call = wrap_callback!(f, F + 'a);
+        // FIXME
+        self.inner_call = unsafe { wrap_callback(&mut f) };
         self.inner_closure = Some(Box::new(f));
 
         let ret = unsafe {

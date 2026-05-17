@@ -12,9 +12,7 @@ use libc::{FILE, fclose, fopen};
 /// # Safety
 /// The caller must ensure that `f` lives for as long at the return
 /// value is used.
-pub(crate) unsafe fn wrap_callback<F: FnMut(f64) -> f64>(
-    f: &mut Box<F>,
-) -> Box<sys::gsl_function_struct> {
+pub(crate) unsafe fn wrap_callback<F: FnMut(f64) -> f64>(f: &mut F) -> sys::gsl_function_struct {
     unsafe extern "C" fn trampoline<F: FnMut(f64) -> f64>(
         x: f64,
         params: *mut std::os::raw::c_void,
@@ -23,12 +21,19 @@ pub(crate) unsafe fn wrap_callback<F: FnMut(f64) -> f64>(
         f(x)
     }
 
-    // The struct must be on the heap to make sure it has a permanent
-    // address when passed to C, even if this value moves.
-    Box::new(sys::gsl_function_struct {
+    sys::gsl_function_struct {
         function: Some(trampoline::<F>),
         params: &mut *f as *const _ as *mut _,
-    })
+    }
+}
+
+/// # Safety
+/// The caller must ensure that `f` lives for as long at the return
+/// value is used.
+pub(crate) unsafe fn box_callback<F: FnMut(f64) -> f64>(
+    f: &mut Box<F>,
+) -> Box<sys::gsl_function_struct> {
+    Box::new(unsafe { wrap_callback(&mut *f) })
 }
 
 #[allow(dead_code)]

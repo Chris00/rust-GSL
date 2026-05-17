@@ -2,8 +2,9 @@
 // A rust binding for the GSL library by Guillaume Gomez (guillaume1.gomez@gmail.com)
 //
 
-//! Numerical Integration
 /*!
+# Numerical Integration
+
 ## Introduction
 
 Each algorithm computes an approximation to a definite integral of the form,
@@ -185,7 +186,7 @@ The CQUAD integration algorithm is described in the following paper:
 */
 
 use crate::Error;
-use crate::ffi::FFI;
+use crate::{ffi::FFI, utilities::wrap_callback};
 
 /// Add to `self` methods `epsabs` and `epsrel` assuming the struct
 /// has fields of the same name.
@@ -346,7 +347,7 @@ macro_rules! get_workspace {
 /// all the results of its predecessors, in order to minimize the
 /// total number of function evaluations.
 #[doc(alias = "gsl_integration_qng")]
-pub fn qng<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> Qng<F> {
+pub fn qng<F: FnMut(f64) -> f64>(f: F, a: f64, b: f64) -> Qng<F> {
     Qng::new(f, a, b)
 }
 
@@ -356,10 +357,10 @@ integ_builder! {
     a f64, b f64,
 }
 
-impl<F: Fn(f64) -> f64> Qng<F> {
+impl<F: FnMut(f64) -> f64> Qng<F> {
     /// Return `(result, abs_err, n_eval)`.
-    pub fn val_err_n(&self) -> Result<(f64, f64, usize), Error> {
-        let function = wrap_callback!(self.f, F);
+    pub fn val_err_n(&mut self) -> Result<(f64, f64, usize), Error> {
+        let function = unsafe { wrap_callback(&mut self.f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut n_eval = 0;
@@ -514,7 +515,7 @@ integ_builder_workspace! {
     a f64, b f64, key GaussKronrodRule,
 }
 
-impl<F: Fn(f64) -> f64> Qag<'_, F> {
+impl<F: FnMut(f64) -> f64> Qag<'_, F> {
     pub fn rule(mut self, key: GaussKronrodRule) -> Self {
         self.key = key;
         self
@@ -525,7 +526,7 @@ impl<F: Fn(f64) -> f64> Qag<'_, F> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let function = wrap_callback!(self.f, F);
+        let function = unsafe { wrap_callback(&mut self.f) };
         let ret = unsafe {
             sys::gsl_integration_qag(
                 &function,
@@ -570,13 +571,13 @@ integ_builder_workspace! {
     a f64, b f64,
 }
 
-impl<F: Fn(f64) -> f64> Qags<'_, F> {
+impl<F: FnMut(f64) -> f64> Qags<'_, F> {
     /// Return $(∫_a^b f, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let function = wrap_callback!(self.f, F);
+        let function = unsafe { wrap_callback(&mut self.f) };
         let ret = unsafe {
             sys::gsl_integration_qags(
                 &function,
@@ -627,13 +628,13 @@ integ_builder_workspace! {
     pts &'pts mut [f64],
 }
 
-impl<F: Fn(f64) -> f64> Qagp<'_, '_, F> {
+impl<F: FnMut(f64) -> f64> Qagp<'_, '_, F> {
     /// Return $(∫_a^b f, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let function = wrap_callback!(self.f, F);
+        let function = unsafe { wrap_callback(&mut self.f) };
 
         let ret = unsafe {
             sys::gsl_integration_qagp(
@@ -677,13 +678,13 @@ integ_builder_workspace! {
     Qagi<>,
 }
 
-impl<F: Fn(f64) -> f64> Qagi<'_, F> {
+impl<F: FnMut(f64) -> f64> Qagi<'_, F> {
     /// Return $(∫_{-∞}^∞ f, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
 
         let ret = unsafe {
             sys::gsl_integration_qagi(
@@ -721,13 +722,13 @@ integ_builder_workspace! {
     a f64,
 }
 
-impl<F: Fn(f64) -> f64> Qagiu<'_, F> {
+impl<F: FnMut(f64) -> f64> Qagiu<'_, F> {
     /// Return $(∫_a^∞ f, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
 
         let ret = unsafe {
             sys::gsl_integration_qagiu(
@@ -766,13 +767,13 @@ integ_builder_workspace! {
     b f64,
 }
 
-impl<F: Fn(f64) -> f64> Qagil<'_, F> {
+impl<F: FnMut(f64) -> f64> Qagil<'_, F> {
     /// Return $(∫_{-∞}^b f, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
 
         let ret = unsafe {
             sys::gsl_integration_qagil(
@@ -819,13 +820,13 @@ integ_builder_workspace! {
     a f64, b f64, c f64,
 }
 
-impl<F: Fn(f64) -> f64> Qawc<'_, F> {
+impl<F: FnMut(f64) -> f64> Qawc<'_, F> {
     /// Return $(∫_a^b f, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
 
         let ret = unsafe {
             sys::gsl_integration_qawc(
@@ -938,13 +939,13 @@ integ_builder_workspace! {
     a f64, b f64, table BorrowedOrOwned<'t, QawsTable>,
 }
 
-impl<F: Fn(f64) -> f64> Qaws<'_, '_, F> {
+impl<F: FnMut(f64) -> f64> Qaws<'_, '_, F> {
     /// Return $(∫_a^b f(x) w(x) dx, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         let mut result = 0.;
         let mut abs_err = 0.;
         let w = get_workspace!(self);
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
 
         let ret = unsafe {
             sys::gsl_integration_qaws(
@@ -1118,7 +1119,7 @@ integ_builder_workspace! {
     omega f64, l f64, sine QawOsc,
 }
 
-impl<F: Fn(f64) -> f64> Qawo<'_, '_, F> {
+impl<F: FnMut(f64) -> f64> Qawo<'_, '_, F> {
     /// Return $(∫_a^b f(x) w(x) dx, \abserr)$.
     pub fn val_err(&mut self) -> Result<(f64, f64), Error> {
         if self.table.is_none() {
@@ -1129,7 +1130,7 @@ impl<F: Fn(f64) -> f64> Qawo<'_, '_, F> {
             self.table = Some(BorrowedOrOwned::Owned(wf));
         }
         let w = get_workspace!(self);
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
         let mut result = 0.;
         let mut abs_err = 0.;
 
@@ -1247,7 +1248,7 @@ integ_builder_workspace! {no-epsrel;
     omega f64,
 }
 
-impl<'w, 't, F: Fn(f64) -> f64> Qawf<'w, '_, 't, F> {
+impl<'w, 't, F: FnMut(f64) -> f64> Qawf<'w, '_, 't, F> {
     pub fn cycle_workspace<'a>(self, w: &'a mut IntegrationWorkspace) -> Qawf<'w, 'a, 't, F> {
         Qawf {
             cycle_workspace: Some(BorrowedOrOwned::Borrowed(w)),
@@ -1272,7 +1273,7 @@ impl<'w, 't, F: Fn(f64) -> f64> Qawf<'w, '_, 't, F> {
         let w = get_workspace!(self);
         let wf = self.table.as_mut().unwrap().to_mut();
         let cw = self.cycle_workspace.as_mut().unwrap().to_mut();
-        let mut function = wrap_callback!(self.f, F);
+        let mut function = unsafe { wrap_callback(&mut self.f) };
         let ret = unsafe {
             sys::gsl_integration_qawf(
                 &mut function,
@@ -1350,7 +1351,7 @@ integ_builder! {
     a f64, b f64,
 }
 
-impl<F: Fn(f64) -> f64> Cquad<'_, F> {
+impl<F: FnMut(f64) -> f64> Cquad<'_, F> {
     /// Use the workspace `w` to compute the integral.
     pub fn workspace(self, w: &mut CquadWorkspace) -> Cquad<'_, F> {
         Cquad {
@@ -1368,7 +1369,7 @@ impl<F: Fn(f64) -> f64> Cquad<'_, F> {
             let w = CquadWorkspace::new(100).ok_or(Error::NoMemory)?;
             self.workspace = Some(BorrowedOrOwned::Owned(w));
         }
-        let function = wrap_callback!(self.f, F);
+        let function = unsafe { wrap_callback(&mut self.f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut n_evals = 0;
@@ -1433,8 +1434,8 @@ impl GLFixedTable {
     /// This function applies the Gauss-Legendre integration rule
     /// contained in table self and returns the result.
     #[doc(alias = "gsl_integration_glfixed")]
-    pub fn glfixed<F: Fn(f64) -> f64>(&self, f: F, a: f64, b: f64) -> f64 {
-        let function = wrap_callback!(f, F);
+    pub fn glfixed<F: FnMut(f64) -> f64>(&self, mut f: F, a: f64, b: f64) -> f64 {
+        let function = unsafe { wrap_callback(&mut f) };
         unsafe { sys::gsl_integration_glfixed(&function, a, b, self.unwrap_shared()) }
     }
 }
@@ -1566,9 +1567,9 @@ impl IntegrationFixedWorkspace {
     /// where $w_i$ are the quadrature weights and $x_i$ are the
     /// quadrature nodes computed in `self`.
     #[doc(alias = "gsl_integration_fixed")]
-    pub fn fixed<F: Fn(f64) -> f64>(&self, f: F) -> Result<f64, Error> {
+    pub fn fixed<F: FnMut(f64) -> f64>(&self, mut f: F) -> Result<f64, Error> {
         let mut result = 0.;
-        let function = wrap_callback!(f, F);
+        let function = unsafe { wrap_callback(&mut f) };
 
         let ret =
             unsafe { sys::gsl_integration_fixed(&function, &mut result, self.unwrap_shared()) };
@@ -1580,6 +1581,8 @@ impl IntegrationFixedWorkspace {
 
 /// Basic Gauss-Kronrod quadratures.
 pub mod basic {
+    use crate::utilities::wrap_callback;
+
     /// 15-point Gauss-Kronrod quadrature.
     ///
     /// Gauss quadrature weights and kronrod quadrature abscissae and
@@ -1588,8 +1591,8 @@ pub mod basic {
     ///
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk15")]
-    pub fn qk15<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
-        let function = wrap_callback!(f, F);
+    pub fn qk15<F: FnMut(f64) -> f64>(mut f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;
@@ -1613,8 +1616,8 @@ pub mod basic {
     ///
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk21")]
-    pub fn qk21<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
-        let function = wrap_callback!(f, F);
+    pub fn qk21<F: FnMut(f64) -> f64>(mut f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;
@@ -1638,8 +1641,8 @@ pub mod basic {
     ///
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk31")]
-    pub fn qk31<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
-        let function = wrap_callback!(f, F);
+    pub fn qk31<F: FnMut(f64) -> f64>(mut f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;
@@ -1663,8 +1666,8 @@ pub mod basic {
     ///
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk41")]
-    pub fn qk41<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
-        let function = wrap_callback!(f, F);
+    pub fn qk41<F: FnMut(f64) -> f64>(mut f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;
@@ -1688,8 +1691,8 @@ pub mod basic {
     ///
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk51")]
-    pub fn qk51<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
-        let function = wrap_callback!(f, F);
+    pub fn qk51<F: FnMut(f64) -> f64>(mut f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;
@@ -1713,8 +1716,8 @@ pub mod basic {
     ///
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk61")]
-    pub fn qk61<F: Fn(f64) -> f64>(f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
-        let function = wrap_callback!(f, F);
+    pub fn qk61<F: FnMut(f64) -> f64>(mut f: F, a: f64, b: f64) -> (f64, f64, f64, f64) {
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;
@@ -1736,13 +1739,13 @@ pub mod basic {
 
     /// Returns `(result, abs_err, resabs, resasc)`.
     #[doc(alias = "gsl_integration_qk")]
-    pub fn qk<F: Fn(f64) -> f64>(
+    pub fn qk<F: FnMut(f64) -> f64>(
         xgk: &[f64],
         wg: &[f64],
         wgk: &[f64],
         fv1: &mut [f64],
         fv2: &mut [f64],
-        f: F,
+        mut f: F,
         a: f64,
         b: f64,
     ) -> (f64, f64, f64, f64) {
@@ -1751,7 +1754,7 @@ pub mod basic {
         assert!(xgk.len() == fv1.len());
         assert!(xgk.len() == fv2.len());
 
-        let function = wrap_callback!(f, F);
+        let function = unsafe { wrap_callback(&mut f) };
         let mut result = 0.;
         let mut abs_err = 0.;
         let mut resabs = 0.;

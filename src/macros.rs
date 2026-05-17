@@ -12,25 +12,6 @@ macro_rules! ffi_wrap {
 }
 
 #[doc(hidden)]
-macro_rules! wrap_callback {
-    ($f:expr, $F:ident $(+ $lt:lifetime)?) => {{
-        unsafe extern "C" fn trampoline<$($lt,)? F: Fn(f64) -> f64 $( + $lt)?>(
-            x: f64,
-            params: *mut std::os::raw::c_void,
-        ) -> f64 {
-            let f: &F = unsafe { &*(params as *const F) };
-            let x = f(x);
-            x
-        }
-
-        sys::gsl_function_struct {
-            function: Some(trampoline::<$F>),
-            params: &$f as *const _ as *mut _,
-        }
-    }};
-}
-
-#[doc(hidden)]
 macro_rules! ffi_wrapper {
     ($(#[$doc: meta])* $name:ident
         $(<$($p:tt $(: $tr0:tt $(+ ?$tr1:tt)?)?),*>)?,

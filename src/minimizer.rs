@@ -102,7 +102,7 @@ interval is used then these algorithm cannot fail, provided the
 function is well-behaved.
 */
 
-use crate::{Error, ffi::FFI, utilities::wrap_callback};
+use crate::{Error, ffi::FFI, utilities::box_callback};
 use std::ops::ControlFlow;
 
 /// Type of the minimizer (without derivative).
@@ -227,7 +227,7 @@ impl<'a> Minimizer<'a> {
         x_upper: f64,
     ) -> Result<(), Error> {
         let mut f = Box::new(f);
-        let mut f_struct = unsafe { wrap_callback(&mut f) };
+        let mut f_struct = unsafe { box_callback(&mut f) };
         self.f = Some(f);
 
         let ret = unsafe {
@@ -257,7 +257,7 @@ impl<'a> Minimizer<'a> {
         f_upper: f64,
     ) -> Result<(), Error> {
         let mut f = Box::new(f);
-        let mut f_struct = unsafe { wrap_callback(&mut f) };
+        let mut f_struct = unsafe { box_callback(&mut f) };
         self.f = Some(f);
 
         let ret = unsafe {
