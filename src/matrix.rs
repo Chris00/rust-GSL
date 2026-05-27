@@ -20,14 +20,188 @@ let m = MatF64::from_slice(&[1., 2., 3., 4.], 2, 2);
 use crate::{
     Error,
     ffi::{self, FFI},
-    vector::{VecF32, VecF64, VecI32, VecU32},
-    view::ViewMut,
+    vector::{AsVector, VecF32, VecF64, VecI32, VecU32},
+    view::{View, ViewMut},
 };
 use pastey::paste;
 use std::{
     fmt::{self, Debug, Formatter},
     ptr,
 };
+
+/// Used to represent how to convert the GSL matrix format to the
+/// matrix (view) type associated with the vector type `Self`.
+pub trait AsMatrix: AsVector {
+    type MatView<'a>;
+    type MatViewMut<'a>;
+
+    /// Return a mutable matrix view (i.e. non-owning) from the slice.
+    ///
+    /// Matrices are stored in row-major order, meaning that each row
+    /// of elements forms a contiguous block in memory.  This is the
+    /// standard “C-language ordering” of two-dimensional arrays.
+    /// Note that FORTRAN stores arrays in column-major order.  The
+    /// number of rows is `nrows`. The range of valid row indices runs
+    /// from `0` to `nrows - 1`.  Similarly `ncols` is the number of
+    /// columns.  The range of valid column indices runs from `0` to
+    /// `ncols - 1`.  The physical row dimension `tda`, or trailing
+    /// dimension, specifies the size of a row of the matrix as laid
+    /// out in memory.
+    ///
+    /// For example, in the following matrix `nrows` is 3, `ncols` is
+    /// 4, and `tda` is 8.  The physical memory layout of the matrix
+    /// begins in the top left hand-corner and proceeds from left to
+    /// right along each row in turn.
+    ///
+    /// ```text
+    /// 00 01 02 03 XX XX XX XX
+    /// 10 11 12 13 XX XX XX XX
+    /// 20 21 22 23 XX XX XX XX
+    /// ```
+    ///
+    /// Each unused memory location is represented by “XX”.  The first
+    /// element of the slice `data` gives the location of the first
+    /// element of the matrix in memory.
+    fn mat_view_from_slice(
+        data: &[f64],
+        nrows: usize,
+        ncols: usize,
+        tda: usize,
+    ) -> Self::MatView<'_>;
+
+    /// Same as [`Self::mat_view_from_slice`] but for mutable data.
+    fn mat_view_from_mut_slice(
+        data: &mut [f64],
+        nrows: usize,
+        ncols: usize,
+        tda: usize,
+    ) -> Self::MatViewMut<'_>;
+
+    /// Convert the mutable GSL pointer as a mutable matrix view.
+    ///
+    /// # Safety
+    ///
+    /// The GSL vector is not owned and neither the C struct nor the
+    /// data block must be freed.
+    ///
+    /// It is important to ensure that the view lifetime is bound to
+    /// the lifetime of the vector or matrix that underlies `view`.
+    unsafe fn mat_view_from_ptr<'a>(ptr: *const sys::gsl_matrix) -> Self::MatView<'a> {
+        debug_assert!(!ptr.is_null());
+        let v = unsafe { ptr.as_ref_unchecked() };
+        let nrows = v.size1;
+        let ncols = v.size2;
+        let len = v.tda * nrows;
+        let data = unsafe { std::slice::from_raw_parts(v.data, len) };
+        Self::mat_view_from_slice(data, nrows, ncols, v.tda)
+    }
+
+    /// Same as [`mat_view_from_ptr`] but for mutable data.
+    unsafe fn mat_view_from_mut_ptr<'a>(ptr: *mut sys::gsl_matrix) -> Self::MatViewMut<'a> {
+        debug_assert!(!ptr.is_null());
+        let v = unsafe { ptr.as_ref_unchecked() };
+        let nrows = v.size1;
+        let ncols = v.size2;
+        let len = v.tda * nrows;
+        let data = unsafe { std::slice::from_raw_parts_mut(v.data, len) };
+        Self::mat_view_from_mut_slice(data, nrows, ncols, v.tda)
+    }
+}
+
+impl AsMatrix for VecF64 {
+    type MatView<'a> = View<'a, MatF64>;
+    type MatViewMut<'a> = ViewMut<'a, MatF64>;
+
+    fn mat_view_from_slice(
+        data: &[f64],
+        nrows: usize,
+        ncols: usize,
+        tda: usize,
+    ) -> Self::MatView<'_> {
+        let m = sys::gsl_matrix {
+            size1: nrows,
+            size2: ncols,
+            tda,
+            data: data.as_ptr() as *mut f64, // `View` disallows mutation
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        View::alloc("<VecF64 as AsMatrix>::view_from_slice", m)
+    }
+
+    fn mat_view_from_mut_slice(
+        data: &mut [f64],
+        nrows: usize,
+        ncols: usize,
+        tda: usize,
+    ) -> Self::MatViewMut<'_> {
+        let m = sys::gsl_matrix {
+            size1: nrows,
+            size2: ncols,
+            tda,
+            data: data.as_mut_ptr(),
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        ViewMut::alloc("<VecF64 as AsMatrix>::view_from_mut_slice", m)
+    }
+
+    unsafe fn mat_view_from_ptr<'a>(ptr: *const sys::gsl_matrix) -> Self::MatView<'a> {
+        View::from_ptr(ptr, false)
+    }
+
+    unsafe fn mat_view_from_mut_ptr<'a>(ptr: *mut sys::gsl_matrix) -> Self::MatViewMut<'a> {
+        ViewMut::from_ptr(ptr, false)
+    }
+}
+
+impl AsMatrix for [f64] {
+    // Slices do not have a dedicated matrix type, use the one of the GSL.
+    type MatView<'a> = View<'a, MatF64>;
+    type MatViewMut<'a> = ViewMut<'a, MatF64>;
+
+    fn mat_view_from_slice(
+        data: &[f64],
+        nrows: usize,
+        ncols: usize,
+        tda: usize,
+    ) -> Self::MatView<'_> {
+        let m = sys::gsl_matrix {
+            size1: nrows,
+            size2: ncols,
+            tda,
+            data: data.as_ptr() as *mut f64, // `View` disallows mutation
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        View::alloc("<[f64] as AsMatrix>::view_from_slice", m)
+    }
+
+    fn mat_view_from_mut_slice(
+        data: &mut [f64],
+        nrows: usize,
+        ncols: usize,
+        tda: usize,
+    ) -> Self::MatViewMut<'_> {
+        let m = sys::gsl_matrix {
+            size1: nrows,
+            size2: ncols,
+            tda,
+            data: data.as_mut_ptr(),
+            block: ptr::null_mut(),
+            owner: 0,
+        };
+        ViewMut::alloc("<[f64] as AsMatrix>::view_from_mut_slice", m)
+    }
+
+    unsafe fn mat_view_from_ptr<'a>(ptr: *const sys::gsl_matrix) -> Self::MatView<'a> {
+        View::from_ptr(ptr, false)
+    }
+
+    unsafe fn mat_view_from_mut_ptr<'a>(ptr: *mut sys::gsl_matrix) -> Self::MatViewMut<'a> {
+        ViewMut::from_ptr(ptr, false)
+    }
+}
 
 macro_rules! gsl_matrix {
     ($rust_name:ident, $name:ident, $rust_ty:ident, $vec_name:ident, $vec_c_name:ident) => {
