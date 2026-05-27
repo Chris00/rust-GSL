@@ -32,9 +32,6 @@ pub use self::monte_carlo::{
     MiserMonteCarlo, MiserParams, PlainMonteCarlo, VegasMonteCarlo, VegasParams,
 };
 pub use self::multifit_linear::MultifitLinearWorkspace;
-pub use self::multifit_solver::{
-    MultiFitFdfSolver, MultiFitFdfSolverType, MultiFitFunction, MultiFitFunctionFdf,
-};
 #[cfg(feature = "v2_1")]
 #[cfg_attr(docsrs, doc(cfg(feature = "v2_1")))]
 pub use self::multilarge_linear::{MultilargeLinearType, MultilargeLinearWorkspace};
@@ -87,7 +84,6 @@ pub mod histograms;
 pub mod interpolation;
 pub mod monte_carlo;
 pub mod multifit_linear;
-pub mod multifit_solver;
 #[cfg(feature = "v2_1")]
 #[cfg_attr(docsrs, doc(cfg(feature = "v2_1")))]
 pub mod multilarge_linear;

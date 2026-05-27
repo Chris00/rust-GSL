@@ -290,10 +290,940 @@ The user can tune nearly all aspects of the iteration at allocation
 time.  See [`Parameters`] and [`large::Parameters`].
  */
 
+use crate::{
+    Error,
+    ffi::FFI,
+    matrix::{AsMatrix, MatF64},
+    vector::VecF64,
+};
+use pastey::paste;
+use std::ffi::c_void;
+
+// `sqrt` is not const.
+const SQRT_EPSILON: f64 = 1.4901161193847656e-08;
+
+/// Method to solve the Trust Region Subproblem.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TRS {
+    /// [Levenberg-Marquardt](crate::multifit#levenberg-marquardt)
+    /// algorithm.
+    LM,
+    /// [Levenberg-Marquardt with Geodesic
+    /// Acceleration](crate::multifit#levenberg-marquardt-with-geodesic-acceleration).
+    LMaccel,
+    /// [Dogleg](crate::multifit#dogleg) algorithm.
+    Dogleg,
+    /// [Double Dogleg](crate::multifit#double-dogleg) algorithm.
+    DDogleg,
+    /// [Two Dimensional
+    /// Subspace](crate::multifit#two-dimensional-subspace) algorithm.
+    Subspace2D,
+}
+
+impl TRS {
+    fn to_c(self) -> *const sys::gsl_multifit_nlinear_trs {
+        unsafe {
+            match self {
+                Self::LM => sys::gsl_multifit_nlinear_trs_lm,
+                Self::LMaccel => sys::gsl_multifit_nlinear_trs_lmaccel,
+                Self::Dogleg => sys::gsl_multifit_nlinear_trs_dogleg,
+                Self::DDogleg => sys::gsl_multifit_nlinear_trs_ddogleg,
+                Self::Subspace2D => sys::gsl_multifit_nlinear_trs_subspace2D,
+            }
+        }
+    }
+}
+
+/// Determines the [diagonal scaling matrix
+/// $D$](crate::multifit#overview).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Scale {
+    /// This damping strategy was suggested by Moré, and corresponds
+    /// to $D^T D = \max(\diag(J^T J))$, in other words the maximum
+    /// elements of $\diag(J^T J)$ encountered thus far in the
+    /// iteration.  This choice of $D$ makes the problem
+    /// scale-invariant, so that if the model parameters $xᵢ$ are each
+    /// scaled by an arbitrary constant, $\tilde{x}ᵢ = aᵢ xᵢ$, then
+    /// the sequence of iterates produced by the algorithm would be
+    /// unchanged.  This method can work very well in cases where the
+    /// model parameters have widely different scales (i.e. if some
+    /// parameters are measured in nanometers, while others are
+    /// measured in degrees Kelvin).  This strategy has been proven
+    /// effective on a large class of problems and so it is the
+    /// library default, but it may not be the best choice for all
+    /// problems.
+    More,
+    /// This damping strategy was originally suggested by Levenberg,
+    /// and corresponds to $D^T D = I$.  This method has also proven
+    /// effective on a large class of problems, but is not
+    /// scale-invariant.  However, some authors (e.g. Transtrum and
+    /// Sethna 2012) argue that this choice is better for problems
+    /// which are susceptible to parameter evaporation
+    /// (i.e. parameters go to infinity)
+    Levenberg,
+    /// This damping strategy was suggested by Marquardt, and
+    /// corresponds to $D^T D = \diag(J^T J)$.  This method is
+    /// scale-invariant, but it is generally considered inferior to
+    /// both the Levenberg and Moré strategies, though may work well
+    /// on certain classes of problems.
+    Marquardt,
+}
+
+impl Scale {
+    fn to_c(self) -> *const sys::gsl_multifit_nlinear_scale {
+        unsafe {
+            match self {
+                Self::More => sys::gsl_multifit_nlinear_scale_more,
+                Self::Levenberg => sys::gsl_multifit_nlinear_scale_levenberg,
+                Self::Marquardt => sys::gsl_multifit_nlinear_scale_marquardt,
+            }
+        }
+    }
+
+    fn to_c_large(self) -> *const sys::gsl_multilarge_nlinear_scale {
+        unsafe {
+            match self {
+                Self::More => sys::gsl_multilarge_nlinear_scale_more,
+                Self::Levenberg => sys::gsl_multilarge_nlinear_scale_levenberg,
+                Self::Marquardt => sys::gsl_multilarge_nlinear_scale_marquardt,
+            }
+        }
+    }
+}
+
+/// Solver for the trust region subproblem.
+///
+/// Solving the trust region subproblem on each iteration almost
+/// always requires the solution of the following linear least squares
+/// system
+///
+/// $$\begin{pmatrix} J \cr √μ D \end{pmatrix} δ
+/// = - \begin{pmatrix} f \cr 0 \end{pmatrix}$$
+///
+/// How the system is solved and can be selected the choices of this
+/// enum.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Solver {
+    /// This method solves the system using a rank revealing QR
+    /// decomposition of the Jacobian $J$.  This method will produce
+    /// reliable solutions in cases where the Jacobian is rank
+    /// deficient or near-singular but does require about twice as
+    /// many operations as the `Cholesky` method.
+    QR,
+    /// This method solves the alternate normal equations problem
+    ///
+    /// $$\left( J^T J + μ D^T D \right) δ = -J^T f$$
+    ///
+    /// by using a Cholesky decomposition of the matrix $J^T J + μ D^T
+    /// D$.  This method is faster than the QR approach, however it is
+    /// susceptible to numerical instabilities if the Jacobian matrix
+    /// is rank deficient or near-singular.  In these cases, an
+    /// attempt is made to reduce the condition number of the matrix
+    /// using Jacobi preconditioning, but for highly ill-conditioned
+    /// problems the QR approach is better.  If it is known that the
+    /// Jacobian matrix is well conditioned, this method is accurate
+    /// and will perform faster than the QR approach.
+    Cholesky,
+    /// This method solves the alternate normal equations problem
+    ///
+    /// $$\left( J^T J + μ D^T D \right) δ = -J^T f$$
+    ///
+    /// by using a modified Cholesky decomposition of the matrix $J^T J
+    /// + μ D^T D$.  This is more suitable for the dogleg methods
+    /// where the parameter $μ = 0$, and the matrix $J^T J$ may be
+    /// ill-conditioned or indefinite causing the standard Cholesky
+    /// decomposition to fail.  This method is based on Level 2 BLAS
+    /// and is thus slower than the standard Cholesky decomposition,
+    /// which is based on Level 3 BLAS.
+    MCholesky,
+    /// This method solves the system using a singular value
+    /// decomposition of the Jacobian $J$.  This method will produce
+    /// the most reliable solutions for ill-conditioned Jacobians but
+    /// is also the slowest solver method.
+    SVD,
+}
+
+impl Solver {
+    fn to_c(self) -> *const sys::gsl_multifit_nlinear_solver {
+        unsafe {
+            match self {
+                Self::QR => sys::gsl_multifit_nlinear_solver_qr,
+                Self::Cholesky => sys::gsl_multifit_nlinear_solver_cholesky,
+                Self::MCholesky => sys::gsl_multifit_nlinear_solver_mcholesky,
+                Self::SVD => sys::gsl_multifit_nlinear_solver_svd,
+            }
+        }
+    }
+}
+
+/// Finite difference type used to approximate the Jacobian.
+///
+/// Specifies whether to use forward or centered differences when
+/// approximating the Jacobian.  This is only used when an analytic
+/// Jacobian is not provided to the solver.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FdType {
+    /// Specify a forward finite difference to approximate the
+    /// Jacobian matrix. The Jacobian matrix will be calculated as
+    ///
+    /// $$J_{ij} = \frac{1}{Δⱼ\} \bigl( fᵢ(x + Δⱼ eⱼ) - fᵢ(x) \bigr)$$
+    ///
+    /// where $Δⱼ = h |xⱼ|$ and $eⱼ$ is the standard $j$-th Cartesian
+    /// unit basis vector so that $x + Δⱼ eⱼ$ represents a small
+    /// (forward) perturbation of the $j$-th parameter by an amount
+    /// $Δⱼ$.  The perturbation $Δⱼ$ is proportional to the current
+    /// value $|xⱼ|$ which helps to calculate an accurate Jacobian
+    /// when the various parameters have different scale sizes.  The
+    /// value of h is specified by the h_df parameter.  The accuracy
+    /// of this method is $O(h)$, and evaluating this matrix requires
+    /// an additional $p$ function evaluations.
+    FwDiff,
+    /// Specify a centered finite difference to approximate the
+    /// Jacobian matrix. The Jacobian matrix will be calculated as
+    ///
+    /// $$J_{ij} = \frac{1}{Δⱼ} \left(
+    /// fᵢ(x + \tfrac{1}{2} Δⱼeⱼ) - fᵢ(x - \tfrac{1}{2} Δⱼeⱼ) \right)$$
+    ///
+    /// See `FwDiff` for a description of $Δⱼ$.  The accuracy of this
+    /// method is $O(h^2)$, but evaluating this matrix requires an
+    /// additional $2p$ function evaluations.
+    CtrDiff,
+}
+
+impl FdType {
+    fn to_c(self) -> sys::gsl_multifit_nlinear_fdtype {
+        match self {
+            Self::FwDiff => sys::gsl_multifit_nlinear_fdtype_GSL_MULTIFIT_NLINEAR_FWDIFF,
+            Self::CtrDiff => sys::gsl_multifit_nlinear_fdtype_GSL_MULTIFIT_NLINEAR_CTRDIFF,
+        }
+    }
+}
+
+/// Tunable Parameters.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Parameters {
+    /// Trust region subproblem method.
+    pub trs: TRS,
+    /// Scaling method.
+    pub scale: Scale,
+    /// Solver method.
+    pub solver: Solver,
+    /// Finite difference method.
+    pub fdtype: FdType,
+    /// Factor for increasing trust radius.
+    ///
+    /// When a step is accepted, the trust region radius will be
+    /// increased by this factor.  The default value is 3.
+    pub factor_up: f64,
+    /// Factor for decreasing trust radius.
+    ///
+    /// When a step is rejected, the trust region radius will be
+    /// decreased by this factor.  The default value is 2.
+    pub factor_down: f64,
+    /// Max allowed $|a|/|v|$.
+    ///
+    /// When using geodesic acceleration to solve a nonlinear least
+    /// squares problem, an important parameter to monitor is the
+    /// ratio of the acceleration term to the velocity term,
+    ///
+    /// $$\frac{‖a‖}{‖v‖}$$
+    ///
+    /// If this ratio is small, it means the acceleration correction
+    /// is contributing very little to the step.  This could be
+    /// because the problem is not “nonlinear” enough to benefit from
+    /// the acceleration. If the ratio is large ($> 1$) it means that
+    /// the acceleration is larger than the velocity, which shouldn’t
+    /// happen since the step represents a truncated series and so the
+    /// second order term $a$ should be smaller than the first order
+    /// term $v$ to guarantee convergence.  Therefore any steps with a
+    /// ratio larger than the parameter `avmax` are rejected.  `avmax`
+    /// is set to 0.75 by default.  For problems which experience
+    /// difficulty converging, this threshold could be lowered.
+    pub avmax: f64,
+    /// Step size for finite difference Jacobian.
+    ///
+    /// This parameter specifies the step size for approximating the
+    /// Jacobian matrix with finite differences.  It is set to $√ε$ by
+    /// default, where $ε$ is [`f64::EPSILON`].
+    pub h_df: f64,
+    /// Step size for finite difference $f_{vv}$.
+    ///
+    /// When using geodesic acceleration, the user must either supply
+    /// a function to calculate $f_{vv}(x)$ or the library can
+    /// estimate this second directional derivative using a finite
+    /// difference method.  When using finite differences, the library
+    /// must calculate $f(x + h v)$ where $h$ represents a small step
+    /// in the velocity direction.  The parameter `h_fvv` defines this
+    /// step size and is set to 0.02 by default.
+    pub h_fvv: f64,
+}
+
+impl Parameters {
+    fn to_c(&self) -> sys::gsl_multifit_nlinear_parameters {
+        sys::gsl_multifit_nlinear_parameters {
+            trs: self.trs.to_c(),
+            scale: self.scale.to_c(),
+            solver: self.solver.to_c(),
+            fdtype: self.fdtype.to_c(),
+            factor_up: self.factor_up,
+            factor_down: self.factor_down,
+            avmax: self.avmax,
+            h_df: self.h_df,
+            h_fvv: self.h_fvv,
+        }
+    }
+}
+
+impl Parameters {
+    /// Return a set of recommended default parameters for use in
+    /// solving nonlinear least squares problems.
+    pub fn new() -> Parameters {
+        Parameters {
+            trs: TRS::LM,
+            scale: Scale::More,
+            solver: Solver::QR,
+            fdtype: FdType::FwDiff,
+            factor_up: 3.,
+            factor_down: 2.,
+            avmax: 0.75,
+            h_df: SQRT_EPSILON,
+            h_fvv: 0.02,
+        }
+    }
+}
+
+impl std::default::Default for Parameters {
+    fn default() -> Self {
+        Parameters::new()
+    }
+}
+
+/// The type of algorithm which will be used to solve a nonlinear
+/// least squares problem.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Type {
+    /// Trust region method.  It is currently the only implemented
+    /// nonlinear least squares method.
+    Trust,
+}
+
+/// Used to identify the types that can be used to specify the
+/// functions to pass to [`Workspace::init`].
+pub trait Fdf<V: AsMatrix + ?Sized> {
+    /// `f(x, fx)` must store the `n` components of the vector $f(x)$
+    /// in `fx` for argument `x`, returning an appropriate error code
+    /// if the function cannot be computed.
+    fn f(&mut self, x: &V, fx: &mut V) -> Result<(), Error>;
+
+    /// `df(x, J)` stores the `n`-by-`p` matrix result
+    ///
+    /// $$J_{ij} = ∂fᵢ(x) / ∂xⱼ$$
+    ///
+    /// in `J` for argument `x`, returning an appropriate error code
+    /// if the matrix cannot be computed.  If an analytic Jacobian is
+    /// unavailable, or too expensive to compute, you can use
+    /// [`unimplemented'()`] and let [`Self::has_df`] return `false`.
+    /// In this case the Jacobian will be internally computed using
+    /// finite difference approximations of the function f.
+    fn df(&mut self, x: &V, J: &mut V::MatViewMut<'_>) -> Result<(), Error>;
+
+    /// Return `true` iff the method [`Self::df`] is implemented.
+    fn has_df(&self) -> bool;
+
+    /// `fvv(a, v, fvv)` must store the `n` components of the vector
+    /// $f_{vv}(x) = ∑_{αβ} v_α v_β \frac{∂}{∂x_α} \frac{∂}{∂x_β}
+    /// f(x)$, representing second directional derivatives of the
+    /// function to be minimized, into the `fvv`.  The point is
+    /// provided in `x` and the velocity vector is provided in `v`,
+    /// both of which have `p` components.
+    ///
+    /// This is needed when geodesic acceleration is enabled.  If
+    /// analytic expressions for $f_{vv}(x)$ are unavailable or too
+    /// difficult to compute, this function may be
+    /// [`unimplemented!()`] and [`Self::has_fvv`] must return
+    /// `false`.  In this case $f_{vv}(x)$ will be computed internally
+    /// using a finite difference approximation.
+    fn fvv(&mut self, x: &V, v: &V, J: &mut V) -> Result<(), Error>;
+
+    /// Return `true` iff the method [`Self::fvv`] is implemented.
+    fn has_fvv(&self) -> bool;
+}
+
+impl<V, F> Fdf<V> for F
+where
+    V: AsMatrix + ?Sized,
+    F: FnMut(&V, &mut V) -> Result<(), Error>,
+{
+    fn f(&mut self, x: &V, fx: &mut V) -> Result<(), Error> {
+        self(x, fx)
+    }
+
+    #[inline]
+    fn has_df(&self) -> bool {
+        false
+    }
+
+    fn df(&mut self, _x: &V, _J: &mut V::MatViewMut<'_>) -> Result<(), Error> {
+        unimplemented!()
+    }
+
+    #[inline]
+    fn has_fvv(&self) -> bool {
+        false
+    }
+
+    fn fvv(&mut self, _x: &V, _v: &V, _J: &mut V) -> Result<(), Error> {
+        unimplemented!()
+    }
+}
+
+ffi_wrapper!(
+    /// Derivative solver.
+    Workspace<'a, V: AsMatrix + ?Sized>,
+    *mut sys::gsl_multifit_nlinear_workspace,
+    gsl_multifit_nlinear_free
+    ;fdf_struct: Option<Box<sys::gsl_multifit_nlinear_fdf>> => None;
+    ;fdf: Option<Box<dyn Fdf<V> + 'a>> => None;
+);
+
+macro_rules! impl_workspace {
+    ($fit: ident, $path: literal) => {
+        paste! {
+
+            impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
+                fn type_to_c(
+                    t: Type
+                ) -> *const sys::[<gsl_multi $fit _nlinear_type>] {
+                    match t {
+                        Type::Trust => unsafe {
+                            sys::[<gsl_multi $fit _nlinear_trust>]
+                        },
+                    }
+                }
+
+                /// Return a new instance of a derivative solver of
+                /// type `t` for `n` observations and `p` parameters.
+                /// The `params` input specifies a tunable set of
+                /// parameters which will affect important details in
+                /// each iteration of the trust region subproblem
+                /// algorithm.  It is recommended to start with the
+                /// suggested default parameters
+                /// [`Parameters::default()`] and then tune the
+                /// parameters once the code is working correctly.
+                /// See Tunable [`Parameters`] for descriptions of the
+                /// various parameters.  For example, the following
+                /// code creates an instance of a Levenberg-Marquardt
+                /// solver for `100` data points and `3` parameters,
+                /// using suggested defaults:
+                ///
+                /// ```
+                /// use rgsl::VecF64;
+                #[doc = "use " $path "::{Parameters, Type, Workspace};"]
+                /// let params = Parameters::default();
+                /// let w = Workspace::<VecF64>::new(Type::Trust, &params, 100, 3);
+                /// ```
+                ///
+                /// The number of observations `n` must be greater
+                /// than or equal to parameters `p`.
+                ///
+                /// # Panic
+                /// Panic if there is insufficient memory to create
+                /// the workspace.
+                #[doc(alias = gsl_multi $fit _nlinear_alloc)]
+                pub fn new(t: Type, params: &Parameters, n: usize, p: usize) -> Self {
+                    let w = unsafe { sys::[<gsl_multi $fit _nlinear_alloc>](
+                        Self::type_to_c(t), &params.to_c(), n, p)
+                    };
+                    if w.is_null() {
+                        panic!("rgsl::multi{}::Workspace::new: out of memory",
+                            stringify!($fit));
+                    }
+                    Self::wrap(w)
+                }
+
+                pub fn trust(params: &Parameters, n: usize, p: usize) -> Self {
+                    Self::new(Type::Trust, params, n, p)
+                }
+
+                /// Return the number of observations the workspace is for.
+                pub fn n(&self) -> usize {
+                    unsafe {
+                        let w = self.inner.as_ref_unchecked();
+                        (*w.f).size
+                    }
+                }
+
+                /// Return the number of parameters the workspace is for.
+                pub fn p(&self) -> usize {
+                    unsafe {
+                        let w = self.inner.as_ref_unchecked();
+                        (*w.x).size
+                    }
+                }
+
+            }
+        }
+    };
+}
+
+impl_workspace!(fit, "rgsl::multifit");
+
+impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
+    /// Initialize, or reinitialize, the workspace to use the function
+    /// `f` and the initial guess `x`.
+    ///
+    /// The call `f(x, fx)` should store the `n` components of the
+    /// vector $f(x)$ in `fx` for argument `x`, returning an
+    /// appropriate error code if the function cannot be computed.
+    ///
+    /// You may also want to supply a [function computing the
+    /// derivative of $f$](Self::df).
+    #[doc(alias = "gsl_multifit_nlinear_init")]
+    pub fn init<F: Fdf<V> + 'a>(&mut self, x: &V, fdf: F) -> Result<(), Error> {
+        unsafe extern "C" fn f_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+            x: *const sys::gsl_vector,
+            params: *mut c_void,
+            fx: *mut sys::gsl_vector,
+        ) -> i32 {
+            let ret = std::panic::catch_unwind(|| unsafe {
+                let fdf = &mut *params.cast::<F>();
+                let vx = V::view_from_ptr(x);
+                let mut vfx = V::view_from_mut_ptr(fx);
+                fdf.f(&*vx, &mut *vfx)
+            });
+            Error::to_c(ret.map_err(|_| Error::Failure).flatten())
+        }
+
+        unsafe extern "C" fn df_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+            x: *const sys::gsl_vector,
+            params: *mut c_void,
+            J: *mut sys::gsl_matrix,
+        ) -> i32 {
+            let ret = std::panic::catch_unwind(|| unsafe {
+                let fdf = &mut *params.cast::<F>();
+                let vx = V::view_from_ptr(x);
+                let mut vJ = V::mat_view_from_mut_ptr(J);
+                fdf.df(&*vx, &mut vJ)
+            });
+            Error::to_c(ret.map_err(|_| Error::Failure).flatten())
+        }
+
+        unsafe extern "C" fn fvv_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+            x: *const sys::gsl_vector,
+            v: *const sys::gsl_vector,
+            params: *mut c_void,
+            fvv: *mut sys::gsl_vector,
+        ) -> i32 {
+            let ret = std::panic::catch_unwind(|| unsafe {
+                let fdf = &mut *params.cast::<F>();
+                let vx = V::view_from_ptr(x);
+                let vv = V::view_from_ptr(v);
+                let mut vfvv = V::view_from_mut_ptr(fvv);
+                fdf.fvv(&*vx, &*vv, &mut *vfvv)
+            });
+            Error::to_c(ret.map_err(|_| Error::Failure).flatten())
+        }
+
+        let mut fdf: Box<F> = Box::new(fdf);
+        let mut fdf_struct = Box::new(sys::gsl_multifit_nlinear_fdf {
+            f: Some(f_trampoline::<V, F>),
+            df: fdf.has_df().then_some(df_trampoline::<V, F>),
+            fvv: fdf.has_fvv().then_some(fvv_trampoline::<V, F>),
+            n: self.n(),
+            p: self.p(),
+            params: &mut *fdf as *mut F as *mut _,
+            nevalf: 0,
+            nevaldf: 0,
+            nevalfvv: 0,
+        });
+        self.fdf = Some(fdf);
+
+        let x = V::as_gsl_vector(x);
+        let ret = unsafe {
+            sys::gsl_multifit_nlinear_init(
+                &*x,              // copied into the workspace
+                &mut *fdf_struct, // Heap pointer (stable address)
+                self.unwrap_unique(),
+            )
+        };
+        self.fdf_struct = Some(fdf_struct);
+        Error::handle(ret, ())
+    }
+
+    pub fn name(&self) -> TRS {
+        let n = unsafe { sys::gsl_multifit_nlinear_trs_name(self.unwrap_shared()) };
+        map_name!(
+            rgsl::multifit::Workspace,
+            [
+                (c"levenberg-marquardt", TRS::LM),
+                (c"levenberg-marquardt+accel", TRS::LMaccel),
+                (c"dogleg", TRS::Dogleg),
+                (c"double-dogleg", TRS::DDogleg),
+                (c"2D-subspace", TRS::Subspace2D),
+            ],
+            n,
+            TRS
+        )
+    }
+}
+
+pub mod large {
+    use super::*;
+
+    /// Method to solve the Trust Region Subproblem.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum TRS {
+        /// [Levenberg-Marquardt](crate::multifit#levenberg-marquardt)
+        /// algorithm.
+        LM,
+        /// [Levenberg-Marquardt with Geodesic
+        /// Acceleration](crate::multifit#levenberg-marquardt-with-geodesic-acceleration).
+        LMaccel,
+        /// [Dogleg](crate::multifit#dogleg) algorithm.
+        Dogleg,
+        /// [Double Dogleg](crate::multifit#double-dogleg) algorithm.
+        DDogleg,
+        /// [Two Dimensional
+        /// Subspace](crate::multifit#two-dimensional-subspace) algorithm.
+        Subspace2D,
+        /// [Steihaug-Toint Conjugate
+        /// Gradient](crate::multifit#steihaug-toint-conjugate-gradient)
+        /// algorithm. This method is available only for large systems.
+        CgST,
+    }
+
+    impl TRS {
+        fn to_c(self) -> *const sys::gsl_multilarge_nlinear_trs {
+            unsafe {
+                match self {
+                    Self::LM => sys::gsl_multilarge_nlinear_trs_lm,
+                    Self::LMaccel => sys::gsl_multilarge_nlinear_trs_lmaccel,
+                    Self::Dogleg => sys::gsl_multilarge_nlinear_trs_dogleg,
+                    Self::DDogleg => sys::gsl_multilarge_nlinear_trs_ddogleg,
+                    Self::Subspace2D => sys::gsl_multilarge_nlinear_trs_subspace2D,
+                    Self::CgST => sys::gsl_multilarge_nlinear_trs_cgst,
+                }
+            }
+        }
+    }
+
+    /// Make possible to use `TRS` instead of `large::TRS` so switching to
+    /// the `large` module requires minimal code change.
+    impl std::convert::From<super::TRS> for TRS {
+        fn from(trs: super::TRS) -> Self {
+            match trs {
+                super::TRS::LM => TRS::LM,
+                super::TRS::LMaccel => TRS::LMaccel,
+                super::TRS::Dogleg => TRS::Dogleg,
+                super::TRS::DDogleg => TRS::DDogleg,
+                super::TRS::Subspace2D => TRS::Subspace2D,
+            }
+        }
+    }
+
+    pub use super::Scale;
+
+    /// Solver for the trust region subproblem.
+    ///
+    /// Solving the trust region subproblem on each iteration almost
+    /// always requires the solution of the following linear least
+    /// squares system
+    ///
+    /// $$\begin{pmatrix} J \cr √μ D \end{pmatrix} δ
+    /// = - \begin{pmatrix} f \cr 0 \end{pmatrix}$$
+    ///
+    /// How the system is solved and can be selected the choices of this
+    /// enum.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum Solver {
+        /// [Cholesky](super::Solver::Cholesky) method.
+        Cholesky,
+        /// [Modified Cholesky](super::Solver::MCholesky) method.
+        MCholesky,
+    }
+
+    impl Solver {
+        fn to_c(self) -> *const sys::gsl_multilarge_nlinear_solver {
+            unsafe {
+                match self {
+                    Self::Cholesky => sys::gsl_multilarge_nlinear_solver_cholesky,
+                    Self::MCholesky => sys::gsl_multilarge_nlinear_solver_mcholesky,
+                }
+            }
+        }
+    }
+
+    pub use super::FdType;
+
+    /// Tunable Parameters.
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub struct Parameters {
+        /// Trust region subproblem method.
+        pub trs: TRS,
+        /// Scaling method.
+        pub scale: Scale,
+        /// Solver method.
+        pub solver: Solver,
+        /// Finite difference method.
+        pub fdtype: FdType,
+        /// Factor for increasing trust radius.
+        ///
+        /// When a step is accepted, the trust region radius will be
+        /// increased by this factor.  The default value is 3.
+        pub factor_up: f64,
+        /// Factor for decreasing trust radius.
+        ///
+        /// When a step is rejected, the trust region radius will be
+        /// decreased by this factor.  The default value is 2.
+        pub factor_down: f64,
+        /// Max allowed $|a|/|v|$.
+        ///
+        /// See [`Parameters::avmax`](super::Parameters::avmax) for
+        /// more details.
+        pub avmax: f64,
+        /// Step size for finite difference Jacobian.
+        ///
+        /// See [`Parameters::h_df`](super::Parameters::h_df) for more
+        /// details.
+        pub h_df: f64,
+        /// Step size for finite difference $f_{vv}$.
+        ///
+        /// See [`Parameters::h_fvv`](super::Parameters::h_fvv) for
+        /// more details.
+        pub h_fvv: f64,
+        /// Maximum iterations for trs method.
+        pub max_iter: usize,
+        /// Tolerance for solving trs.
+        pub tol: f64,
+    }
+
+    impl Parameters {
+        fn to_c(&self) -> sys::gsl_multilarge_nlinear_parameters {
+            sys::gsl_multilarge_nlinear_parameters {
+                trs: self.trs.to_c(),
+                scale: self.scale.to_c_large(),
+                solver: self.solver.to_c(),
+                fdtype: self.fdtype.to_c(),
+                factor_up: self.factor_up,
+                factor_down: self.factor_down,
+                avmax: self.avmax,
+                h_df: self.h_df,
+                h_fvv: self.h_fvv,
+                max_iter: self.max_iter,
+                tol: self.tol,
+            }
+        }
+
+        /// Return the parameters set to their default values.
+        pub fn new() -> Self {
+            Self {
+                trs: TRS::LM,
+                scale: Scale::More,
+                solver: Solver::Cholesky,
+                fdtype: FdType::FwDiff,
+                factor_up: 3.,
+                factor_down: 2.,
+                avmax: 0.75,
+                h_df: SQRT_EPSILON,
+                h_fvv: 0.01,
+                max_iter: 0,
+                tol: 1e-6,
+            }
+        }
+    }
+
+    impl std::default::Default for Parameters {
+        fn default() -> Self {
+            Parameters::new()
+        }
+    }
+
+    pub use super::Type;
+
+    /// Used to identify the types that can be used to specify the
+    /// functions to pass to [`Workspace::init`].
+    pub trait Fdf<V: AsMatrix + ?Sized> {
+        /// `f(x, fx)` must store the `n` components of the vector $f(x)$
+        /// in `fx` for argument `x`, returning an appropriate error code
+        /// if the function cannot be computed.
+        fn f(&mut self, x: &V, fx: &mut V) -> Result<(), Error>;
+
+        /// If `transJ` is `false`, then this function should compute
+        /// the matrix-vector product $J u$, where
+        ///
+        /// $$J_{ij} = ∂fᵢ(x) / ∂xⱼ$$
+        ///
+        /// and store the result in `v`.  If `transJ` is `true`, then
+        /// this function should compute the matrix-vector product
+        /// $J^T u$ and store the result in `v`.  Additionally, the
+        /// normal equations matrix $J^T J$ should be stored in the
+        /// lower half of `JTJ`.  The matrix `JTJ` may not be
+        /// provided, for example by iterative methods which do not
+        /// require this matrix, so the user should check for this
+        /// prior to constructing the matrix.
+        fn df(
+            &mut self,
+            transJ: bool,
+            x: &V,
+            u: &V,
+            v: &mut V,
+            JTJ: Option<&mut V::MatViewMut<'_>>,
+        ) -> Result<(), Error>;
+
+        /// `fvv(a, v, fvv)` must store the `n` components of the vector
+        /// $f_{vv}(x) = ∑_{αβ} v_α v_β \frac{∂}{∂x_α} \frac{∂}{∂x_β}
+        /// f(x)$, representing second directional derivatives of the
+        /// function to be minimized, into the `fvv`.  The point is
+        /// provided in `x` and the velocity vector is provided in `v`,
+        /// both of which have `p` components.
+        ///
+        /// This is needed when geodesic acceleration is enabled.  If
+        /// analytic expressions for $f_{vv}(x)$ are unavailable or too
+        /// difficult to compute, this function may be
+        /// [`unimplemented!()`] and [`Self::has_fvv`] must return
+        /// `false`.  In this case $f_{vv}(x)$ will be computed internally
+        /// using a finite difference approximation.
+        fn fvv(&mut self, x: &V, v: &V, J: &mut V) -> Result<(), Error>;
+
+        /// Return `true` iff the method [`Self::fvv`] is implemented.
+        fn has_fvv(&self) -> bool;
+    }
+
+    ffi_wrapper!(
+        /// Derivative solver for large problems.
+        Workspace<'a, V: AsMatrix + ?Sized>,
+        *mut sys::gsl_multilarge_nlinear_workspace,
+        gsl_multilarge_nlinear_free
+        ;fdf_struct: Option<Box<sys::gsl_multilarge_nlinear_fdf>> => None;
+        ;fdf: Option<Box<dyn Fdf<V> + 'a>> => None;
+    );
+
+    impl_workspace!(large, "rgsl::multilarge");
+
+    impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
+        /// Initialize, or reinitialize, the workspace to use the function
+        /// `f` and the initial guess `x`.
+        ///
+        /// The call `f(x, fx)` should store the `n` components of the
+        /// vector $f(x)$ in `fx` for argument `x`, returning an
+        /// appropriate error code if the function cannot be computed.
+        ///
+        /// You may also want to supply a [function computing the
+        /// derivative of $f$](Self::df).
+        #[doc(alias = "gsl_multilarge_nlinear_init")]
+        pub fn init<F: Fdf<V> + 'a>(&mut self, x: &V, fdf: F) -> Result<(), Error> {
+            unsafe extern "C" fn f_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+                x: *const sys::gsl_vector,
+                params: *mut c_void,
+                fx: *mut sys::gsl_vector,
+            ) -> i32 {
+                let ret = std::panic::catch_unwind(|| unsafe {
+                    let fdf = &mut *params.cast::<F>();
+                    let vx = V::view_from_ptr(x);
+                    let mut vfx = V::view_from_mut_ptr(fx);
+                    fdf.f(&*vx, &mut *vfx)
+                });
+                Error::to_c(ret.map_err(|_| Error::Failure).flatten())
+            }
+
+            unsafe extern "C" fn df_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+                transJ: sys::CBLAS_TRANSPOSE,
+                x: *const sys::gsl_vector,
+                u: *const sys::gsl_vector,
+                params: *mut c_void,
+                v: *mut sys::gsl_vector,
+                JTJ: *mut sys::gsl_matrix,
+            ) -> i32 {
+                let transJ = transJ == sys::CBLAS_TRANSPOSE_CblasTrans;
+                let ret = std::panic::catch_unwind(|| unsafe {
+                    let fdf = &mut *params.cast::<F>();
+                    let vx = V::view_from_ptr(x);
+                    let vu = V::view_from_ptr(u);
+                    let mut vv = V::view_from_mut_ptr(v);
+                    let mut vJTJ = if JTJ.is_null() {
+                        None
+                    } else {
+                        Some(V::mat_view_from_mut_ptr(JTJ))
+                    };
+                    fdf.df(transJ, &*vx, &*vu, &mut *vv, vJTJ.as_mut())
+                });
+                Error::to_c(ret.map_err(|_| Error::Failure).flatten())
+            }
+
+            unsafe extern "C" fn fvv_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+                x: *const sys::gsl_vector,
+                v: *const sys::gsl_vector,
+                params: *mut c_void,
+                fvv: *mut sys::gsl_vector,
+            ) -> i32 {
+                let ret = std::panic::catch_unwind(|| unsafe {
+                    let fdf = &mut *params.cast::<F>();
+                    let vx = V::view_from_ptr(x);
+                    let vv = V::view_from_ptr(v);
+                    let mut vfvv = V::view_from_mut_ptr(fvv);
+                    fdf.fvv(&*vx, &*vv, &mut *vfvv)
+                });
+                Error::to_c(ret.map_err(|_| Error::Failure).flatten())
+            }
+
+            let mut fdf: Box<F> = Box::new(fdf);
+            let mut fdf_struct = Box::new(sys::gsl_multilarge_nlinear_fdf {
+                f: Some(f_trampoline::<V, F>),
+                df: Some(df_trampoline::<V, F>),
+                fvv: fdf.has_fvv().then_some(fvv_trampoline::<V, F>),
+                n: self.n(),
+                p: self.p(),
+                params: &mut *fdf as *mut F as *mut _,
+                nevalf: 0,
+                nevaldfu: 0,
+                nevaldf2: 0,
+                nevalfvv: 0,
+            });
+            self.fdf = Some(fdf);
+
+        let x = V::as_gsl_vector(x);
+        let ret = unsafe {
+            sys::gsl_multilarge_nlinear_init(
+                &*x,              // copied into the workspace
+                &mut *fdf_struct, // Heap pointer (stable address)
+                self.unwrap_unique(),
+            )
+        };
+        self.fdf_struct = Some(fdf_struct);
+        Error::handle(ret, ())
+    }
+
+        pub fn name(&self) -> TRS {
+            let n = unsafe { sys::gsl_multilarge_nlinear_trs_name(self.unwrap_shared()) };
+            map_name!(
+                rgsl::multifit::Workspace,
+                [
+                    (c"levenberg-marquardt", TRS::LM),
+                    (c"levenberg-marquardt+accel", TRS::LMaccel),
+                    (c"dogleg", TRS::Dogleg),
+                    (c"double-dogleg", TRS::DDogleg),
+                    (c"2D-subspace", TRS::Subspace2D),
+                    (c"steihaug-toint", TRS::CgST),
+                ],
+                n,
+                TRS
+            )
+        }
+    }
+
+    // FIXME: keep ?
+    #[doc(alias = "gsl_multilarge_linear_L_decomp")]
+    pub fn linear_L_decomp(L: &mut MatF64, tau: &mut VecF64) -> Result<(), Error> {
+        let ret =
+            unsafe { sys::gsl_multilarge_linear_L_decomp(L.unwrap_unique(), tau.unwrap_unique()) };
+        Error::handle(ret, ())
+    }
+}
 
 /// Compute the covariance matrix cov = inv (J^T J) by QRP^T decomposition of J
 #[doc(alias = "gsl_multifit_covar")]
-pub fn covar(J: &MatrixF64, epsrel: f64, covar: &mut MatrixF64) -> Result<(), Error> {
+pub fn covar(J: &MatF64, epsrel: f64, covar: &mut MatF64) -> Result<(), Error>
+ {
     let ret = unsafe { sys::gsl_multifit_covar(J.unwrap_shared(), epsrel, covar.unwrap_unique()) };
     Error::handle(ret, ())
 }
@@ -344,4 +1274,82 @@ pub fn linear_lcorner2(rho: &VecF64, eta: &VecF64) -> Result<usize, Error> {
 pub fn linear_Lk(p: usize, k: usize, L: &mut MatF64) -> Result<(), Error> {
     let ret = unsafe { sys::gsl_multifit_linear_Lk(p, k, L.unwrap_unique()) };
     Error::handle(ret, ())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_name() {
+        type W<'a> = Workspace<'a, VecF64>;
+
+        let params = Parameters::default();
+        let w = W::trust(&params, 10, 2);
+        assert_eq!(w.name(), TRS::LM);
+
+        let p = Parameters {
+            trs: TRS::LMaccel,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::LMaccel);
+
+        let p = Parameters {
+            trs: TRS::Dogleg,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Dogleg);
+
+        let p = Parameters {
+            trs: TRS::DDogleg,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::DDogleg);
+
+        let p = Parameters {
+            trs: TRS::Subspace2D,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Subspace2D);
+    }
+
+    #[test]
+    fn test_large_name() {
+        use large::{Parameters, TRS};
+        type W<'a> = large::Workspace<'a, VecF64>;
+
+        let params = Parameters::default();
+        let w = W::trust(&params, 10, 2);
+        assert_eq!(w.name(), TRS::LM);
+
+        let p = Parameters {
+            trs: TRS::LMaccel,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::LMaccel);
+
+        let p = Parameters {
+            trs: TRS::Dogleg,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Dogleg);
+
+        let p = Parameters {
+            trs: TRS::DDogleg,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::DDogleg);
+
+        let p = Parameters {
+            trs: TRS::Subspace2D,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Subspace2D);
+
+            let p = Parameters {
+            trs: TRS::CgST,
+            ..params
+        };
+        assert_eq!(W::trust(&p, 10, 2).name(), TRS::CgST);
+}
 }

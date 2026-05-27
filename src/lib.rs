@@ -24,7 +24,7 @@ pub use types::rng;
 pub use utilities::IOStream;
 pub use vector::{VecF32, VecF64, VecI32, VecU32};
 pub use vector_complex::{VecC32, VecC64};
-pub use view::{AsView, View, ViewMut};
+pub use view::{View, ViewMut};
 
 // enums part
 pub use self::enums::*;
@@ -59,10 +59,10 @@ pub mod linear_algebra;
 pub mod matrix;
 pub mod matrix_complex;
 pub mod minimizer;
+#[cfg(feature = "v2_2")]
 pub mod multifit;
-#[cfg(feature = "v2_1")]
-#[cfg_attr(docsrs, doc(cfg(feature = "v2_1")))]
-pub mod multilarge;
+#[cfg(feature = "v2_3")]
+pub use multifit::large as multilarge;
 pub mod multilinear;
 pub mod multimin;
 pub mod multiroot;
