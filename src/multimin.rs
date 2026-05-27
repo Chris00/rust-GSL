@@ -79,7 +79,8 @@ use crate::{
     Error,
     ffi::FFI,
     vector::{AsVector, VecF64},
-    view::{AsView, View},
+    view::AsView,
+    view::View,
 };
 use std::{ffi::c_void, ops::ControlFlow};
 
@@ -593,9 +594,15 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
             x: *const sys::gsl_vector,
             params: *mut c_void,
         ) -> f64 {
-            let t = unsafe { &mut *params.cast::<F>() };
-            let vx = unsafe { V::view_from_ptr(x) };
-            t.f(&vx)
+            let ret = std::panic::catch_unwind(|| unsafe {
+                let t = &mut *params.cast::<F>();
+                let vx = V::view_from_ptr(x);
+                t.f(&vx)
+            });
+            ret.unwrap_or_else(|e| {
+                println!("rgsl::multimin::MinimizerFdf: `f` panicked {e:?}");
+                std::process::abort();
+            })
         }
 
         unsafe extern "C" fn inner_df<V: AsVector + ?Sized, F: Fdf<V>>(
@@ -603,12 +610,19 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
             params: *mut c_void,
             g: *mut sys::gsl_vector,
         ) {
-            unsafe {
+            let ret = std::panic::catch_unwind(|| unsafe {
                 let t = &mut *params.cast::<F>();
                 let vx = V::view_from_ptr(x);
                 let mut vg = V::view_from_mut_ptr(g);
                 t.df(&vx, &mut vg);
-            }
+            });
+            // Contrarily to what the documentation says, the
+            // signature of this C function does not allow to return
+            // an error code.
+            ret.unwrap_or_else(|e| {
+                println!("rgsl::multimin::MinimizerFdf: `df` panicked {e:?}");
+                std::process::abort();
+            })
         }
         unsafe extern "C" fn inner_fdf<V: AsVector + ?Sized, F: Fdf<V>>(
             x: *const sys::gsl_vector,
@@ -616,14 +630,18 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
             f: *mut f64,
             g: *mut sys::gsl_vector,
         ) {
-            unsafe {
+            let ret = std::panic::catch_unwind(|| unsafe {
                 let t = &mut *params.cast::<F>();
                 let vx = V::view_from_ptr(x);
                 let mut vg = V::view_from_mut_ptr(g);
                 *f = t.fdf(&vx, &mut vg);
-            }
+            });
+            ret.unwrap_or_else(|e| {
+                println!("rgsl::multimin::MinimizerFdf: `fdf` panicked {e:?}");
+                std::process::abort();
+            })
         }
-        let mut fdf = Box::new(fdf);
+        let mut fdf: Box<F> = Box::new(fdf);
         let mut fdf_struct = Box::new(sys::gsl_multimin_function_fdf_struct {
             f: Some(inner_f::<V, F>),
             df: Some(inner_df::<V, F>),
