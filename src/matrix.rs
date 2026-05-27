@@ -982,3 +982,16 @@ gsl_matrix!(MatF32, gsl_matrix_float, f32, VecF32, gsl_vector_float);
 gsl_matrix!(MatF64, gsl_matrix, f64, VecF64, gsl_vector);
 gsl_matrix!(MatI32, gsl_matrix_int, i32, VecI32, gsl_vector_int);
 gsl_matrix!(MatU32, gsl_matrix_uint, u32, VecU32, gsl_vector_uint);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn out_of_bounds() {
+        let mut s = [1.];
+        let m = MatF64::from_mut_slice(&mut s, 1, 1);
+        assert_eq!(m.get(0, 0), 1.);
+        assert_eq!(m.get(1, 0), 0.);
+    }
+}
