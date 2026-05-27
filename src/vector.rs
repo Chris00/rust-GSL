@@ -31,7 +31,7 @@ extern crate num_complex;
 use self::num_complex::Complex;
 
 #[allow(clippy::len_without_is_empty)]
-/// Used to specify types that are considered vectors by this crate.
+/// Used to specify types that are considered input vectors by this crate.
 /// Elements of the vector are of type `F` (e.g., [`f32`] or [`f64`]).
 ///
 /// # Safety
@@ -259,6 +259,8 @@ impl AsVector for [f64] {
     type ViewMut<'a> = &'a mut [f64];
 
     fn view_from_slice(x: &[f64], len: usize, stride: usize) -> Self::View<'_> {
+        // The GSL code does not create strides > 1 internally so that
+        // should be no problem to convert them to slices.
         assert_eq!(stride, 1);
         &x[..len]
     }
@@ -786,7 +788,7 @@ impl AsVector for VecF64 {
             block: ptr::null_mut(),
             owner: 0,
         };
-        ViewMut::alloc("VecF64::view_from_mut_slice", c)
+        ViewMut::alloc("<VecF64 as AsVector>::view_from_mut_slice", c)
     }
 
     unsafe fn view_from_ptr<'a>(ptr: *const sys::gsl_vector) -> Self::View<'a> {

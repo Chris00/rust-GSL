@@ -14,8 +14,8 @@ mod example {
 
     fn hibert_matrix() -> MatF64 {
         let mut x = MatF64::new(N, P);
-        let n = x.size1();
-        let m = x.size2();
+        let n = x.nrows();
+        let m = x.ncols();
 
         for i in 0..n {
             for j in 0..m {
@@ -65,7 +65,7 @@ mod example {
         let (rnorm, snorm) = w.linear_solve(0., &x, &y, &mut c).unwrap();
         let chisq = rnorm.powi(2);
 
-        eprintln!("\n=== Unregularized fit ===");
+        eprintln!("=== Unregularized fit ===");
         eprintln!("residual norm = {}", rnorm);
         eprintln!("solution norm = {}", snorm);
         eprintln!("chisq/dof = {}", chisq / (N - P) as f64);
@@ -95,7 +95,7 @@ mod example {
         let (rnorm, snorm) = w.linear_solve(lambda_gcv, &x, &y, &mut c_gcv).unwrap();
         let chisq = rnorm.powi(2) + (lambda_gcv * snorm).powi(2);
 
-        eprintln!("\n=== Regularized fit (GCV) ===\n");
+        eprintln!("\n=== Regularized fit (GCV) ===");
         eprintln!("optimal lambda: {}", lambda_gcv);
         eprintln!("best fit: y = {} u + {} v", c_gcv.get(0), c_gcv.get(1));
         eprintln!("residual norm = {}", rnorm);
@@ -113,11 +113,8 @@ mod example {
             );
         }
 
-        // output L-curve corner point
-        println!("\n\n{:.6} {:.6}", rho.get(reg_idx), eta.get(reg_idx));
-
-        // output GCV curve corner minimum
-        println!("\n\n{:.6} {:.6}", lambda_gcv, g_gcv);
+        println!("\nL-curve corner point: {:.6} {:.6}", rho.get(reg_idx), eta.get(reg_idx));
+        println!("\nGCV curve corner minimum: {:.6} {:.6}", lambda_gcv, g_gcv);
     }
 }
 

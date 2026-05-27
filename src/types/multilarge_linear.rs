@@ -3,10 +3,7 @@
 //
 
 use crate::ffi::FFI;
-use crate::{
-    Error, MatF64, VecF64,
-    view::{AsView, View},
-};
+use crate::{Error, MatF64, VecF64, view::AsView, view::View};
 
 ffi_wrapper!(MultilargeLinearType, *const sys::gsl_multilarge_linear_type);
 

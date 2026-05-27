@@ -64,13 +64,7 @@ only function evaluations (not derivatives).  The algorithms estimate
 the matrix $J$ or $J^{-1}$ by approximate methods.
 */
 
-use crate::{
-    Error,
-    ffi::FFI,
-    matrix::MatF64,
-    vector::VecF64,
-    view::{AsView, View},
-};
+use crate::{Error, ffi::FFI, matrix::MatF64, vector::VecF64, view::AsView, view::View};
 use std::ffi::{c_int, c_void};
 
 ffi_wrapper!(
