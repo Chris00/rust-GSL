@@ -151,7 +151,7 @@ pub trait AsMatrix: AsVector {
         Self::mat_view_from_slice(data, nrows, ncols, v.tda)
     }
 
-    /// Same as [`mat_view_from_ptr`] but for mutable data.
+    /// Same as [`Self::mat_view_from_ptr`] but for mutable data.
     ///
     /// # Safety
     ///

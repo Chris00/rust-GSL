@@ -125,10 +125,10 @@ solutions to the trust region subproblem.  In all algorithms below,
 the Hessian matrix $Bₖ$ is approximated as $Bₖ ≈ Jₖ^T Jₖ$, where $Jₖ =
 J(xₖ)$.  In all methods, the solution of the TRS involves solving a
 linear least squares system involving the Jacobian matrix.  For small
-to moderate sized problems ([`MultiFitFSolver`] interface), this is
+to moderate sized problems ([`Workspace`] interface), this is
 accomplished by factoring the full Jacobian matrix, which is provided
 by the user, with the Cholesky, QR, or SVD decompositions.  For large
-systems (`large::MultiFitFSolver` interface), the user has two
+systems ([`large::Workspace`] interface), the user has two
 choices.  One is to solve the system iteratively, without needing to
 store the full Jacobian matrix in memory.  With this method, the user
 must provide a routine to calculate the matrix-vector products $J u$
@@ -622,7 +622,7 @@ pub trait Fdf<V: AsMatrix + ?Sized> {
     /// in `J` for argument `x`, returning an appropriate error code
     /// if the matrix cannot be computed.  If an analytic Jacobian is
     /// unavailable, or too expensive to compute, you can use
-    /// [`unimplemented'()`] and let [`Self::has_df`] return `false`.
+    /// [`std::unimplemented`] and let [`Self::has_df`] return `false`.
     /// In this case the Jacobian will be internally computed using
     /// finite difference approximations of the function f.
     fn df(&mut self, x: &V, J: &mut V::MatViewMut<'_>) -> Result<(), Error>;
@@ -691,9 +691,7 @@ macro_rules! impl_workspace {
         paste! {
 
             impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
-                fn type_to_c(
-                    t: Type
-                ) -> *const sys::[<gsl_multi $fit _nlinear_type>] {
+                fn type_to_c(t: Type) -> *const sys::[<gsl_multi $fit _nlinear_type>] {
                     match t {
                         Type::Trust => unsafe {
                             sys::[<gsl_multi $fit _nlinear_trust>]
@@ -775,9 +773,6 @@ impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
     /// The call `f(x, fx)` should store the `n` components of the
     /// vector $f(x)$ in `fx` for argument `x`, returning an
     /// appropriate error code if the function cannot be computed.
-    ///
-    /// You may also want to supply a [function computing the
-    /// derivative of $f$](Self::df).
     #[doc(alias = "gsl_multifit_nlinear_init")]
     pub fn init<F: Fdf<V> + 'a>(&mut self, x: &V, fdf: F) -> Result<(), Error> {
         unsafe extern "C" fn f_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
@@ -850,6 +845,7 @@ impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
         Error::handle(ret, ())
     }
 
+    #[doc(alias = "gsl_multifit_nlinear_trs_name")]
     pub fn name(&self) -> TRS {
         let n = unsafe { sys::gsl_multifit_nlinear_trs_name(self.unwrap_shared()) };
         map_name!(
@@ -1102,14 +1098,14 @@ pub mod large {
 
     impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
         /// Initialize, or reinitialize, the workspace to use the function
-        /// `f` and the initial guess `x`.
+        /// `fdf` and the initial guess `x`.
         ///
-        /// The call `f(x, fx)` should store the `n` components of the
-        /// vector $f(x)$ in `fx` for argument `x`, returning an
-        /// appropriate error code if the function cannot be computed.
-        ///
-        /// You may also want to supply a [function computing the
-        /// derivative of $f$](Self::df).
+        /// There are several ways of specifying a function.
+        /// - One can simply pass a function `f` such that the call
+        ///   `f(x, fx)` stores the `n` components of the vector $f(x)$
+        ///   in `fx` for argument `x`, returning an appropriate error
+        ///   code if the function cannot be computed.
+        /// - On can pass
         #[doc(alias = "gsl_multilarge_nlinear_init")]
         pub fn init<F: Fdf<V> + 'a>(&mut self, x: &V, fdf: F) -> Result<(), Error> {
             unsafe extern "C" fn f_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
@@ -1193,6 +1189,7 @@ pub mod large {
             Error::handle(ret, ())
         }
 
+        #[doc(alias = "gsl_multilarge_nlinear_trs_name")]
         pub fn name(&self) -> TRS {
             let n = unsafe { sys::gsl_multilarge_nlinear_trs_name(self.unwrap_shared()) };
             map_name!(

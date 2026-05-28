@@ -115,7 +115,7 @@ ffi_wrapper!(
     /// # Examples
     ///
     /// Minimize the function $(x₀, x₁) ↦ (x₀ - 1)² + (x₁ - 1)²$ using
-    /// [`VecF64`] to represent vectors.
+    /// [`VecF64`](crate::VecF64) to represent vectors.
     ///
     /// ```
     /// use rgsl::{VecF64, multimin::Minimizer};
@@ -439,7 +439,7 @@ ffi_wrapper!(
     /// # Example
     ///
     /// Minimize the function $(x₀, x₁) ↦ (x₀ - 1)² + (x₁ - 2)²$ using
-    /// [`VecF64`] to represent vectors.
+    /// [`VecF64`](crate::VecF64) to represent vectors.
     ///
     /// ```
     /// use rgsl::{Error, VecF64, multimin::{self as mmin, MinimizerFdf}};
