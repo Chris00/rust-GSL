@@ -113,7 +113,11 @@ mod example {
             );
         }
 
-        println!("\nL-curve corner point: {:.6} {:.6}", rho.get(reg_idx), eta.get(reg_idx));
+        println!(
+            "\nL-curve corner point: {:.6} {:.6}",
+            rho.get(reg_idx),
+            eta.get(reg_idx)
+        );
         println!("\nGCV curve corner minimum: {:.6} {:.6}", lambda_gcv, g_gcv);
     }
 }
