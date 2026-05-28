@@ -110,6 +110,7 @@ where
 }
 
 /// Same as [`vector_as_gsl`] for mutable vectors.
+#[allow(dead_code)]
 pub(crate) fn vector_as_gsl_mut<V>(x: &mut V) -> ViewMut<'_, sys::gsl_vector>
 where
     V: VectorMut<f64> + ?Sized,

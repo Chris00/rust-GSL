@@ -77,6 +77,7 @@ pub trait MatrixMut<F>: Matrix<F> {
 }
 
 /// Convert `m` to a GSL matrix.
+#[allow(dead_code)]
 pub(crate) fn matrix_as_gsl<M>(m: &M) -> View<'_, sys::gsl_matrix>
 where
     M: Matrix<f64> + ?Sized,
@@ -93,6 +94,7 @@ where
 }
 
 /// Convert `m` to a GSL matrix.
+#[allow(dead_code)]
 pub(crate) fn matrix_as_gsl_mut<M>(m: &mut M) -> ViewMut<'_, sys::gsl_matrix>
 where
     M: MatrixMut<f64> + ?Sized,
