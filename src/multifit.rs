@@ -428,8 +428,8 @@ pub enum Solver {
     ///
     /// $$\left( J^T J + μ D^T D \right) δ = -J^T f$$
     ///
-    /// by using a modified Cholesky decomposition of the matrix $J^T J
-    /// + μ D^T D$.  This is more suitable for the dogleg methods
+    /// by using a modified Cholesky decomposition of the matrix
+    /// $J^T J + μ D^T D$.  This is more suitable for the dogleg methods
     /// where the parameter $μ = 0$, and the matrix $J^T J$ may be
     /// ill-conditioned or indefinite causing the standard Cholesky
     /// decomposition to fail.  This method is based on Level 2 BLAS
@@ -559,7 +559,7 @@ pub struct Parameters {
 }
 
 impl Parameters {
-    fn to_c(&self) -> sys::gsl_multifit_nlinear_parameters {
+    fn as_c(&self) -> sys::gsl_multifit_nlinear_parameters {
         sys::gsl_multifit_nlinear_parameters {
             trs: self.trs.to_c(),
             scale: self.scale.to_c(),
@@ -732,7 +732,7 @@ macro_rules! impl_workspace {
                 #[doc(alias = gsl_multi $fit _nlinear_alloc)]
                 pub fn new(t: Type, params: &Parameters, n: usize, p: usize) -> Self {
                     let w = unsafe { sys::[<gsl_multi $fit _nlinear_alloc>](
-                        Self::type_to_c(t), &params.to_c(), n, p)
+                        Self::type_to_c(t), &params.as_c(), n, p)
                     };
                     if w.is_null() {
                         panic!("rgsl::multi{}::Workspace::new: out of memory",
@@ -998,7 +998,7 @@ pub mod large {
     }
 
     impl Parameters {
-        fn to_c(&self) -> sys::gsl_multilarge_nlinear_parameters {
+        fn as_c(&self) -> sys::gsl_multilarge_nlinear_parameters {
             sys::gsl_multilarge_nlinear_parameters {
                 trs: self.trs.to_c(),
                 scale: self.scale.to_c_large(),
@@ -1284,9 +1284,7 @@ pub fn linear_lcorner2(
     let mut idx = 0;
     let rho = vector_as_gsl(rho);
     let eta = vector_as_gsl(eta);
-    let ret = unsafe {
-        sys::gsl_multifit_linear_lcorner2(&*rho, &*eta, &mut idx)
-    };
+    let ret = unsafe { sys::gsl_multifit_linear_lcorner2(&*rho, &*eta, &mut idx) };
     Error::handle(ret, idx)
 }
 

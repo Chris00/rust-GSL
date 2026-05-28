@@ -10,66 +10,6 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// Used to express that the type offers views from pointers to
-/// `gsl_vector`, `gsl_matrix`,...
-///
-/// # Safety
-///
-/// Make sure the `View` and `ViewMut`, when dropped, do not touch the
-/// pointer `Sys`.
-pub unsafe trait AsView {
-    type Sys;
-    type View<'a>
-    where
-        Self: 'a;
-    type ViewMut<'a>
-    where
-        Self: 'a;
-
-    /// Return a view of `ptr`.
-    fn as_view<'a>(ptr: *const Self::Sys) -> Self::View<'a>
-    where
-        Self: 'a;
-
-    /// Return a mutable view of `ptr`.
-    fn as_view_mut<'a>(ptr: *mut Self::Sys) -> Self::ViewMut<'a>
-    where
-        Self: 'a;
-}
-
-// View and ViewMut will be used to
-// - wrap raw pointers to gls_vector passed to callbacks;
-// - wrap pointers to internal gsl_vectors — e.g. matrix rows —
-//   (similar to the first case);
-// - convert gsl_vector_..._view (struct on the stack not owning the
-//   data).
-
-unsafe impl<T: FFI> AsView for T {
-    type Sys = <T as FFI>::Sys;
-    type View<'a>
-        = View<'a, T>
-    where
-        T: 'a;
-    type ViewMut<'a>
-        = ViewMut<'a, T>
-    where
-        T: 'a;
-
-    fn as_view<'a>(ptr: *const Self::Sys) -> Self::View<'a>
-    where
-        T: 'a,
-    {
-        View::from_ptr(ptr, false)
-    }
-
-    fn as_view_mut<'a>(ptr: *mut Self::Sys) -> Self::ViewMut<'a>
-    where
-        T: 'a,
-    {
-        ViewMut::from_ptr(ptr, false)
-    }
-}
-
 /// An immutable view to `T`.
 pub struct View<'a, T> {
     // `T` will wrap a pointer or be a raw GSL struct.

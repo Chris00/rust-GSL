@@ -3,7 +3,7 @@
 //
 
 use crate::ffi::FFI;
-use crate::{Error, MatF64, VecF64, view::AsView, view::View};
+use crate::{Error, MatF64, VecF64, matrix::AsMatrix, vector::AsVector, view::View};
 
 ffi_wrapper!(MultilargeLinearType, *const sys::gsl_multilarge_linear_type);
 
@@ -249,13 +249,19 @@ impl MultilargeLinearWorkspace {
     #[cfg_attr(docsrs, doc(cfg(feature = "v2_7")))]
     #[doc(alias = "gsl_multilarge_linear_matrix_ptr")]
     pub fn matrix(&self) -> View<'_, MatF64> {
-        MatF64::as_view(unsafe { sys::gsl_multilarge_linear_matrix_ptr(self.unwrap_shared()) as _ })
+        unsafe {
+            let ptr = sys::gsl_multilarge_linear_matrix_ptr(self.unwrap_shared());
+            VecF64::mat_view_from_ptr(ptr)
+        }
     }
 
     #[cfg(feature = "v2_7")]
     #[cfg_attr(docsrs, doc(cfg(feature = "v2_7")))]
     #[doc(alias = "gsl_multilarge_linear_rhs_ptr")]
     pub fn rhs(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multilarge_linear_rhs_ptr(self.unwrap_shared()) as _ })
+        unsafe {
+            let ptr = sys::gsl_multilarge_linear_rhs_ptr(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 }

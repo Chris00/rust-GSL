@@ -152,6 +152,14 @@ pub trait AsMatrix: AsVector {
     }
 
     /// Same as [`mat_view_from_ptr`] but for mutable data.
+    ///
+    /// # Safety
+    ///
+    /// The GSL matrix is not owned and neither the C struct nor the
+    /// data block must be freed.
+    ///
+    /// It is important to ensure that the view lifetime is bound to
+    /// the lifetime of the vector or matrix that underlies `view`.
     unsafe fn mat_view_from_mut_ptr<'a>(ptr: *mut sys::gsl_matrix) -> Self::MatViewMut<'a> {
         debug_assert!(!ptr.is_null());
         let v = unsafe { ptr.as_ref_unchecked() };

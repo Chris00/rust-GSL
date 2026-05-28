@@ -64,7 +64,13 @@ only function evaluations (not derivatives).  The algorithms estimate
 the matrix $J$ or $J^{-1}$ by approximate methods.
 */
 
-use crate::{Error, ffi::FFI, matrix::MatF64, vector::VecF64, view::AsView, view::View};
+use crate::{
+    Error,
+    ffi::FFI,
+    matrix::{AsMatrix, MatF64},
+    vector::{AsVector, VecF64},
+    view::View,
+};
 use std::ffi::{c_int, c_void};
 
 ffi_wrapper!(
@@ -185,10 +191,12 @@ impl<'a> MultiRootFSolver<'a> {
         where
             A: Fn(&VecF64, &mut VecF64) -> Result<(), Error>,
         {
-            let g: &A = unsafe { &*(params as *const A) };
-            let vx = VecF64::as_view(x);
-            let mut vf = VecF64::as_view_mut(f);
-            Error::to_c(g(&vx, &mut vf))
+            unsafe {
+                let g: &A = &*(params as *const A);
+                let vx = VecF64::view_from_ptr(x);
+                let mut vf = VecF64::view_from_mut_ptr(f);
+                Error::to_c(g(&vx, &mut vf))
+            }
         }
 
         self.inner_call = sys::gsl_multiroot_function_struct {
@@ -229,20 +237,29 @@ impl<'a> MultiRootFSolver<'a> {
     /// Returns the current estimate of the root for the solver.
     #[doc(alias = "gsl_multiroot_fsolver_root")]
     pub fn root(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multiroot_fsolver_root(self.unwrap_shared()) })
+        unsafe {
+            let ptr = sys::gsl_multiroot_fsolver_root(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 
     /// Returns the last step `dx` taken by the solver.
     #[doc(alias = "gsl_multiroot_fsolver_dx")]
     pub fn dx(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multiroot_fsolver_dx(self.unwrap_shared()) })
+        unsafe {
+            let ptr = sys::gsl_multiroot_fsolver_dx(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 
     /// Return the function value $f(x)$ at the current estimate of
     /// the root for the solver.
     #[doc(alias = "gsl_multiroot_fsolver_f")]
     pub fn f(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multiroot_fsolver_f(self.unwrap_shared()) })
+        unsafe {
+            let ptr = sys::gsl_multiroot_fsolver_f(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 }
 
@@ -366,11 +383,13 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
             params: *mut c_void,
             f: *mut sys::gsl_vector,
         ) -> i32 {
-            let t = unsafe { &*(params as *mut MultiRootFdfSolverFunction) };
-            let i_f = &t.f;
-            let vx = VecF64::as_view(x);
-            let mut vf = VecF64::as_view_mut(f);
-            Error::to_c(i_f(&vx, &mut vf))
+            unsafe {
+                let t = &*(params as *mut MultiRootFdfSolverFunction);
+                let i_f = &t.f;
+                let vx = VecF64::view_from_ptr(x);
+                let mut vf = VecF64::view_from_mut_ptr(f);
+                Error::to_c(i_f(&vx, &mut vf))
+            }
         }
 
         unsafe extern "C" fn inner_df(
@@ -378,11 +397,13 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
             params: *mut c_void,
             J: *mut sys::gsl_matrix,
         ) -> i32 {
-            let t = unsafe { &*(params as *mut MultiRootFdfSolverFunction) };
-            let i_df = &t.df;
-            let vx = VecF64::as_view(x);
-            let mut vJ = MatF64::as_view_mut(J);
-            Error::to_c(i_df(&vx, &mut vJ))
+            unsafe {
+                let t = &*(params as *mut MultiRootFdfSolverFunction);
+                let i_df = &t.df;
+                let vx = VecF64::view_from_ptr(x);
+                let mut vJ = VecF64::mat_view_from_mut_ptr(J);
+                Error::to_c(i_df(&vx, &mut vJ))
+            }
         }
 
         unsafe extern "C" fn inner_fdf(
@@ -391,12 +412,14 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
             f: *mut sys::gsl_vector,
             J: *mut sys::gsl_matrix,
         ) -> i32 {
-            let t = unsafe { &*(params as *mut MultiRootFdfSolverFunction) };
-            let i_fdf = &t.fdf;
-            let vx = VecF64::as_view(x);
-            let mut vf = VecF64::as_view_mut(f);
-            let mut vJ = MatF64::as_view_mut(J);
-            Error::to_c(i_fdf(&vx, &mut vf, &mut vJ))
+            unsafe {
+                let t = &*(params as *mut MultiRootFdfSolverFunction);
+                let i_fdf = &t.fdf;
+                let vx = VecF64::view_from_ptr(x);
+                let mut vf = VecF64::view_from_mut_ptr(f);
+                let mut vJ = VecF64::mat_view_from_mut_ptr(J);
+                Error::to_c(i_fdf(&vx, &mut vf, &mut vJ))
+            }
         }
 
         MultiRootFdfSolverFunction {
@@ -493,20 +516,29 @@ impl MultiRootFdfSolver {
     /// Returns the current estimate of the root for the solver.
     #[doc(alias = "gsl_multiroot_fdfsolver_root")]
     pub fn root(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multiroot_fdfsolver_root(self.unwrap_shared()) })
+        unsafe {
+            let ptr = sys::gsl_multiroot_fdfsolver_root(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 
     /// Returns the last step taken by the solver.
     #[doc(alias = "gsl_multiroot_fdfsolver_dx")]
     pub fn dx(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multiroot_fdfsolver_dx(self.unwrap_shared()) })
+        unsafe {
+            let ptr = sys::gsl_multiroot_fdfsolver_dx(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 
     /// Returns the function value f(x) at the current estimate of the
     /// root for the solver.
     #[doc(alias = "gsl_multiroot_fdfsolver_f")]
     pub fn f(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multiroot_fdfsolver_f(self.unwrap_shared()) })
+        unsafe {
+            let ptr = sys::gsl_multiroot_fdfsolver_f(self.unwrap_shared());
+            VecF64::view_from_ptr(ptr)
+        }
     }
 }
 
