@@ -450,9 +450,13 @@ paste! {
 
         /// Convert the GSL view.
         ///
-        /// SAFETY: It is important to ensure that the view lifetime
-        /// is bound to the lifetime of the vector or matrix that
-        /// underlies `view`.
+        /// # Safety
+        /// It is important to ensure that the view lifetime is bound
+        /// to the lifetime of the vector or matrix that underlies
+        /// `view`.
+        // This is a duplicate of `AsVector::view_from_gsl_view` but
+        // we need it for all Vector element types in matrix,
+        // vector_complex, and matrix_complex.
         pub(crate) unsafe fn view_mut<'a>(
             view: sys::[<$name _view>]
         ) -> ViewMut<'a, Self> {
