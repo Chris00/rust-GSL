@@ -293,8 +293,8 @@ time.  See [`Parameters`] and [`large::Parameters`].
 use crate::{
     Error,
     ffi::FFI,
-    matrix::{AsMatrix, MatF64},
-    vector::VecF64,
+    matrix::{AsMatrix, Matrix, MatrixMut, matrix_as_gsl, matrix_as_gsl_mut},
+    vector::{Vector, VectorMut, vector_as_gsl, vector_as_gsl_mut},
 };
 use pastey::paste;
 use std::ffi::c_void;
@@ -838,7 +838,7 @@ impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
         });
         self.fdf = Some(fdf);
 
-        let x = V::as_gsl_vector(x);
+        let x = vector_as_gsl(x);
         let ret = unsafe {
             sys::gsl_multifit_nlinear_init(
                 &*x,              // copied into the workspace
@@ -1181,17 +1181,17 @@ pub mod large {
             });
             self.fdf = Some(fdf);
 
-        let x = V::as_gsl_vector(x);
-        let ret = unsafe {
-            sys::gsl_multilarge_nlinear_init(
-                &*x,              // copied into the workspace
-                &mut *fdf_struct, // Heap pointer (stable address)
-                self.unwrap_unique(),
-            )
-        };
-        self.fdf_struct = Some(fdf_struct);
-        Error::handle(ret, ())
-    }
+            let x = vector_as_gsl(x);
+            let ret = unsafe {
+                sys::gsl_multilarge_nlinear_init(
+                    &*x,              // copied into the workspace
+                    &mut *fdf_struct, // Heap pointer (stable address)
+                    self.unwrap_unique(),
+                )
+            };
+            self.fdf_struct = Some(fdf_struct);
+            Error::handle(ret, ())
+        }
 
         pub fn name(&self) -> TRS {
             let n = unsafe { sys::gsl_multilarge_nlinear_trs_name(self.unwrap_shared()) };
@@ -1210,75 +1210,108 @@ pub mod large {
             )
         }
     }
-
-    // FIXME: keep ?
-    #[doc(alias = "gsl_multilarge_linear_L_decomp")]
-    pub fn linear_L_decomp(L: &mut MatF64, tau: &mut VecF64) -> Result<(), Error> {
-        let ret =
-            unsafe { sys::gsl_multilarge_linear_L_decomp(L.unwrap_unique(), tau.unwrap_unique()) };
-        Error::handle(ret, ())
-    }
 }
 
 /// Compute the covariance matrix cov = inv (J^T J) by QRP^T decomposition of J
 #[doc(alias = "gsl_multifit_covar")]
-pub fn covar(J: &MatF64, epsrel: f64, covar: &mut MatF64) -> Result<(), Error>
- {
-    let ret = unsafe { sys::gsl_multifit_covar(J.unwrap_shared(), epsrel, covar.unwrap_unique()) };
+pub fn covar(
+    J: &(impl Matrix<f64> + ?Sized),
+    epsrel: f64,
+    covar: &mut (impl MatrixMut<f64> + ?Sized),
+) -> Result<(), Error> {
+    let J = matrix_as_gsl(J);
+    let mut covar = matrix_as_gsl_mut(covar);
+    let ret = unsafe { sys::gsl_multifit_covar(&*J, epsrel, &mut *covar) };
     Error::handle(ret, ())
 }
 
 #[doc(alias = "gsl_multifit_test_delta")]
-pub fn test_delta(dx: &VecF64, x: &VecF64, epsabs: f64, epsrel: f64) -> Result<(), Error> {
-    let ret = unsafe {
-        sys::gsl_multifit_test_delta(dx.unwrap_shared(), x.unwrap_shared(), epsabs, epsrel)
-    };
+pub fn test_delta(
+    dx: &(impl Vector<f64> + ?Sized),
+    x: &(impl Vector<f64> + ?Sized),
+    epsabs: f64,
+    epsrel: f64,
+) -> Result<(), Error> {
+    let dx = vector_as_gsl(dx);
+    let x = vector_as_gsl(x);
+    let ret = unsafe { sys::gsl_multifit_test_delta(&*dx, &*x, epsabs, epsrel) };
     Error::handle(ret, ())
 }
 
 #[doc(alias = "gsl_multifit_gradient")]
-pub fn gradient(J: &MatF64, f: &VecF64, g: &mut VecF64) -> Result<(), Error> {
-    let ret = unsafe {
-        sys::gsl_multifit_gradient(J.unwrap_shared(), f.unwrap_shared(), g.unwrap_unique())
-    };
+pub fn gradient(
+    J: &(impl Matrix<f64> + ?Sized),
+    f: &(impl Vector<f64> + ?Sized),
+    g: &mut (impl VectorMut<f64> + ?Sized),
+) -> Result<(), Error> {
+    let J = matrix_as_gsl(J);
+    let f = vector_as_gsl(f);
+    let mut g = vector_as_gsl_mut(g);
+    let ret = unsafe { sys::gsl_multifit_gradient(&*J, &*f, &mut *g) };
     Error::handle(ret, ())
 }
 
 #[doc(alias = "gsl_multifit_linear_lreg")]
-pub fn linear_lreg(smin: f64, smax: f64, reg_param: &mut VecF64) -> Result<(), Error> {
-    let ret = unsafe { sys::gsl_multifit_linear_lreg(smin, smax, reg_param.unwrap_unique()) };
+pub fn linear_lreg(
+    smin: f64,
+    smax: f64,
+    reg_param: &mut (impl VectorMut<f64> + ?Sized),
+) -> Result<(), Error> {
+    let mut reg_param = vector_as_gsl_mut(reg_param);
+    let ret = unsafe { sys::gsl_multifit_linear_lreg(smin, smax, &mut *reg_param) };
     Error::handle(ret, ())
 }
 
 /// Returns `idx`.
 #[doc(alias = "gsl_multifit_linear_lcorner")]
-pub fn linear_lcorner(rho: &VecF64, eta: &VecF64) -> Result<usize, Error> {
+pub fn linear_lcorner(
+    rho: &(impl Vector<f64> + ?Sized),
+    eta: &(impl Vector<f64> + ?Sized),
+) -> Result<usize, Error> {
     let mut idx = 0;
-    let ret = unsafe {
-        sys::gsl_multifit_linear_lcorner(rho.unwrap_shared(), eta.unwrap_shared(), &mut idx)
-    };
+    let rho = vector_as_gsl(rho);
+    let eta = vector_as_gsl(eta);
+    let ret = unsafe { sys::gsl_multifit_linear_lcorner(&*rho, &*eta, &mut idx) };
     Error::handle(ret, idx)
 }
 
 /// Returns `(Value, idx)`.
 #[doc(alias = "gsl_multifit_linear_lcorner2")]
-pub fn linear_lcorner2(rho: &VecF64, eta: &VecF64) -> Result<usize, Error> {
+pub fn linear_lcorner2(
+    rho: &(impl Vector<f64> + ?Sized),
+    eta: &(impl Vector<f64> + ?Sized),
+) -> Result<usize, Error> {
     let mut idx = 0;
+    let rho = vector_as_gsl(rho);
+    let eta = vector_as_gsl(eta);
     let ret = unsafe {
-        sys::gsl_multifit_linear_lcorner2(rho.unwrap_shared(), eta.unwrap_shared(), &mut idx)
+        sys::gsl_multifit_linear_lcorner2(&*rho, &*eta, &mut idx)
     };
     Error::handle(ret, idx)
 }
 
 #[doc(alias = "gsl_multifit_linear_Lk")]
-pub fn linear_Lk(p: usize, k: usize, L: &mut MatF64) -> Result<(), Error> {
-    let ret = unsafe { sys::gsl_multifit_linear_Lk(p, k, L.unwrap_unique()) };
+pub fn linear_Lk(p: usize, k: usize, L: &mut (impl MatrixMut<f64> + ?Sized)) -> Result<(), Error> {
+    let mut L = matrix_as_gsl_mut(L);
+    let ret = unsafe { sys::gsl_multifit_linear_Lk(p, k, &mut *L) };
+    Error::handle(ret, ())
+}
+
+#[doc(alias = "gsl_multilarge_linear_L_decomp")]
+pub fn linear_L_decomp(
+    L: &mut (impl MatrixMut<f64> + ?Sized),
+    tau: &mut (impl VectorMut<f64> + ?Sized),
+) -> Result<(), Error> {
+    let mut L = matrix_as_gsl_mut(L);
+    let mut tau = vector_as_gsl_mut(tau);
+    let ret = unsafe { sys::gsl_multilarge_linear_L_decomp(&mut *L, &mut *tau) };
     Error::handle(ret, ())
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::VecF64;
 
     #[test]
     fn test_name() {
@@ -1346,10 +1379,10 @@ mod test {
         };
         assert_eq!(W::trust(&p, 10, 2).name(), TRS::Subspace2D);
 
-            let p = Parameters {
+        let p = Parameters {
             trs: TRS::CgST,
             ..params
         };
         assert_eq!(W::trust(&p, 10, 2).name(), TRS::CgST);
-}
+    }
 }

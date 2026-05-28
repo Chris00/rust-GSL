@@ -29,6 +29,85 @@ use std::{
     ptr,
 };
 
+/// Used to describe types accepted as matrices.
+///
+/// Matrices are stored in row-major order, meaning that each row
+/// of elements forms a contiguous block in memory.  This is the
+/// standard “C-language ordering” of two-dimensional arrays.
+/// Note that FORTRAN stores arrays in column-major order.  The
+/// number of rows is `nrows`. The range of valid row indices runs
+/// from `0` to `nrows - 1`.  Similarly `ncols` is the number of
+/// columns.  The range of valid column indices runs from `0` to
+/// `ncols - 1`.  The physical row dimension `tda`, or trailing
+/// dimension, specifies the size of a row of the matrix as laid
+/// out in memory.
+///
+/// Matrices are stored in row-major order.
+/// For example, in the following matrix `nrows` is 3, `ncols` is
+/// 4, and `tda` is 8.  The physical memory layout of the matrix
+/// begins in the top left hand-corner and proceeds from left to
+/// right along each row in turn.
+///
+/// ```text
+/// 00 01 02 03 XX XX XX XX
+/// 10 11 12 13 XX XX XX XX
+/// 20 21 22 23 XX XX XX XX
+/// ```
+///
+/// Each unused memory location is represented by “XX”.  The first
+/// element of the slice `data` gives the location of the first
+/// element of the matrix in memory.
+pub trait Matrix<F> {
+    /// Number of rows.
+    fn nrows(m: &Self) -> usize;
+    /// Number of columns.
+    fn ncols(m: &Self) -> usize;
+    /// Memory slots used for each row.
+    fn tda(m: &Self) -> usize;
+
+    /// The memory slice where the matrix is allocated.
+    ///
+    /// The element (0, 0) of the matrix is at index 0.
+    fn as_slice(m: &Self) -> &[F];
+}
+
+pub trait MatrixMut<F>: Matrix<F> {
+    /// Same as [`Matrix::as_slice`] but for mutale data.
+    fn as_mut_slice(m: &mut Self) -> &mut [F];
+}
+
+/// Convert `m` to a GSL matrix.
+pub(crate) fn matrix_as_gsl<M>(m: &M) -> View<'_, sys::gsl_matrix>
+where
+    M: Matrix<f64> + ?Sized,
+{
+    let m = sys::gsl_matrix {
+        size1: Matrix::nrows(m),
+        size2: Matrix::ncols(m),
+        tda: Matrix::tda(m),
+        data: Matrix::as_slice(m).as_ptr() as *mut _,
+        block: ptr::null_mut(),
+        owner: 0,
+    };
+    View::new(m, false)
+}
+
+/// Convert `m` to a GSL matrix.
+pub(crate) fn matrix_as_gsl_mut<M>(m: &mut M) -> ViewMut<'_, sys::gsl_matrix>
+where
+    M: MatrixMut<f64> + ?Sized,
+{
+    let m = sys::gsl_matrix {
+        size1: Matrix::nrows(m),
+        size2: Matrix::ncols(m),
+        tda: Matrix::tda(m),
+        data: MatrixMut::as_mut_slice(m).as_mut_ptr(),
+        block: ptr::null_mut(),
+        owner: 0,
+    };
+    ViewMut::new(m, false)
+}
+
 /// Used to represent how to convert the GSL matrix format to the
 /// matrix (view) type associated with the vector type `Self`.
 pub trait AsMatrix: AsVector {
@@ -37,31 +116,7 @@ pub trait AsMatrix: AsVector {
 
     /// Return a mutable matrix view (i.e. non-owning) from the slice.
     ///
-    /// Matrices are stored in row-major order, meaning that each row
-    /// of elements forms a contiguous block in memory.  This is the
-    /// standard “C-language ordering” of two-dimensional arrays.
-    /// Note that FORTRAN stores arrays in column-major order.  The
-    /// number of rows is `nrows`. The range of valid row indices runs
-    /// from `0` to `nrows - 1`.  Similarly `ncols` is the number of
-    /// columns.  The range of valid column indices runs from `0` to
-    /// `ncols - 1`.  The physical row dimension `tda`, or trailing
-    /// dimension, specifies the size of a row of the matrix as laid
-    /// out in memory.
-    ///
-    /// For example, in the following matrix `nrows` is 3, `ncols` is
-    /// 4, and `tda` is 8.  The physical memory layout of the matrix
-    /// begins in the top left hand-corner and proceeds from left to
-    /// right along each row in turn.
-    ///
-    /// ```text
-    /// 00 01 02 03 XX XX XX XX
-    /// 10 11 12 13 XX XX XX XX
-    /// 20 21 22 23 XX XX XX XX
-    /// ```
-    ///
-    /// Each unused memory location is represented by “XX”.  The first
-    /// element of the slice `data` gives the location of the first
-    /// element of the matrix in memory.
+    /// See [`Matrix`] for more information on the memory layout.
     fn mat_view_from_slice(
         data: &[f64],
         nrows: usize,
@@ -787,21 +842,13 @@ macro_rules! gsl_matrix {
                 }
 
                 pub fn nrows(&self) -> usize {
-                    if self.unwrap_shared().is_null() {
-                        // FIXME: panic?  Should not be possible.
-                        0
-                    } else {
-                        unsafe { (*self.unwrap_shared()).size1 }
-                    }
+                    debug_assert!(!self.unwrap_shared().is_null());
+                    unsafe { (*self.unwrap_shared()).size1 }
                 }
 
                 pub fn ncols(&self) -> usize {
-                    if self.unwrap_shared().is_null() {
-                        // FIXME: panic?  Should not be possible.
-                        0
-                    } else {
-                        unsafe { (*self.unwrap_shared()).size2 }
-                    }
+                    debug_assert!(!self.unwrap_shared().is_null());
+                    unsafe { (*self.unwrap_shared()).size2 }
                 }
 
                 // TODO: impl Clone
@@ -869,111 +916,25 @@ macro_rules! gsl_matrix {
             }
         }
 
-        // pub struct [<$rust_name View>]<'a> {
-        //     mat: sys::[<$name _view>],
-        //     #[allow(dead_code)]
-        //     phantom: PhantomData<&'a ()>,
-        // }
+        impl Matrix<$rust_ty> for $rust_name {
+            fn nrows(m: &Self) -> usize {
+                m.nrows()
+            }
 
-        // impl<'a> [<$rust_name View>]<'a> {
-        //     /// These functions return a matrix view of the array base with a physical number of columns tda
-        //     /// which may differ from the corresponding dimension of the matrix. The matrix has n1 rows and
-        //     /// n2 columns, and the physical number of columns in memory is given by tda. Mathematically,
-        //     /// the (i,j)-th element of the new matrix is given by,
-        //     ///
-        //     /// m'(i,j) = base[i*tda + j]
-        //     ///
-        //     /// where the index i runs from 0 to n1-1 and the index j runs from 0 to n2-1.
-        //     ///
-        //     /// The new matrix is only a view of the array base. When the view goes out of scope the
-        //     /// original array base will continue to exist. The original memory can only be deallocated by
-        //     /// freeing the original array. Of course, the original array should not be deallocated while
-        //     /// the view is still in use.
-        //     ///
-        //     /// The function gsl_matrix_const_view_array_with_tda is equivalent to
-        //     /// gsl_matrix_view_array_with_tda but can be used for matrices which are declared const.
-        //     #[doc(alias = $name _view_array_with_tda)]
-        //     pub fn from_array_with_tda(base: &'a mut [$rust_ty], n1: usize, n2: usize, tda: usize) -> Self {
-        //         unsafe {
-        //             Self {
-        //                 mat: sys::[<$name _view_array_with_tda>](base.as_mut_ptr(), n1, n2, tda),
-        //                 phantom: PhantomData,
-        //             }
-        //         }
-        //     }
+            fn ncols(m: &Self) -> usize {
+                m.ncols()
+            }
 
-        //     /// These functions return a matrix view of the vector v. The matrix has n1 rows and n2 columns.
-        //     /// The vector must have unit stride. The physical number of columns in memory is also given by
-        //     /// n2. Mathematically, the (i,j)-th element of the new matrix is given by,
-        //     ///
-        //     /// m'(i,j) = v->data[i*n2 + j]
-        //     ///
-        //     /// where the index i runs from 0 to n1-1 and the index j runs from 0 to n2-1.
-        //     ///
-        //     /// The new matrix is only a view of the vector v. When the view goes out of scope the original
-        //     /// vector v will continue to exist. The original memory can only be deallocated by freeing the
-        //     /// original vector. Of course, the original vector should not be deallocated while the view
-        //     /// is still in use.
-        //     ///
-        //     /// The function gsl_matrix_const_view_vector is equivalent to gsl_matrix_view_vector but can be
-        //     /// used for matrices which are declared const.
-        //     #[doc(alias = $name _view_vector)]
-        //     pub fn from_vector(v: &'a mut $vec_name, n1: usize, n2: usize) -> Self {
-        //         unsafe {
-        //             Self {
-        //                 mat: sys::[<$name _view_vector>](v.unwrap_unique(), n1, n2),
-        //                 phantom: PhantomData,
-        //             }
-        //         }
-        //     }
+            fn tda(m: &Self) -> usize {
+                unsafe { *m.unwrap_shared() }.tda
+            }
 
-        //     /// These functions return a matrix view of the vector v with a physical number of columns tda
-        //     /// which may differ from the corresponding matrix dimension. The vector must have unit stride.
-        //     /// The matrix has n1 rows and n2 columns, and the physical number of columns in memory is given
-        //     /// by tda. Mathematically, the (i,j)-th element of the new matrix is given by,
-        //     ///
-        //     /// m'(i,j) = v->data[i*tda + j]
-        //     ///
-        //     /// where the index i runs from 0 to n1-1 and the index j runs from 0 to n2-1.
-        //     ///
-        //     /// The new matrix is only a view of the vector v. When the view goes out of scope the original
-        //     /// vector v will continue to exist. The original memory can only be deallocated by freeing the
-        //     /// original vector. Of course, the original vector should not be deallocated while the view
-        //     /// is still in use.
-        //     ///
-        //     /// The function gsl_matrix_const_view_vector_with_tda is equivalent to
-        //     /// gsl_matrix_view_vector_with_tda but can be used for matrices which are declared const.
-        //     #[doc(alias = $name _view_vector_with_tda)]
-        //     pub fn from_vector_with_tda(v: &'a mut $vec_name, n1: usize, n2: usize, tda: usize) -> Self {
-        //         unsafe {
-        //             Self {
-        //                 mat: sys::[<$name _view_vector_with_tda>](v.unwrap_unique(), n1, n2, tda),
-        //                 phantom: PhantomData,
-        //             }
-        //         }
-        //     }
-
-        //     // TODO: point?
-        //     // pub fn matrix<F: FnOnce(Option<&$rust_name>) -> R, R>(&self, f: F) -> R {
-        //     //     let tmp = &self.mat.matrix;
-        //     //     let tmp_mat = $rust_name::view(tmp as *const _);
-        //     //     if tmp_mat.is_ptr_null() {
-        //     //         f(None)
-        //     //     } else {
-        //     //         f(Some(&tmp_mat))
-        //     //     }
-        //     // }
-
-        //     // TODO: Point?
-        //     // pub fn matrix_mut<F: FnOnce(Option<&mut $rust_name>) -> R, R>(&mut self, f: F) -> R {
-        //     //     let mut tmp_mat = $rust_name::view_mut(&mut self.mat.matrix);
-        //     //     if tmp_mat.is_ptr_null() {
-        //     //         f(None)
-        //     //     } else {
-        //     //         f(Some(&mut tmp_mat))
-        //     //     }
-        //     // }
-        // } // end of impl block
+            fn as_slice(m: &Self) -> &[$rust_ty] {
+                let m = unsafe { *m.unwrap_shared() };
+                let len = m.size1 * m.tda;
+                unsafe { std::slice::from_raw_parts(m.data, len) }
+            }
+        }
         } // end of paste! block
     }; // end of the gsl_matrix macro
 }

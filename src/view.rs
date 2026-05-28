@@ -72,7 +72,7 @@ unsafe impl<T: FFI> AsView for T {
 
 /// An immutable view to `T`.
 pub struct View<'a, T> {
-    // `T` will wrap a pointer.
+    // `T` will wrap a pointer or be a raw GSL struct.
     inner: ManuallyDrop<T>,
     // - In case of callbacks, the given `gsl_vector...` pointer must
     //   not be freed (so the Rust destructor must not be called).
@@ -99,7 +99,7 @@ impl<T> Deref for View<'_, T> {
     }
 }
 
-impl<T: FFI + Debug> Debug for View<'_, T> {
+impl<T: Debug> Debug for View<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         <T as Debug>::fmt(self, f)
     }

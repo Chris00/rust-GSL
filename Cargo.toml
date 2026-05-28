@@ -40,6 +40,9 @@ rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition", "--html-in-h
 name = "rgsl"
 crate-type = ["dylib", "rlib"]
 
+[dev-dependencies]
+criterion = "0.8.2"
+
 # Examples with special requirements
 [[example]]
 name = "filt_edge"
@@ -72,3 +75,7 @@ required-features = ["v2_5"]
 [[example]]
 name = "largefit"
 required-features = ["v2_2"]
+
+[[bench]]
+name = "vector_specialization"
+harness = false

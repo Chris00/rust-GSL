@@ -78,9 +78,7 @@ global minimum of the function in question.
 use crate::{
     Error,
     ffi::FFI,
-    vector::{AsVector, VecF64},
-    view::AsView,
-    view::View,
+    vector::{AsVector, vector_as_gsl},
 };
 use std::{ffi::c_void, ops::ControlFlow};
 
@@ -264,8 +262,8 @@ impl<'a, V: AsVector + ?Sized> Minimizer<'a, V> {
         });
         self.f = Some(f);
 
-        let x = V::as_gsl_vector(x);
-        let step_size = V::as_gsl_vector(step_size);
+        let x = vector_as_gsl(x);
+        let step_size = vector_as_gsl(step_size);
         let ret = unsafe {
             sys::gsl_multimin_fminimizer_set(
                 self.unwrap_unique(),
@@ -651,7 +649,7 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
         });
         self.fdf = Some(fdf);
 
-        let x = V::as_gsl_vector(x);
+        let x = vector_as_gsl(x);
         let ret = unsafe {
             sys::gsl_multimin_fdfminimizer_set(
                 self.unwrap_unique(),
@@ -684,8 +682,11 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
 
     /// Returns the current best estimate of the location of the minimum.
     #[doc(alias = "gsl_multimin_fdfminimizer_x")]
-    pub fn x(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_x(self.unwrap_shared()) })
+    pub fn x(&self) -> V::View<'_> {
+        unsafe {
+            let ptr = sys::gsl_multimin_fdfminimizer_x(self.unwrap_shared());
+            V::view_from_ptr(ptr)
+        }
     }
 
     /// Returns the value of the function at the minimum.
@@ -696,14 +697,20 @@ impl<'a, V: AsVector + ?Sized> MinimizerFdf<'a, V> {
 
     /// Returns the gradient of the function at the minimum.
     #[doc(alias = "gsl_multimin_fdfminimizer_gradient")]
-    pub fn gradient(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_gradient(self.unwrap_shared()) })
+    pub fn gradient(&self) -> V::View<'_> {
+        unsafe {
+            let ptr = sys::gsl_multimin_fdfminimizer_gradient(self.unwrap_shared());
+            V::view_from_ptr(ptr)
+        }
     }
 
     /// Returns the last step increment of the estimate.
     #[doc(alias = "gsl_multimin_fdfminimizer_dx")]
-    pub fn dx(&self) -> View<'_, VecF64> {
-        VecF64::as_view(unsafe { sys::gsl_multimin_fdfminimizer_dx(self.unwrap_shared()) })
+    pub fn dx(&self) -> V::View<'_> {
+        unsafe {
+            let ptr = sys::gsl_multimin_fdfminimizer_dx(self.unwrap_shared());
+            V::view_from_ptr(ptr)
+        }
     }
 
     /// Perform a single iteration of the minimizer `self`.  If the
@@ -748,7 +755,7 @@ pub fn test_gradient<V>(g: &V, epsabs: f64) -> ControlFlow<()>
 where
     V: AsVector + ?Sized,
 {
-    let g = V::as_gsl_vector(g);
+    let g = vector_as_gsl(g);
     Error::control_flow(unsafe { sys::gsl_multimin_test_gradient(&*g, epsabs) })
 }
 
@@ -791,6 +798,7 @@ mod test {
     /// }
     /// ```
     use super::*;
+    use crate::VecF64;
 
     #[cfg(feature = "ndarray")]
     #[test]

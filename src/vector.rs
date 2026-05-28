@@ -9,7 +9,7 @@ Vectors (resp. mutable vectors) are any type that implements the
 [`Vector`] (resp. [`VectorMut`]) trait which defines the interface to a
 slice of a memory block.  A vector slice is a set of equally-spaced
 elements of an area of memory.
-!*/
+*/
 
 use crate::{
     Error,
@@ -76,6 +76,54 @@ pub unsafe trait VectorMut<F>: Vector<F> {
     fn as_mut_slice(x: &mut Self) -> &mut [F];
 }
 
+/// Convert a vector to a GSL vector (borrowing the data from `x`).
+///
+/// # Safety
+///
+/// The resulting value must bot be mutated if `x` is not mutably
+/// borrowed.  It's lifetime should not be longer than the one of `x`.
+pub(crate) fn vector_as_gsl<V>(x: &V) -> View<'_, sys::gsl_vector>
+where
+    V: Vector<f64> + ?Sized,
+{
+    // This function may be more efficiently implemented (0.78 of the
+    // time) for `VecF64` be using the existing gsl_vector:
+    //
+    // let t = unsafe { *x.unwrap_shared() };
+    // View::new(t, false)
+    //
+    // However, this gains only about 140 picoseconds per call (see
+    // benches/vector_specialization.rs) and is not worth to make the
+    // interface more complicated for users.
+    let v = sys::gsl_vector {
+        size: V::len(x),
+        stride: V::stride(x),
+        // `View` only offers read-only access so the cast is OK.
+        data: V::as_slice(x).as_ptr() as *mut _,
+        block: ptr::null_mut(),
+        owner: 0,
+    };
+    // The struct `gsl_vector` is stored in `View` so will be
+    // freed.  It does not implement `Drop` but, even if it did,
+    // `drop` must not be run because the data is not ours.
+    View::new(v, false)
+}
+
+/// Same as [`vector_as_gsl`] for mutable vectors.
+pub(crate) fn vector_as_gsl_mut<V>(x: &mut V) -> ViewMut<'_, sys::gsl_vector>
+where
+    V: VectorMut<f64> + ?Sized,
+{
+    let v = sys::gsl_vector {
+        size: V::len(x),
+        stride: V::stride(x),
+        data: V::as_mut_slice(x).as_mut_ptr(),
+        block: ptr::null_mut(),
+        owner: 0,
+    };
+    ViewMut::new(v, false)
+}
+
 /// Used to present GSL vectors "borrowed" from the C side as "views"
 /// of the vector type `Self`.
 pub trait AsVector: Vector<f64> {
@@ -133,29 +181,6 @@ pub trait AsVector: Vector<f64> {
         let len = 1 + (v.size - 1) * v.stride;
         let x = unsafe { std::slice::from_raw_parts_mut(v.data, len) };
         Self::view_from_mut_slice(x, v.size, v.stride)
-    }
-
-    /// Convert a vector to a GSL vector (borrowing the data from `Self`).
-    ///
-    /// # Safety
-    ///
-    /// The resulting value must bot be mutated if `x` is not mutably
-    /// borrowed.  It's lifetime should not be longer than the one of
-    /// `x`.
-    #[doc(hidden)]
-    fn as_gsl_vector(x: &Self) -> View<'_, sys::gsl_vector> {
-        let v = sys::gsl_vector {
-            size: Vector::len(x),
-            stride: Vector::stride(x),
-            // `View` only offers read-only access so the cast is OK.
-            data: Vector::as_slice(x).as_ptr() as *mut _,
-            block: ptr::null_mut(),
-            owner: 0,
-        };
-        // The struct `gsl_vector` is stored in `View` so will be
-        // freed.  It does not implement `Drop` but, even if it did,
-        // `drop` must not be run because the data is not ours.
-        View::new(v, false)
     }
 }
 
@@ -803,12 +828,6 @@ impl AsVector for VecF64 {
         // The view contains a stack allocated `gsl_vector`.  Since we
         // want to Deref to `VecF64`, we reallocate it on the heap.
         ViewMut::alloc("VecF64::view_from_gsl_view", view.vector)
-    }
-
-    #[inline]
-    fn as_gsl_vector(x: &VecF64) -> View<'_, sys::gsl_vector> {
-        let t = unsafe { *x.unwrap_shared() };
-        View::new(t, false)
     }
 }
 
