@@ -773,6 +773,39 @@ paste! {
         }
     }
 
+    impl std::ops::Index<usize> for $rust_name {
+        type Output = $rust_ty;
+
+        /// Return the `i`-th element of the vector `self`.  If `i` lies
+        /// outside the allowed range of `0` to `n-1` then 0 is returned.
+        #[inline]
+        fn index(&self, i: usize) -> &$rust_ty {
+            if i >= self.len() {
+                panic!("rgsl::vector::{}: index {} out of bound",
+                    stringify!($rust_name), i);
+            }
+            // `Self::get` cannot be used to have a *reference*.
+            unsafe {
+                let v: sys::$name = *self.unwrap_shared();
+                &*v.data.add(i * v.stride)
+            }
+        }
+    }
+
+    impl std::ops::IndexMut<usize> for $rust_name {
+        fn index_mut(&mut self, i: usize) -> &mut $rust_ty {
+            if i >= self.len() {
+                panic!("rgsl::vector::{}: index {} out of bound",
+                    stringify!($rust_name), i);
+            }
+            // `Self::set` cannot be used to get a mutable reference.
+            unsafe {
+                let v: sys::$name = *self.unwrap_unique();
+                &mut *v.data.add(i * v.stride)
+            }
+        }
+    }
+
     unsafe impl Vector<$rust_ty> for $rust_name {
         #[inline]
         fn len(x: &Self) -> usize {
@@ -899,5 +932,13 @@ mod test {
     fn vec_set_out_of_range() {
         let mut v = VecF64::from_slice(&[1., 2.]);
         v.set(2, 0.);
+    }
+
+    #[test]
+    fn index_ops() {
+        let mut v = VecF64::from_slice(&[0., 1., 2.]);
+        assert_eq!(v[2], 2.);
+        v[0] = 4.;
+        assert_eq!(v[0], 4.);
     }
 }
