@@ -12,8 +12,9 @@ elements of an area of memory.
 */
 
 use crate::{
-    Error,
+    Error, MatF64,
     ffi::FFI,
+    matrix::AsMatrix,
     view::{View, ViewMut},
 };
 use std::{
@@ -127,6 +128,9 @@ where
 
 /// Used to present GSL vectors "borrowed" from the C side as "views"
 /// of the vector type `Self`.
+///
+/// It must be implemented on “vector references” to which other
+/// vector types [`Deref`].
 pub trait AsVector: Vector<f64> {
     /// Immutable view of a vector (with borrowed data).
     type View<'a>: Deref<Target = Self>;
@@ -183,6 +187,11 @@ pub trait AsVector: Vector<f64> {
         let x = unsafe { std::slice::from_raw_parts_mut(v.data, len) };
         Self::view_from_mut_slice(x, v.size, v.stride)
     }
+}
+
+/// Use to associate a vector type `Self` with a “natural” matrix type.
+pub trait VectorSpace: AsVector {
+    type Mat: AsMatrix;
 }
 
 // Implement the `Vector` trait on standard vectors.
@@ -295,6 +304,12 @@ impl AsVector for [f64] {
         assert_eq!(stride, 1);
         &mut x[..len]
     }
+}
+
+impl VectorSpace for [f64] {
+    // `[f64]` doen't have a natural associated matrix type.  Use the
+    // one provided by this library.
+    type Mat = MatF64;
 }
 
 #[cfg(feature = "ndarray")]
@@ -834,6 +849,10 @@ impl AsVector for VecF64 {
         // want to Deref to `VecF64`, we reallocate it on the heap.
         ViewMut::alloc("VecF64::view_from_gsl_view", view.vector)
     }
+}
+
+impl VectorSpace for VecF64 {
+    type Mat = MatF64;
 }
 
 // https://doc.rust-lang.org/std/primitive.f128.html

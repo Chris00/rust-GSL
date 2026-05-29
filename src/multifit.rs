@@ -294,7 +294,7 @@ use crate::{
     Error,
     ffi::FFI,
     matrix::{AsMatrix, Matrix, MatrixMut, matrix_as_gsl, matrix_as_gsl_mut},
-    vector::{Vector, VectorMut, vector_as_gsl, vector_as_gsl_mut},
+    vector::{Vector, VectorMut, VectorSpace, vector_as_gsl, vector_as_gsl_mut},
 };
 use pastey::paste;
 use std::ffi::c_void;
@@ -609,7 +609,7 @@ pub enum Type {
 
 /// Used to identify the types that can be used to specify the
 /// functions to pass to [`Workspace::init`].
-pub trait Fdf<V: AsMatrix + ?Sized> {
+pub trait Fdf<V: VectorSpace + ?Sized> {
     /// `f(x, fx)` must store the `n` components of the vector $f(x)$
     /// in `fx` for argument `x`, returning an appropriate error code
     /// if the function cannot be computed.
@@ -625,12 +625,12 @@ pub trait Fdf<V: AsMatrix + ?Sized> {
     /// [`std::unimplemented`] and let [`Self::has_df`] return `false`.
     /// In this case the Jacobian will be internally computed using
     /// finite difference approximations of the function f.
-    fn df(&mut self, x: &V, J: &mut V::MatViewMut<'_>) -> Result<(), Error>;
+    fn df(&mut self, x: &V, J: &mut V::Mat) -> Result<(), Error>;
 
     /// Return `true` iff the method [`Self::df`] is implemented.
     fn has_df(&self) -> bool;
 
-    /// `fvv(a, v, fvv)` must store the `n` components of the vector
+    /// `fvv(x, v, fvv)` must store the `n` components of the vector
     /// $f_{vv}(x) = ∑_{αβ} v_α v_β \frac{∂}{∂x_α} \frac{∂}{∂x_β}
     /// f(x)$, representing second directional derivatives of the
     /// function to be minimized, into the `fvv`.  The point is
@@ -651,7 +651,7 @@ pub trait Fdf<V: AsMatrix + ?Sized> {
 
 impl<V, F> Fdf<V> for F
 where
-    V: AsMatrix + ?Sized,
+    V: VectorSpace + ?Sized,
     F: FnMut(&V, &mut V) -> Result<(), Error>,
 {
     fn f(&mut self, x: &V, fx: &mut V) -> Result<(), Error> {
@@ -663,7 +663,7 @@ where
         false
     }
 
-    fn df(&mut self, _x: &V, _J: &mut V::MatViewMut<'_>) -> Result<(), Error> {
+    fn df(&mut self, _x: &V, _J: &mut V::Mat) -> Result<(), Error> {
         unimplemented!()
     }
 
@@ -679,7 +679,7 @@ where
 
 ffi_wrapper!(
     /// Derivative solver.
-    Workspace<'a, V: AsMatrix + ?Sized>,
+    Workspace<'a, V: VectorSpace + ?Sized>,
     *mut sys::gsl_multifit_nlinear_workspace,
     gsl_multifit_nlinear_free
     ;fdf_struct: Option<Box<sys::gsl_multifit_nlinear_fdf>> => None;
@@ -690,7 +690,7 @@ macro_rules! impl_workspace {
     ($fit: ident, $path: literal) => {
         paste! {
 
-            impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
+            impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
                 fn type_to_c(t: Type) -> *const sys::[<gsl_multi $fit _nlinear_type>] {
                     match t {
                         Type::Trust => unsafe {
@@ -766,7 +766,6 @@ macro_rules! impl_workspace {
 
 impl_workspace!(fit, "rgsl::multifit");
 
-impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
     /// Initialize, or reinitialize, the workspace to use the function
     /// `f` and the initial guess `x`.
     ///
@@ -775,7 +774,8 @@ impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
     /// appropriate error code if the function cannot be computed.
     #[doc(alias = "gsl_multifit_nlinear_init")]
     pub fn init<F: Fdf<V> + 'a>(&mut self, x: &V, fdf: F) -> Result<(), Error> {
-        unsafe extern "C" fn f_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
+        unsafe extern "C" fn f_trampoline<V: VectorSpace + ?Sized, F: Fdf<V>>(
             x: *const sys::gsl_vector,
             params: *mut c_void,
             fx: *mut sys::gsl_vector,
@@ -789,7 +789,7 @@ impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
             Error::to_c(ret.map_err(|_| Error::Failure).flatten())
         }
 
-        unsafe extern "C" fn df_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+        unsafe extern "C" fn df_trampoline<V: VectorSpace + ?Sized, F: Fdf<V>>(
             x: *const sys::gsl_vector,
             params: *mut c_void,
             J: *mut sys::gsl_matrix,
@@ -797,13 +797,13 @@ impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
             let ret = std::panic::catch_unwind(|| unsafe {
                 let fdf = &mut *params.cast::<F>();
                 let vx = V::view_from_ptr(x);
-                let mut vJ = V::mat_view_from_mut_ptr(J);
+                let mut vJ = V::Mat::mat_view_from_mut_ptr(J);
                 fdf.df(&*vx, &mut vJ)
             });
             Error::to_c(ret.map_err(|_| Error::Failure).flatten())
         }
 
-        unsafe extern "C" fn fvv_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+        unsafe extern "C" fn fvv_trampoline<V: VectorSpace + ?Sized, F: Fdf<V>>(
             x: *const sys::gsl_vector,
             v: *const sys::gsl_vector,
             params: *mut c_void,
@@ -1038,7 +1038,7 @@ pub mod large {
 
     /// Used to identify the types that can be used to specify the
     /// functions to pass to [`Workspace::init`].
-    pub trait Fdf<V: AsMatrix + ?Sized> {
+    pub trait Fdf<V: VectorSpace + ?Sized> {
         /// `f(x, fx)` must store the `n` components of the vector $f(x)$
         /// in `fx` for argument `x`, returning an appropriate error code
         /// if the function cannot be computed.
@@ -1063,7 +1063,7 @@ pub mod large {
             x: &V,
             u: &V,
             v: &mut V,
-            JTJ: Option<&mut V::MatViewMut<'_>>,
+            JTJ: Option<&mut V::Mat>,
         ) -> Result<(), Error>;
 
         /// `fvv(a, v, fvv)` must store the `n` components of the vector
@@ -1087,7 +1087,7 @@ pub mod large {
 
     ffi_wrapper!(
         /// Derivative solver for large problems.
-        Workspace<'a, V: AsMatrix + ?Sized>,
+        Workspace<'a, V: VectorSpace + ?Sized>,
         *mut sys::gsl_multilarge_nlinear_workspace,
         gsl_multilarge_nlinear_free
         ;fdf_struct: Option<Box<sys::gsl_multilarge_nlinear_fdf>> => None;
@@ -1096,7 +1096,6 @@ pub mod large {
 
     impl_workspace!(large, "rgsl::multilarge");
 
-    impl<'a, V: AsMatrix + ?Sized> Workspace<'a, V> {
         /// Initialize, or reinitialize, the workspace to use the function
         /// `fdf` and the initial guess `x`.
         ///
@@ -1108,7 +1107,8 @@ pub mod large {
         /// - On can pass
         #[doc(alias = "gsl_multilarge_nlinear_init")]
         pub fn init<F: Fdf<V> + 'a>(&mut self, x: &V, fdf: F) -> Result<(), Error> {
-            unsafe extern "C" fn f_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+    impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
+            unsafe extern "C" fn f_trampoline<V: VectorSpace + ?Sized, F: Fdf<V>>(
                 x: *const sys::gsl_vector,
                 params: *mut c_void,
                 fx: *mut sys::gsl_vector,
@@ -1122,7 +1122,7 @@ pub mod large {
                 Error::to_c(ret.map_err(|_| Error::Failure).flatten())
             }
 
-            unsafe extern "C" fn df_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+            unsafe extern "C" fn df_trampoline<V: VectorSpace + ?Sized, F: Fdf<V>>(
                 transJ: sys::CBLAS_TRANSPOSE,
                 x: *const sys::gsl_vector,
                 u: *const sys::gsl_vector,
@@ -1136,17 +1136,17 @@ pub mod large {
                     let vx = V::view_from_ptr(x);
                     let vu = V::view_from_ptr(u);
                     let mut vv = V::view_from_mut_ptr(v);
-                    let mut vJTJ = if JTJ.is_null() {
-                        None
+                    if JTJ.is_null() {
+                        fdf.df(transJ, &*vx, &*vu, &mut *vv, None)
                     } else {
-                        Some(V::mat_view_from_mut_ptr(JTJ))
-                    };
-                    fdf.df(transJ, &*vx, &*vu, &mut *vv, vJTJ.as_mut())
+                        let mut JTJ = V::Mat::mat_view_from_mut_ptr(JTJ);
+                        fdf.df(transJ, &*vx, &*vu, &mut *vv, Some(&mut *JTJ))
+                    }
                 });
                 Error::to_c(ret.map_err(|_| Error::Failure).flatten())
             }
 
-            unsafe extern "C" fn fvv_trampoline<V: AsMatrix + ?Sized, F: Fdf<V>>(
+            unsafe extern "C" fn fvv_trampoline<V: VectorSpace + ?Sized, F: Fdf<V>>(
                 x: *const sys::gsl_vector,
                 v: *const sys::gsl_vector,
                 params: *mut c_void,

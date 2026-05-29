@@ -401,7 +401,7 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
                 let t = &*(params as *mut MultiRootFdfSolverFunction);
                 let i_df = &t.df;
                 let vx = VecF64::view_from_ptr(x);
-                let mut vJ = VecF64::mat_view_from_mut_ptr(J);
+                let mut vJ = MatF64::mat_view_from_mut_ptr(J);
                 Error::to_c(i_df(&vx, &mut vJ))
             }
         }
@@ -417,7 +417,7 @@ impl<'a> MultiRootFdfSolverFunction<'a> {
                 let i_fdf = &t.fdf;
                 let vx = VecF64::view_from_ptr(x);
                 let mut vf = VecF64::view_from_mut_ptr(f);
-                let mut vJ = VecF64::mat_view_from_mut_ptr(J);
+                let mut vJ = MatF64::mat_view_from_mut_ptr(J);
                 Error::to_c(i_fdf(&vx, &mut vf, &mut vJ))
             }
         }

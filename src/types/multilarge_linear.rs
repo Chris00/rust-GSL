@@ -251,7 +251,7 @@ impl MultilargeLinearWorkspace {
     pub fn matrix(&self) -> View<'_, MatF64> {
         unsafe {
             let ptr = sys::gsl_multilarge_linear_matrix_ptr(self.unwrap_shared());
-            VecF64::mat_view_from_ptr(ptr)
+            MatF64::mat_view_from_ptr(ptr)
         }
     }
 
