@@ -759,6 +759,14 @@ macro_rules! impl_workspace {
                     }
                 }
 
+                /// Return the name of the solver.
+                #[doc(alias = gsl_multi $fit _nlinear_name)]
+                pub fn name(&self) -> Type {
+                    // At the moment, no need to call gsl_multifit_nlinear_name
+                    // or gsl_multilarge_nlinear_name.
+                    Type::Trust
+                }
+
             }
         }
     };
@@ -846,7 +854,7 @@ impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
     }
 
     #[doc(alias = "gsl_multifit_nlinear_trs_name")]
-    pub fn name(&self) -> TRS {
+    pub fn trs_name(&self) -> TRS {
         let n = unsafe { sys::gsl_multifit_nlinear_trs_name(self.unwrap_shared()) };
         map_name!(
             rgsl::multifit::Workspace,
@@ -1190,7 +1198,7 @@ pub mod large {
         }
 
         #[doc(alias = "gsl_multilarge_nlinear_trs_name")]
-        pub fn name(&self) -> TRS {
+        pub fn trs_name(&self) -> TRS {
             let n = unsafe { sys::gsl_multilarge_nlinear_trs_name(self.unwrap_shared()) };
             map_name!(
                 rgsl::multifit::Workspace,
@@ -1314,31 +1322,31 @@ mod test {
 
         let params = Parameters::default();
         let w = W::trust(&params, 10, 2);
-        assert_eq!(w.name(), TRS::LM);
+        assert_eq!(w.trs_name(), TRS::LM);
 
         let p = Parameters {
             trs: TRS::LMaccel,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::LMaccel);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::LMaccel);
 
         let p = Parameters {
             trs: TRS::Dogleg,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Dogleg);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::Dogleg);
 
         let p = Parameters {
             trs: TRS::DDogleg,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::DDogleg);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::DDogleg);
 
         let p = Parameters {
             trs: TRS::Subspace2D,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Subspace2D);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::Subspace2D);
     }
 
     #[test]
@@ -1348,36 +1356,36 @@ mod test {
 
         let params = Parameters::default();
         let w = W::trust(&params, 10, 2);
-        assert_eq!(w.name(), TRS::LM);
+        assert_eq!(w.trs_name(), TRS::LM);
 
         let p = Parameters {
             trs: TRS::LMaccel,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::LMaccel);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::LMaccel);
 
         let p = Parameters {
             trs: TRS::Dogleg,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Dogleg);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::Dogleg);
 
         let p = Parameters {
             trs: TRS::DDogleg,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::DDogleg);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::DDogleg);
 
         let p = Parameters {
             trs: TRS::Subspace2D,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::Subspace2D);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::Subspace2D);
 
         let p = Parameters {
             trs: TRS::CgST,
             ..params
         };
-        assert_eq!(W::trust(&p, 10, 2).name(), TRS::CgST);
+        assert_eq!(W::trust(&p, 10, 2).trs_name(), TRS::CgST);
     }
 }
