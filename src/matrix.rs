@@ -13,6 +13,10 @@ Matrices are represented by [`MatF32`], [`MatF64`], [`MatI32`], and
 ```
 use rgsl::MatF64;
 let m = MatF64::from_slice(&[1., 2., 3., 4.], 2, 2);
+assert_eq!(m[(0,0)], 1.);
+assert_eq!(m[(0,1)], 2.);
+assert_eq!(m[(1,0)], 3.);
+assert_eq!(m[(1,1)], 4.);
 ```
 
  */
@@ -26,7 +30,7 @@ use crate::{
 use pastey::paste;
 use std::{
     fmt::{self, Debug, Formatter},
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut, Index, IndexMut},
     ptr,
 };
 
@@ -807,14 +811,22 @@ macro_rules! gsl_matrix {
                     }
                 }
 
+                #[inline]
                 pub fn nrows(&self) -> usize {
                     debug_assert!(!self.unwrap_shared().is_null());
                     unsafe { (*self.unwrap_shared()).size1 }
                 }
 
+                #[inline]
                 pub fn ncols(&self) -> usize {
                     debug_assert!(!self.unwrap_shared().is_null());
                     unsafe { (*self.unwrap_shared()).size2 }
+                }
+
+                #[inline]
+                pub fn tda(&self) -> usize {
+                    debug_assert!(!self.unwrap_shared().is_null());
+                    unsafe { *self.unwrap_shared() }.tda
                 }
 
                 // TODO: impl Clone
@@ -855,52 +867,90 @@ macro_rules! gsl_matrix {
                 }
             }
 
-        impl Debug for $rust_name {
-            #[allow(unused_must_use)]
-            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-                let ptr = self.unwrap_shared();
-                if ptr.is_null() {
-                    write!(f, "<null>")
-                } else {
-                    let size1 = self.nrows();
-                    let size2 = self.ncols();
-                    for y in 0..size1 {
-                        write!(f, "[");
-                        for x in 0..size2 {
-                            if x < size2 - 1 {
-                                write!(f, "{}, ", self.get(y, x));
-                            } else {
-                                write!(f, "{}", self.get(y, x));
+            impl Debug for $rust_name {
+                #[allow(unused_must_use)]
+                fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+                    let ptr = self.unwrap_shared();
+                    if ptr.is_null() {
+                        write!(f, "<null>")
+                    } else {
+                        let size1 = self.nrows();
+                        let size2 = self.ncols();
+                        for y in 0..size1 {
+                            write!(f, "[");
+                            for x in 0..size2 {
+                                if x < size2 - 1 {
+                                    write!(f, "{}, ", self.get(y, x));
+                                } else {
+                                    write!(f, "{}", self.get(y, x));
+                                }
+                            }
+                            if y < size1 - 1 {
+                                write!(f, "]\n");
                             }
                         }
-                        if y < size1 - 1 {
-                            write!(f, "]\n");
-                        }
+                        write!(f, "]")
                     }
-                    write!(f, "]")
                 }
             }
-        }
 
-        impl Matrix<$rust_ty> for $rust_name {
-            fn nrows(m: &Self) -> usize {
-                m.nrows()
+            impl Matrix<$rust_ty> for $rust_name {
+                fn nrows(m: &Self) -> usize {
+                    m.nrows()
+                }
+
+                fn ncols(m: &Self) -> usize {
+                    m.ncols()
+                }
+
+                fn tda(m: &Self) -> usize {
+                    m.tda()
+                }
+
+                fn as_slice(m: &Self) -> &[$rust_ty] {
+                    let m = unsafe { *m.unwrap_shared() };
+                    let len = m.size1 * m.tda;
+                    unsafe { std::slice::from_raw_parts(m.data, len) }
+                }
             }
 
-            fn ncols(m: &Self) -> usize {
-                m.ncols()
+            impl Index<(usize, usize)> for $rust_name {
+                type Output = $rust_ty;
+
+                fn index(&self, (i,j): (usize, usize)) -> &$rust_ty {
+                    if i >= self.nrows() {
+                        panic!("rgsl::matrix::{}: row {} >= {}",
+                            stringify!($rust_name), i, self.nrows())
+                    }
+                    if j >= self.ncols() {
+                        panic!("rgsl::matrix::{}: col {} >= {}",
+                            stringify!($rust_name), j, self.ncols())
+                    }
+                    // Implemented "by hand" to return a reference.
+                    unsafe{
+                        let m: sys::$name = *self.unwrap_shared();
+                        &*m.data.add(i * m.tda + j)
+                    }
+                }
             }
 
-            fn tda(m: &Self) -> usize {
-                unsafe { *m.unwrap_shared() }.tda
+            impl IndexMut<(usize, usize)> for $rust_name {
+                fn index_mut(&mut self, (i,j): (usize, usize)) -> &mut $rust_ty {
+                    if i >= self.nrows() {
+                        panic!("rgsl::matrix::{}: row {} >= {}",
+                            stringify!($rust_name), i, self.nrows())
+                    }
+                    if j >= self.ncols() {
+                        panic!("rgsl::matrix::{}: col {} >= {}",
+                            stringify!($rust_name), j, self.ncols())
+                    }
+                    // Implemented "by hand" to return a reference.
+                    unsafe{
+                        let m: sys::$name = *self.unwrap_unique();
+                        &mut *m.data.add(i * m.tda + j)
+                    }
+                }
             }
-
-            fn as_slice(m: &Self) -> &[$rust_ty] {
-                let m = unsafe { *m.unwrap_shared() };
-                let len = m.size1 * m.tda;
-                unsafe { std::slice::from_raw_parts(m.data, len) }
-            }
-        }
         } // end of paste! block
     }; // end of the gsl_matrix macro
 }
@@ -920,5 +970,19 @@ mod test {
         let m = MatF64::from_mut_slice(&mut s, 1, 1);
         assert_eq!(m.get(0, 0), 1.);
         assert_eq!(m.get(1, 0), 0.);
+    }
+
+    #[test]
+    fn indices() {
+        let mut s = [1., 2., 3., 4.];
+        let mut m = MatF64::from_mut_slice(&mut s, 2, 2);
+        assert_eq!(m[(0, 0)], 1.);
+        assert_eq!(m[(0, 1)], 2.);
+        assert_eq!(m[(1, 0)], 3.);
+        assert_eq!(m[(1, 1)], 4.);
+        m[(0, 1)] = 5.;
+        assert_eq!(m[(0, 1)], 5.);
+        drop(m);
+        assert_eq!(s[1], 5.);
     }
 }
