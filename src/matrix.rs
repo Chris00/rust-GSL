@@ -12,11 +12,13 @@ Matrices are represented by [`MatF32`], [`MatF64`], [`MatI32`], and
 
 ```
 use rgsl::MatF64;
-let m = MatF64::from_slice(&[1., 2., 3., 4.], 2, 2);
+let mut m: MatF64 = [[1., 2.], [3., 4.]].into();
 assert_eq!(m[(0,0)], 1.);
 assert_eq!(m[(0,1)], 2.);
 assert_eq!(m[(1,0)], 3.);
 assert_eq!(m[(1,1)], 4.);
+m[(0,1)] = m[(0,1)] + m[(1,0)];
+assert_eq!(m[(0,1)], 5.);
 ```
 
  */
@@ -239,8 +241,8 @@ macro_rules! gsl_matrix {
             impl $rust_name {
                 #[doc = "Creates a new " $rust_name " with all elements set to zero"]
                 #[doc(alias = $name _calloc)]
-                pub fn new(n1: usize, n2: usize) -> Self {
-                    let tmp = unsafe { sys::[<$name _calloc>](n1, n2) };
+                pub fn new(nrows: usize, ncols: usize) -> Self {
+                    let tmp = unsafe { sys::[<$name _calloc>](nrows, ncols) };
                     if tmp.is_null() {
                         panic!("{}::new cannot allocate memory",
                             stringify!($rust_name));
@@ -263,11 +265,11 @@ macro_rules! gsl_matrix {
                 }
 
                 /// Return a matrix view of `base`.  The matrix has
-                /// `n1` rows and `n2` columns.  The (`i`, `j`)-th
+                /// `nrows` rows and `ncols` columns.  The (`i`, `j`)-th
                 /// element of the new matrix is given by
                 ///
                 /// ```text
-                /// m'(i,j) = base[i*ncols + j]
+                /// m'(i,j) = base[i*tda + j]
                 /// ```
                 ///
                 /// where the index `i` runs from `0` to `nrows-1` and
@@ -829,6 +831,19 @@ macro_rules! gsl_matrix {
                     unsafe { *self.unwrap_shared() }.tda
                 }
 
+                pub fn as_slice(&self) -> &[$rust_ty] {
+                    let m = unsafe { *self.unwrap_shared() };
+                    let len = m.size1 * m.tda;
+                    unsafe { std::slice::from_raw_parts(m.data, len) }
+                }
+
+                pub fn as_mut_slice(&mut self) -> &mut [$rust_ty] {
+                    let m = unsafe { *self.unwrap_unique() };
+                    let len = m.size1 * m.tda;
+                    unsafe { std::slice::from_raw_parts_mut(m.data, len) }
+                }
+
+
                 // TODO: impl Clone
                 pub fn clone(&self) -> Result<Self, Error> {
                     debug_assert!(!self.unwrap_shared().is_null());
@@ -908,10 +923,9 @@ macro_rules! gsl_matrix {
                 }
 
                 fn as_slice(m: &Self) -> &[$rust_ty] {
-                    let m = unsafe { *m.unwrap_shared() };
-                    let len = m.size1 * m.tda;
-                    unsafe { std::slice::from_raw_parts(m.data, len) }
+                    m.as_slice()
                 }
+
             }
 
             impl Index<(usize, usize)> for $rust_name {
@@ -949,6 +963,19 @@ macro_rules! gsl_matrix {
                         let m: sys::$name = *self.unwrap_unique();
                         &mut *m.data.add(i * m.tda + j)
                     }
+                }
+            }
+
+            impl<const N: usize, const M: usize> From<[[$rust_ty; M]; N]>
+            for $rust_name {
+                fn from(value: [[$rust_ty; M]; N]) -> Self {
+                    let mut m = Self::new(N, M);
+                    for i in 0..m.nrows() {
+                        for j in 0..m.ncols() {
+                            m[(i, j)] = value[i][j];
+                        }
+                    }
+                    m
                 }
             }
         } // end of paste! block
