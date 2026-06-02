@@ -3,10 +3,76 @@
 //
 
 /*!
-Linear Regression
+# Linear Regression
 
-The functions described in this section can be used to perform least-squares fits to a straight line model, Y(c,x) = c_0 + c_1 x.
-!*/
+This module contains routines for performing least squares fits to
+experimental data using linear combinations of functions.  The data
+may be weighted or unweighted, i.e. with known or unknown errors.  For
+weighted data the functions compute the best fit parameters and their
+associated covariance matrix. For unweighted data the covariance
+matrix is estimated from the scatter of the points, giving a
+variance-covariance matrix.
+
+The functions are divided into separate versions for simple one- or
+two-parameter regression and multiple-parameter fits.
+
+# Overview
+
+Least-squares fits are found by minimizing $χ²$ (chi-squared), the
+weighted sum of squared residuals over $n$ experimental datapoints
+$(xᵢ, yᵢ)$ for the model $Y(c,x)$,
+
+$$χ² = ∑ᵢ wᵢ (yᵢ - Y(c, xᵢ))²$$
+
+The $p$ parameters of the model are $c = \{c_0, c_1,…\}$.  The weight
+factors $wᵢ$ are given by $wᵢ = 1/σᵢ²$ where $σᵢ$ is the experimental
+error on the data-point $yᵢ$.  The errors are assumed to be Gaussian
+and uncorrelated.  For unweighted data the chi-squared sum is computed
+without any weight factors.
+
+The fitting routines return the best-fit parameters $c$ and their $p ×
+p$ covariance matrix.  The covariance matrix measures the statistical
+errors on the best-fit parameters resulting from the errors on the
+data, $σᵢ$, and is defined as
+
+$$C_{ab} = ⟨δcₐ δc_b⟩
+
+where $⟨\,⟩$ denotes an average over the Gaussian error distributions
+of the underlying datapoints.
+
+The covariance matrix is calculated by error propagation from the data
+errors $σᵢ$.  The change in a fitted parameter $δcₐ$ caused by a small
+change in the data $δyᵢ$ is given by
+
+$$δcₐ = ∑ᵢ \frac{∂cₐ}{∂yᵢ} δyᵢ$$
+
+allowing the covariance matrix to be written in terms of the errors on
+the data,
+
+$$C_{ab} = ∑_{i,j} \frac{∂cₐ}{∂yᵢ} \frac{∂c_b}{∂yⱼ} ⟨δyᵢ δyⱼ⟩$$
+
+For uncorrelated data the fluctuations of the underlying datapoints satisfy
+
+$$⟨δyᵢ δyⱼ⟩ = σᵢ² δ_{ij}$$
+
+giving a corresponding parameter covariance matrix of
+
+$$C_{ab} = ∑ᵢ \frac{1}{wᵢ} \frac{∂cₐ}{∂yᵢ} \frac{∂c_b}{∂yᵢ}$$
+
+When computing the covariance matrix for unweighted data, i.e. data
+with unknown errors, the weight factors $wᵢ$ in this sum are replaced
+by the single estimate $w = 1/σ²$, where $|sigma²$ is the computed
+variance of the residuals about the best-fit model, $σ² = ∑ (yᵢ -
+Y(c,xᵢ))² / (n-p)$.  This is referred to as the variance-covariance
+matrix.
+
+The standard deviations of the best-fit parameters are given by the
+square root of the corresponding diagonal elements of the covariance
+matrix, $σ_{c_a} = √{C_{aa}}$.  The correlation coefficient of the fit
+parameters $c_a$ and $c_b$ is given by $ρ_{ab} = C_{ab} / √{C_{aa}
+C_{bb}}$.
+
+*/
 
 use crate::{
     Error,

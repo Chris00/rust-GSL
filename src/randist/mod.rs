@@ -5,15 +5,26 @@
 /*!
 # Random Number Distributions
 
-This chapter describes functions for generating random variates and computing their probability distributions.
-Samples from the distributions described in this chapter can be obtained using any of the random number generators in the library as an underlying source of randomness.
+This module contains functions for generating random variates and
+computing their probability distributions.  Samples from the
+distributions described in this chapter can be obtained using any of
+the random number generators in the library as an underlying source of
+randomness.
 
-In the simplest cases a non-uniform distribution can be obtained analytically from the uniform distribution of a random number generator by applying an appropriate transformation.
-This method uses one call to the random number generator. More complicated distributions are created by the acceptance-rejection method, which compares the desired distribution against a distribution which is similar and known analytically.
-This usually requires several samples from the generator.
+In the simplest cases a non-uniform distribution can be obtained
+analytically from the uniform distribution of a random number
+generator by applying an appropriate transformation.  This method uses
+one call to the random number generator. More complicated
+distributions are created by the acceptance-rejection method, which
+compares the desired distribution against a distribution which is
+similar and known analytically.  This usually requires several samples
+from the generator.
 
-The library also provides cumulative distribution functions and inverse cumulative distribution functions, sometimes referred to as quantile functions.
-The cumulative distribution functions and their inverses are computed separately for the upper and lower tails of the distribution, allowing full accuracy to be retained for small results.
+The library also provides cumulative distribution functions and
+inverse cumulative distribution functions, sometimes referred to as
+quantile functions.  The cumulative distribution functions and their
+inverses are computed separately for the upper and lower tails of the
+distribution, allowing full accuracy to be retained for small results.
 
 Note that the discrete random variate functions always return a value of type unsigned int, and on most platforms this has a maximum value of 2^32-1 ~=~ 4.29e9. They should only be called with a safe range of parameters (where there is a negligible probability of a variate exceeding this limit) to prevent incorrect results due to overflow.
 
