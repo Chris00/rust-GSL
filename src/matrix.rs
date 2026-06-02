@@ -83,6 +83,26 @@ pub trait MatrixMut<F>: Matrix<F> {
     fn as_mut_slice(m: &mut Self) -> &mut [F];
 }
 
+// Views<'_, T> deref to T, so a &*t is enough but these
+// implementations make the user code more straightforward.
+impl<F, M: Matrix<F>> Matrix<F> for View<'_, M> {
+    fn nrows(m: &Self) -> usize {
+        M::nrows(&*m)
+    }
+
+    fn ncols(m: &Self) -> usize {
+        M::ncols(&*m)
+    }
+
+    fn tda(m: &Self) -> usize {
+        M::tda(&*m)
+    }
+
+    fn as_slice(m: &Self) -> &[F] {
+        M::as_slice(&*m)
+    }
+}
+
 /// Convert `m` to a GSL matrix.
 #[allow(dead_code)]
 pub(crate) fn matrix_as_gsl<M>(m: &M) -> View<'_, sys::gsl_matrix>
