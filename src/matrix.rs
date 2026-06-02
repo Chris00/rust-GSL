@@ -241,7 +241,7 @@ macro_rules! gsl_matrix {
             impl $rust_name {
                 #[doc = "Creates a new " $rust_name " with all elements set to zero"]
                 #[doc(alias = $name _calloc)]
-                pub fn new(nrows: usize, ncols: usize) -> Self {
+                pub fn zeros(nrows: usize, ncols: usize) -> Self {
                     let tmp = unsafe { sys::[<$name _calloc>](nrows, ncols) };
                     if tmp.is_null() {
                         panic!("{}::new cannot allocate memory",
@@ -847,7 +847,7 @@ macro_rules! gsl_matrix {
                 // TODO: impl Clone
                 pub fn clone(&self) -> Result<Self, Error> {
                     debug_assert!(!self.unwrap_shared().is_null());
-                    let mut m = Self::new(self.nrows(), self.ncols());
+                    let mut m = Self::zeros(self.nrows(), self.ncols());
                     m.copy_from(self)?;
                     Ok(m)
                 }
@@ -969,7 +969,7 @@ macro_rules! gsl_matrix {
             impl<const N: usize, const M: usize> From<[[$rust_ty; M]; N]>
             for $rust_name {
                 fn from(value: [[$rust_ty; M]; N]) -> Self {
-                    let mut m = Self::new(N, M);
+                    let mut m = Self::zeros(N, M);
                     for i in 0..m.nrows() {
                         for j in 0..m.ncols() {
                             m[(i, j)] = value[i][j];

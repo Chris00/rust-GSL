@@ -26,8 +26,8 @@ fn main() -> Result<(), rgsl::Error> {
         1. / 7.,
     ];
     let mut m = MatF64::from_mut_slice(data, 4, 4);
-    let mut eval = VecF64::new(4);
-    let mut evec = MatF64::new(4, 4);
+    let mut eval = VecF64::zeros(4);
+    let mut evec = MatF64::zeros(4, 4);
     let mut w = EigenSymmetricVWorkspace::new(4).expect("EigenSymmetricVWorkspace::new failed...");
 
     w.symmv(&mut m, &mut eval, &mut evec)?;

@@ -8,7 +8,7 @@ extern crate rgsl;
 
 fn main() {
     println!("=== VECTOR PART ===");
-    let mut v = rgsl::VecF64::new(3);
+    let mut v = rgsl::VecF64::zeros(3);
 
     for i in 0..3 {
         v.set(i, 1.23f64 + i as f64);
@@ -22,7 +22,7 @@ fn main() {
     // println!("{}", c);
 
     println!("=== MATRIX PART ===");
-    let mut m = rgsl::MatrixF64::new(10, 3);
+    let mut m = rgsl::MatF64::zeros(10, 3);
 
     for i in 0..10 {
         for j in 0..3 {

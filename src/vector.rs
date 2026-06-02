@@ -444,10 +444,10 @@ paste! {
         ///
         /// Panic if no memory can be allocated.
         #[doc(alias = $name _calloc)]
-        pub fn new(size: usize) -> Self {
+        pub fn zeros(size: usize) -> Self {
             let tmp = unsafe { sys::[<$name _calloc>](size) };
             if tmp.is_null() {
-                panic!("{}::new cannot allocate memory",
+                panic!("{}::new out of memory",
                     stringify!($rust_name));
             }
             Self::wrap(tmp)
@@ -762,7 +762,7 @@ paste! {
                 panic!("{}::clone cannot allocate memory",
                     stringify!($rust_name));
             }
-            let mut v = $rust_name::new(self.len());
+            let mut v = $rust_name::zeros(self.len());
             if v.copy_from(self).is_err() {
                 panic!("{}::clone problem copying the vector",
                     stringify!($rust_name));

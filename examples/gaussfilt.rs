@@ -14,19 +14,19 @@ mod example {
 
     pub fn run() {
         // input vector
-        let mut x = VecF64::new(N);
+        let mut x = VecF64::zeros(N);
         // filtered output vector for alpha1
-        let mut y1 = VecF64::new(N);
+        let mut y1 = VecF64::zeros(N);
         // filtered output vector for alpha2
-        let mut y2 = VecF64::new(N);
+        let mut y2 = VecF64::zeros(N);
         // filtered output vector for alpha3
-        let mut y3 = VecF64::new(N);
+        let mut y3 = VecF64::zeros(N);
         // Gaussian kernel for alpha1
-        let mut k1 = VecF64::new(K);
+        let mut k1 = VecF64::zeros(K);
         // Gaussian kernel for alpha2
-        let mut k2 = VecF64::new(K);
+        let mut k2 = VecF64::zeros(K);
         // Gaussian kernel for alpha3
-        let mut k3 = VecF64::new(K);
+        let mut k3 = VecF64::zeros(K);
 
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
         let mut gauss_p =

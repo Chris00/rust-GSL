@@ -14,13 +14,13 @@ mod example {
 
     pub fn run() {
         // input vector
-        let mut x = VecF64::new(N);
+        let mut x = VecF64::zeros(N);
         // filtered output vector
-        let mut y = VecF64::new(N);
+        let mut y = VecF64::zeros(N);
         // first derivative filtered vector
-        let mut dy = VecF64::new(N);
+        let mut dy = VecF64::zeros(N);
         // second derivative filtered vector
-        let mut d2y = VecF64::new(N);
+        let mut d2y = VecF64::zeros(N);
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
         let mut gauss_p =
             FilterGaussianWorkspace::new(K).expect("FilterGaussianWorkspace::new failed");

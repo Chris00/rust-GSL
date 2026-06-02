@@ -16,14 +16,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // allocate a cubic bspline workspace (k = 4)
     let mut bw = BSpLineWorkspace::new(4, NCOEFFS - 2).expect("BSpLineWorkspace::new failed...");
-    let mut b = VecF64::new(NCOEFFS);
+    let mut b = VecF64::zeros(NCOEFFS);
 
-    let mut x = VecF64::new(N);
-    let mut y = VecF64::new(N);
-    let mut mat_x = MatF64::new(N, NCOEFFS);
-    let mut c = VecF64::new(NCOEFFS);
-    let mut w = VecF64::new(N);
-    let mut cov = MatF64::new(NCOEFFS, NCOEFFS);
+    let mut x = VecF64::zeros(N);
+    let mut y = VecF64::zeros(N);
+    let mut mat_x = MatF64::zeros(N, NCOEFFS);
+    let mut c = VecF64::zeros(NCOEFFS);
+    let mut w = VecF64::zeros(N);
+    let mut cov = MatF64::zeros(NCOEFFS, NCOEFFS);
     let mut mw = MultifitLinearWorkspace::new(N, NCOEFFS).unwrap();
 
     // this is the data to be fitted

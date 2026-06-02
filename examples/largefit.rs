@@ -43,13 +43,13 @@ mod example {
     ) -> Result<(), Error> {
         let mut w =
             MultilargeLinearWorkspace::new(t, P).expect("MultilargeLinearWorkspace::new failed");
-        let mut x = MatF64::new(NROWS, P);
-        let mut y = VecF64::new(NROWS);
+        let mut x = MatF64::zeros(NROWS, P);
+        let mut y = VecF64::zeros(NROWS);
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
 
-        let mut reg_param = VecF64::new(NLCURVE);
-        let mut rho = VecF64::new(NLCURVE);
-        let mut eta = VecF64::new(NLCURVE);
+        let mut reg_param = VecF64::zeros(NLCURVE);
+        let mut rho = VecF64::zeros(NLCURVE);
+        let mut eta = VecF64::zeros(NLCURVE);
 
         let mut rowidx = 0;
         let mut t = 0.;
@@ -129,8 +129,8 @@ mod example {
     }
 
     pub fn run() -> Result<(), Error> {
-        let mut c_tsqr = VecF64::new(P);
-        let mut c_normal = VecF64::new(P);
+        let mut c_tsqr = VecF64::zeros(P);
+        let mut c_normal = VecF64::zeros(P);
 
         // solve system with TSQR method
         solve_system(true, MultilargeLinearType::tsqr(), &mut c_tsqr)?;
@@ -142,7 +142,7 @@ mod example {
         solve_system(false, MultilargeLinearType::normal(), &mut c_normal)?;
 
         // output solution
-        let mut v = VecF64::new(P);
+        let mut v = VecF64::zeros(P);
         let mut t = 0.;
 
         while t <= 1. {

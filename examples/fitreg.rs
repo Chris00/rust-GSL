@@ -14,8 +14,8 @@ mod example {
 
     pub fn run() {
         let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
-        let mut x = MatF64::new(N, P);
-        let mut y = VecF64::new(N);
+        let mut x = MatF64::zeros(N, P);
+        let mut y = VecF64::zeros(N);
 
         for i in 0..N {
             // generate first random variable u
@@ -38,19 +38,19 @@ mod example {
         let mut w =
             MultifitLinearWorkspace::new(N, P).expect("MultifitLinearWorkspace::new failed");
         // OLS solution
-        let mut c = VecF64::new(P);
+        let mut c = VecF64::zeros(P);
         // regularized solution (L-curve)
-        let mut c_lcurve = VecF64::new(P);
+        let mut c_lcurve = VecF64::zeros(P);
         // regularized solution (GCV)
-        let mut c_gcv = VecF64::new(P);
+        let mut c_gcv = VecF64::zeros(P);
 
-        let mut reg_param = VecF64::new(NPOINTS);
+        let mut reg_param = VecF64::zeros(NPOINTS);
         // residual norms
-        let mut rho = VecF64::new(NPOINTS);
+        let mut rho = VecF64::zeros(NPOINTS);
         // solution norms
-        let mut eta = VecF64::new(NPOINTS);
+        let mut eta = VecF64::zeros(NPOINTS);
         // GCV function values
-        let mut g = VecF64::new(NPOINTS);
+        let mut g = VecF64::zeros(NPOINTS);
 
         // compute SVD of X
         w.linear_svd(&mut x).unwrap();

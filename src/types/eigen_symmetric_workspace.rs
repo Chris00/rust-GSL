@@ -808,14 +808,14 @@ fn eigen_symmetric_workspace() -> Result<(), Error> {
     use VecF64;
 
     let mut e = EigenSymmetricWorkspace::new(2).unwrap();
-    let mut m = MatF64::new(2, 2);
+    let mut m = MatF64::zeros(2, 2);
 
     let data = [5., 5., 1., 6.];
     m.set(0, 0, data[0]);
     m.set(0, 1, data[1]);
     m.set(1, 0, data[2]);
     m.set(1, 1, data[3]);
-    let mut v = VecF64::new(2);
+    let mut v = VecF64::zeros(2);
     e.symm(&mut m, &mut v)?;
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "4.3820 6.6180");
     Ok(())
@@ -855,14 +855,14 @@ fn eigen_symmetric_vworkspace() -> Result<(), Error> {
 
     let mut e = EigenSymmetricVWorkspace::new(3).unwrap();
     let data = [5., 5., 1., 6.];
-    let mut m = MatF64::new(2, 2);
+    let mut m = MatF64::zeros(2, 2);
 
     m.set(0, 0, data[0]);
     m.set(0, 1, data[1]);
     m.set(1, 0, data[2]);
     m.set(1, 1, data[3]);
-    let mut m2 = MatF64::new(2, 2);
-    let mut v = VecF64::new(2);
+    let mut m2 = MatF64::zeros(2, 2);
+    let mut v = VecF64::zeros(2);
     e.symmv(&mut m, &mut v, &mut m2)?;
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "4.3820 6.6180");
     assert_eq!(
@@ -919,7 +919,7 @@ fn eigen_hermitian_workspace() {
     m.set(1, 0, &Complex::<f64>::rect(2., 3.));
     m.set(1, 1, &Complex::<f64>::rect(5., 7.));
 
-    let mut v = VecF64::new(2);
+    let mut v = VecF64::zeros(2);
     e.herm(&mut m, &mut v).unwrap();
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "8.6056 1.3944");
 }
@@ -973,7 +973,7 @@ fn eigen_hermitian_vworkspace() {
     m.set(1, 0, &Complex::<f64>::rect(2., 3.));
     m.set(1, 1, &Complex::<f64>::rect(5., 7.));
 
-    let mut v = VecF64::new(2);
+    let mut v = VecF64::zeros(2);
     let mut m2 = MatC64::new(2, 2);
     e.hermv(&mut m, &mut v, &mut m2).unwrap();
     assert_eq!(&format!("{:.4} {:.4}", v.get(0), v.get(1)), "8.6056 1.3944");
