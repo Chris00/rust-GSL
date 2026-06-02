@@ -87,19 +87,43 @@ pub trait MatrixMut<F>: Matrix<F> {
 // implementations make the user code more straightforward.
 impl<F, M: Matrix<F>> Matrix<F> for View<'_, M> {
     fn nrows(m: &Self) -> usize {
-        M::nrows(&*m)
+        M::nrows(&**m)
     }
 
     fn ncols(m: &Self) -> usize {
-        M::ncols(&*m)
+        M::ncols(&**m)
     }
 
     fn tda(m: &Self) -> usize {
-        M::tda(&*m)
+        M::tda(&**m)
     }
 
     fn as_slice(m: &Self) -> &[F] {
-        M::as_slice(&*m)
+        M::as_slice(&**m)
+    }
+}
+
+impl<F, M: Matrix<F>> Matrix<F> for ViewMut<'_, M> {
+    fn nrows(m: &Self) -> usize {
+        M::nrows(&**m)
+    }
+
+    fn ncols(m: &Self) -> usize {
+        M::ncols(&**m)
+    }
+
+    fn tda(m: &Self) -> usize {
+        M::tda(&**m)
+    }
+
+    fn as_slice(m: &Self) -> &[F] {
+        M::as_slice(&**m)
+    }
+}
+
+impl<F, M: MatrixMut<F>> MatrixMut<F> for ViewMut<'_, M> {
+    fn as_mut_slice(m: &mut Self) -> &mut [F] {
+        M::as_mut_slice(&mut **m)
     }
 }
 

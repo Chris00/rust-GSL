@@ -289,6 +289,24 @@ unsafe impl<T, V: Vector<T>> Vector<T> for View<'_, V> {
     }
 }
 
+unsafe impl<T, V: Vector<T>> Vector<T> for ViewMut<'_, V> {
+    fn len(x: &Self) -> usize {
+        V::len(&**x)
+    }
+    fn stride(x: &Self) -> usize {
+        V::stride(&**x)
+    }
+    fn as_slice(x: &Self) -> &[T] {
+        V::as_slice(&**x)
+    }
+}
+
+unsafe impl<F, V: VectorMut<F>> VectorMut<F> for ViewMut<'_, V> {
+    fn as_mut_slice(x: &mut Self) -> &mut [F] {
+        V::as_mut_slice(&mut *x)
+    }
+}
+
 impl AsVector for [f64] {
     type View<'a> = &'a [f64];
     type ViewMut<'a> = &'a mut [f64];
