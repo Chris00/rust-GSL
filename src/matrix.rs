@@ -928,6 +928,12 @@ macro_rules! gsl_matrix {
 
             }
 
+            impl MatrixMut<$rust_ty> for $rust_name {
+                fn as_mut_slice(m: &mut Self) -> &mut [$rust_ty] {
+                    m.as_mut_slice()
+                }
+            }
+
             impl Index<(usize, usize)> for $rust_name {
                 type Output = $rust_ty;
 
