@@ -431,6 +431,14 @@ paste! {
         }
     }
 
+    impl<const N: usize> From<[$rust_ty; N]> for $rust_name {
+        fn from(value: [$rust_ty; N]) -> Self {
+            let mut v = Self::alloc(N);
+            v.as_slice_mut().copy_from_slice(&value);
+            v
+        }
+    }
+
     impl $rust_name {
         #[doc = "Create a new `" $rust_name "` with all elements set to zero."]
         ///
@@ -445,19 +453,21 @@ paste! {
             Self::wrap(tmp)
         }
 
+        fn alloc(n: usize) -> Self {
+            let ptr = unsafe { sys::[<$name _alloc>](n) };
+            if ptr.is_null() {
+                panic!("{}: out of memory", stringify!($rust_name));
+            }
+            Self::wrap(ptr)
+        }
+
         #[doc = "Create a new [`" $rust_name
             "`] with elements initialized from `slice`."]
         ///
         /// Panic if no memory can be allocated.
         #[doc(alias = $name _alloc)]
         pub fn from_slice(slice: &[$rust_ty]) -> Self {
-            let tmp = unsafe { sys::[<$name _alloc>](slice.len() as _) };
-            if tmp.is_null() {
-                panic!("{}::from_slice cannot allocate memory",
-                    stringify!($rust_name));
-            }
-            let mut v = Self::wrap(tmp);
-
+            let mut v = Self::alloc(slice.len());
             for (pos, tmp) in slice.iter().enumerate() {
                 v.set(pos as _, *tmp);
             }
@@ -920,6 +930,14 @@ impl_ComplexSlice!(f32);
 #[cfg(test)]
 mod test {
     use super::VecF64;
+
+    #[test]
+    fn vec_from_array() {
+        let v: VecF64 = [0., 1.].into();
+        assert_eq!(v.len(), 2);
+        assert_eq!(v[0], 0.);
+        assert_eq!(v[1], 1.);
+    }
 
     #[test]
     fn vec_get_out_of_range() {
