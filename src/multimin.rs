@@ -774,11 +774,10 @@ mod test {
     ///         x.get(0) + x.get(1)},
     ///         &VecF64::from_slice(&[-10.0, 1.0]),
     ///         &VecF64::from_slice(&[1.0, 1.0]));
-    ///
-    ///     let mut mint = Minimizer::new(Type::Simplex, 2);
-    ///     set(&mut mint);
-    ///     let _status = mint.iterate();
     /// }
+    /// let mut mint = Minimizer::new(Type::Simplex, 2);
+    /// set(&mut mint);
+    /// let _status = mint.iterate();
     /// ```
     ///
     /// Same but a working version:
@@ -791,11 +790,10 @@ mod test {
     ///         x.get(0) + x.get(1)},
     ///         &VecF64::from_slice(&[-10.0, 1.0]),
     ///         &VecF64::from_slice(&[1.0, 1.0]));
-    ///
-    ///     let mut mint = Minimizer::new(Type::Simplex, 2);
-    ///     set(&mut mint);
-    ///     let _status = mint.iterate();
     /// }
+    /// let mut mint = Minimizer::new(Type::Simplex, 2);
+    /// set(&mut mint);
+    /// let _status = mint.iterate();
     /// ```
     use super::*;
     use crate::VecF64;

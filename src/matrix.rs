@@ -541,7 +541,7 @@ macro_rules! gsl_matrix {
                         other.unwrap_shared()
                     )};
                     Error::handle(ret, ())
-            }
+                }
 
                 /// Subtract the elements of the `other` matrix from
                 /// the elements of the `self` matrix.  The result
