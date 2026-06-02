@@ -12,7 +12,7 @@ const NCOEFFS: usize = 12;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let rng_ty = RngType::env_setup().expect("Failed to setup RngType...");
-    let mut r = Rng::new(rng_ty).expect("Rng::new failed...");
+    let mut r = Rng::new(rng_ty);
 
     // allocate a cubic bspline workspace (k = 4)
     let mut bw = BSpLineWorkspace::new(4, NCOEFFS - 2).expect("BSpLineWorkspace::new failed...");

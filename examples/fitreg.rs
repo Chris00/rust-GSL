@@ -13,7 +13,7 @@ mod example {
     const NPOINTS: usize = 200; // number of points on L-curve and GCV curve
 
     pub fn run() {
-        let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+        let mut r = Rng::new(RngType::default());
         let mut x = MatF64::zeros(N, P);
         let mut y = VecF64::zeros(N);
 

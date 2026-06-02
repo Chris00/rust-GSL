@@ -21,7 +21,7 @@ mod example {
         let mut dy = VecF64::zeros(N);
         // second derivative filtered vector
         let mut d2y = VecF64::zeros(N);
-        let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+        let mut r = Rng::new(RngType::default());
         let mut gauss_p =
             FilterGaussianWorkspace::new(K).expect("FilterGaussianWorkspace::new failed");
 

@@ -24,7 +24,7 @@ mod example {
         let mut y_median = VecF64::zeros(N);
         // recursive median filtered output
         let mut y_rmedian = VecF64::zeros(N);
-        let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+        let mut r = Rng::new(RngType::default());
 
         // generate input signal
         for i in 0..N {

@@ -716,7 +716,7 @@ fn plain() {
     let calls = 500000;
 
     crate::RngType::env_setup();
-    let mut r = crate::Rng::new(crate::RngType::default()).unwrap();
+    let mut r = crate::Rng::new(crate::RngType::default());
 
     {
         let mut s = PlainMonteCarlo::new(3).unwrap();
@@ -742,7 +742,7 @@ fn miser() {
     let calls = 500000;
 
     crate::RngType::env_setup();
-    let mut r = crate::Rng::new(crate::RngType::default()).unwrap();
+    let mut r = crate::Rng::new(crate::RngType::default());
 
     {
         let mut s = MiserMonteCarlo::new(3).unwrap();
@@ -763,7 +763,7 @@ fn miser_closure() {
     let calls = 500000;
 
     crate::RngType::env_setup();
-    let mut r = crate::Rng::new(crate::RngType::default()).unwrap();
+    let mut r = crate::Rng::new(crate::RngType::default());
 
     {
         let mut s = MiserMonteCarlo::new(3).unwrap();
@@ -799,7 +799,7 @@ fn vegas_warm_up() {
     let xu: [f64; 3] = [PI, PI, PI];
 
     crate::RngType::env_setup();
-    let mut r = crate::Rng::new(crate::RngType::default()).unwrap();
+    let mut r = crate::Rng::new(crate::RngType::default());
 
     {
         let mut s = VegasMonteCarlo::new(3).unwrap();
@@ -825,7 +825,7 @@ fn vegas() {
     let xu: [f64; 3] = [PI, PI, PI];
 
     crate::RngType::env_setup();
-    let mut r = crate::Rng::new(crate::RngType::default()).unwrap();
+    let mut r = crate::Rng::new(crate::RngType::default());
 
     {
         let mut s = VegasMonteCarlo::new(3).unwrap();

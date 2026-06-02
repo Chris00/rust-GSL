@@ -26,7 +26,7 @@ use rgsl::RngType;
 
 fn main() {
     rgsl::RngType::env_setup();
-    let mut r = rgsl::Rng::new(RngType::default()).unwrap();
+    let mut r = rgsl::Rng::new(RngType::default());
 
     println!("=== DEFAULT ===");
     println!("generator type: {}", r.name());

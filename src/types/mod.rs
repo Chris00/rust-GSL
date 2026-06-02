@@ -41,7 +41,6 @@ pub use self::polynomial::PolyComplexWorkspace;
 pub use self::qrng::{QRng, QRngType};
 pub use self::ran_discrete::RanDiscrete;
 pub use self::result::{Result, ResultE10};
-pub use self::rng::{Rng, RngType};
 pub use self::rstat::{RStatQuantileWorkspace, RStatWorkspace};
 pub use self::series_acceleration::{LevinUTruncWorkspace, LevinUWorkspace};
 pub use self::siman::{SimAnnealing, SimAnnealingParams};
@@ -59,6 +58,8 @@ pub use crate::matrix_complex::{MatC32 as MatrixComplexF32, MatC64 as MatrixComp
 pub use crate::minimizer::{Minimizer, Type as MinimizerType};
 #[deprecated(since = "8.0.0", note = "Use rgsl::permutation::Permutation")]
 pub use crate::permutation::Permutation;
+#[deprecated(since = "8.0.0", note = "Use rgsl::rng")]
+pub use crate::rng::{Rng, RngType};
 #[deprecated(since = "8.0.0", note = "Use rgsl::roots::*")]
 pub use crate::roots::{
     RootFSolver, RootFdfSolver, Type as RootFSolverType, TypeFdf as RootFdfSolverType,
@@ -95,7 +96,6 @@ pub mod polynomial;
 pub mod qrng;
 pub mod ran_discrete;
 pub mod result;
-pub mod rng;
 pub mod rstat;
 pub mod series_acceleration;
 pub mod siman;

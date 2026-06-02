@@ -9,7 +9,7 @@ use rgsl::{Rng, RngType};
 fn main() {
     RngType::env_setup();
 
-    let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+    let mut r = Rng::new(RngType::default());
     let mut x: f64 = 0.1;
 
     while x < 2. {

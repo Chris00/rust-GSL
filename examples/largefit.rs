@@ -45,7 +45,7 @@ mod example {
             MultilargeLinearWorkspace::new(t, P).expect("MultilargeLinearWorkspace::new failed");
         let mut x = MatF64::zeros(NROWS, P);
         let mut y = VecF64::zeros(NROWS);
-        let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+        let mut r = Rng::new(RngType::default());
 
         let mut reg_param = VecF64::zeros(NLCURVE);
         let mut rho = VecF64::zeros(NLCURVE);

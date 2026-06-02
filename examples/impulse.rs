@@ -25,7 +25,7 @@ mod example {
         // outlier detected?
         let mut ioutlier = VecI32::zeros(N);
         let mut w = FilterImpulseWorkspace::new(K).expect("FilterImpulseWorkspace::new failed");
-        let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+        let mut r = Rng::new(RngType::default());
 
         // generate input signal
         for i in 0..N {

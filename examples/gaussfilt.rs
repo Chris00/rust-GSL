@@ -28,7 +28,7 @@ mod example {
         // Gaussian kernel for alpha3
         let mut k3 = VecF64::zeros(K);
 
-        let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+        let mut r = Rng::new(RngType::default());
         let mut gauss_p =
             FilterGaussianWorkspace::new(K).expect("FilterGaussianWorkspace::new failed");
 

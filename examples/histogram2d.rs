@@ -17,7 +17,7 @@ fn main() {
 
     RngType::env_setup();
 
-    let mut r = Rng::new(RngType::default()).expect("Rng::new failed");
+    let mut r = Rng::new(RngType::default());
 
     let mut p = Histogram2DPdf::new(h.nx(), h.ny()).expect("Histogram2DPdf::new failed");
     p.init(&h).unwrap();
