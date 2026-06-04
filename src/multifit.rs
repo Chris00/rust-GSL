@@ -1682,6 +1682,9 @@ macro_rules! impl_workspace {
                 ///
                 /// See also [`Self::driver`].
                 pub fn iterate(&mut self) -> Result<(), Error> {
+                    if self.fdf.is_none() {
+                        return Err(Error::NoProgress);
+                    }
                     let ret = unsafe {
                         sys::[<gsl_multi $fit _nlinear_iterate>](
                             self.unwrap_unique())
@@ -1739,6 +1742,9 @@ macro_rules! impl_workspace {
 
                 /// Return the number of function evaluations.
                 pub fn nevalf(&self) -> usize {
+                    if self.fdf.is_none() {
+                        return 0;
+                    }
                     unsafe {
                         let w = &* self.unwrap_shared();
                         (*w.fdf).nevalf
@@ -1747,6 +1753,9 @@ macro_rules! impl_workspace {
 
                 /// Return the number of directional derivatives evaluations.
                 pub fn nevalfvv(&self) -> usize {
+                    if self.fdf.is_none() {
+                        return 0;
+                    }
                     unsafe {
                         let w = &* self.unwrap_shared();
                         (*w.fdf).nevalfvv
@@ -2202,6 +2211,9 @@ impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
     /// Return the number of Jacobian evaluations.
     pub fn nevaldf(&self) -> usize {
         // See `nevalf`.
+        if self.fdf.is_none() {
+            return 0;
+        }
         unsafe {
             let w = &*self.unwrap_shared();
             (*w.fdf).nevaldf
@@ -2713,6 +2725,9 @@ pub mod large {
         /// Return the number of matrix-vector $Ju$ evaluations.
         pub fn nevaldf(&self) -> usize {
             // See `nevalf`.
+            if self.fdf.is_none() {
+                return 0;
+            }
             unsafe {
                 let w = &*self.unwrap_shared();
                 (*w.fdf).nevaldfu
