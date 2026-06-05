@@ -466,9 +466,9 @@ impl Data {
 fn main() -> Result<(), Error> {
     let params = Parameters::default();
     let d = Data::new(100);
-    let mut w = multifit::Workspace::trust(&params, d.t.len(), 3);
     let x: VecF64 = [1., 1., 0.].into();
-    w.winit(&x, &d.weights,
+    let mut w = multifit::Workspace::trust(&params, d.t.len(), 3)
+        .winit(&x, &d.weights,
         (|x: &_, fx: &mut _| d.expb_f(x, fx),
          |x: &_, jac: &mut _| d.expb_df(x, jac)))?;
 
@@ -631,8 +631,8 @@ fn solve_system(
     params: &Parameters,
 ) -> Result<(), Error> {
     let max_iter = 200;
-    let mut work = Workspace::trust(params, n, x0.len());
-    work.init(x0, fdf);
+    let mut work = Workspace::trust(params, n, x0.len())
+        .init(x0, fdf)?;
     let χsq0 = {
         let f = work.residual();
         dot(&f, &f)?
@@ -861,8 +861,8 @@ fn solve_system(
     fdf: impl Fdf<VecF64>,
     params: &Parameters,
 ) -> Result<VecF64, Error> {
-    let mut work = Workspace::trust(&params, n, x.len());
-    work.init(x, fdf);
+    let mut work = Workspace::trust(&params, n, x.len())
+        .init(x, fdf)?;
     let χsq0 = {
         let f = work.residual();
         dot(&f, &f)?
@@ -1024,9 +1024,9 @@ fn solve_system(
     fdf: impl Fdf<VecF64>,
 ) -> Result<(), Error> {
     let n = 2;
-    let mut work = Workspace::trust(&params, n, x0.len());
+    let work = Workspace::trust(&params, n, x0.len());
     eprintln!("# {:?}/{:?}", work.name(), work.trs_name());
-    work.init(x0, fdf);
+    let mut work = work.init(x0, fdf)?;
     let χsq0 = {
         let f = work.residual();
         dot(&f, &f)?
@@ -1586,6 +1586,7 @@ impl Test {
 
 ffi_wrapper!(
     /// Derivative solver.
+    #[must_use]
     Workspace<'a, V: VectorSpace + ?Sized>,
     *mut sys::gsl_multifit_nlinear_workspace,
     gsl_multifit_nlinear_free
@@ -1593,11 +1594,110 @@ ffi_wrapper!(
     ;fdf: Option<Box<dyn Fdf<V> + 'a>> => None;
 );
 
+ffi_wrapper!(
+    /// Uninitialized derivative solver.  Call [`Self::init`] or
+    /// [`Self::winit`] to initialize it.
+    #[must_use]
+    UninitializedWorkspace,
+    *mut sys::gsl_multifit_nlinear_workspace,
+    gsl_multifit_nlinear_free
+);
+
+macro_rules! workspace_common {
+    ($fit: ident) => {
+        paste! {
+            /// Return the number of observations the workspace is for.
+            pub fn n(&self) -> usize {
+                unsafe {
+                    // `f` is non-null because it is allocated by `new`.
+                    let w = &* self.unwrap_shared();
+                    (*w.f).size
+                }
+            }
+
+            /// Return the number of parameters the workspace is for.
+            pub fn p(&self) -> usize {
+                unsafe {
+                    // `x` is non-null because it is allocated by `new`.
+                    let w = &* self.unwrap_shared();
+                    (*w.x).size
+                }
+            }
+
+            /// Return the name of the solver.
+            #[doc(alias = gsl_multi $fit _nlinear_name)]
+            pub fn name(&self) -> Type {
+                // At the moment, no need to call gsl_multifit_nlinear_name
+                // or gsl_multilarge_nlinear_name.  It is part of the type.
+                Type::Trust
+            }
+
+            /// Return the name of the Trust Region Algorithm used.
+            #[doc(alias = gsl_multi $fit _nlinear_trs_name)]
+            pub fn trs_name(&self) -> TRS {
+                // `trs_name_of_ptr` is implemented differently for
+                // `fit` and `large`.
+                trs_name_of_ptr(self.unwrap_shared())
+            }
+        }
+    };
+}
+
 macro_rules! impl_workspace {
     ($fit: ident, $path: literal) => {
         paste! {
+            impl UninitializedWorkspace {
+                workspace_common!($fit);
 
-            impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
+                fn into_workspace<'a, V>(mut self) -> Workspace<'a, V>
+                where V: VectorSpace + ?Sized {
+                    let work = Workspace::wrap(self.unwrap_unique());
+                    // Don't run the destructor on self: we want to
+                    // keep the allocated workspace it points to.
+                    std::mem::forget(self);
+                    work
+                }
+
+                /// Initialize the workspace to use the function `fdf`
+                /// and the initial guess `x`.
+                ///
+                /// See [`Workspace::init`] for more information.
+                pub fn init<'a, V, F>(
+                    self,
+                    x: &V,
+                    fdf: F,
+                ) -> Result<Workspace<'a, V>, Error>
+                where
+                    V: VectorSpace + ?Sized,
+                    F: Fdf<V> + 'a,
+                {
+                    let mut work = self.into_workspace();
+                    work.init(x, fdf)?;
+                    Ok(work)
+                }
+
+                /// Same as [`Self::init`] but you must in addition
+                /// specify a weight vector `w`.  The weighting matrix
+                /// is $W = \diag(w₁,w₂,...,wₙ)$.
+                pub fn winit<'a, V, F>(
+                    self,
+                    x: &V,
+                    w: &V,
+                    fdf: F,
+                ) -> Result<Workspace<'a, V>, Error>
+                where
+                    V: VectorSpace + ?Sized,
+                    F: Fdf<V> + 'a,
+                {
+                    let mut work = self.into_workspace();
+                    work.winit(x, w, fdf)?;
+                    Ok(work)
+                }
+            }
+
+            // The associated functions declared in this block do not
+            // depend on `V` but Rust needs to know the type of `V`.
+            impl<'a> Workspace<'a, crate::vector::VecF64> {
                 fn type_to_c(t: Type) -> *const sys::[<gsl_multi $fit _nlinear_type>] {
                     match t {
                         Type::Trust => unsafe {
@@ -1635,7 +1735,7 @@ macro_rules! impl_workspace {
                 /// Panic if there is insufficient memory to create
                 /// the workspace.
                 #[doc(alias = gsl_multi $fit _nlinear_alloc)]
-                pub fn new(t: Type, params: &Parameters, n: usize, p: usize) -> Self {
+                pub fn new(t: Type, params: &Parameters, n: usize, p: usize) -> UninitializedWorkspace {
                     let w = unsafe { sys::[<gsl_multi $fit _nlinear_alloc>](
                         Self::type_to_c(t), &params.as_c(), n, p)
                     };
@@ -1643,36 +1743,19 @@ macro_rules! impl_workspace {
                         panic!("rgsl::multi{}::Workspace::new: out of memory",
                             stringify!($fit));
                     }
-                    Self::wrap(w)
+                    UninitializedWorkspace::wrap(w)
                 }
 
-                pub fn trust(params: &Parameters, n: usize, p: usize) -> Self {
+                /// Return a new instance of a derivative solver of
+                /// type [`Trust`](Type::Trust) for `n` observations
+                /// and `p` parameters.
+                pub fn trust(params: &Parameters, n: usize, p: usize) -> UninitializedWorkspace {
                     Self::new(Type::Trust, params, n, p)
                 }
+            }
 
-                /// Return the number of observations the workspace is for.
-                pub fn n(&self) -> usize {
-                    unsafe {
-                        let w = &* self.unwrap_shared();
-                        (*w.f).size
-                    }
-                }
-
-                /// Return the number of parameters the workspace is for.
-                pub fn p(&self) -> usize {
-                    unsafe {
-                        let w = &* self.unwrap_shared();
-                        (*w.x).size
-                    }
-                }
-
-                /// Return the name of the solver.
-                #[doc(alias = gsl_multi $fit _nlinear_name)]
-                pub fn name(&self) -> Type {
-                    // At the moment, no need to call gsl_multifit_nlinear_name
-                    // or gsl_multilarge_nlinear_name.
-                    Type::Trust
-                }
+            impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
+                workspace_common!($fit);
 
                 /// Perform a single iteration of the solver.  If the
                 /// iteration encounters an unexpected problem then an
@@ -1709,6 +1792,7 @@ macro_rules! impl_workspace {
                 #[doc(alias = gsl_multi $fit _nlinear_residual)]
                 pub fn residual(&self) -> V::View<'_> {
                     unsafe {
+                        // It is allocated by `new` but irrelevant before `init`.
                         let ptr = sys::[<gsl_multi $fit _nlinear_residual>](
                             self.unwrap_shared());
                         V::view_from_ptr(ptr)
@@ -1720,6 +1804,7 @@ macro_rules! impl_workspace {
                 /// taken as a vector, length `p`.
                 pub fn dx(&self) -> V::View<'_> {
                     unsafe {
+                        // It is allocated by `new` but irrelevant before `init`.
                         let w = &* self.unwrap_shared();
                         V::view_from_ptr(w.dx)
                     }
@@ -1732,6 +1817,7 @@ macro_rules! impl_workspace {
                 // checker:ignore
                 #[doc(alias = gsl_multi $fit _nlinear_niter)]
                 pub fn niter(&self) -> usize {
+                    // Available after `new` but irrelevant before `init`.
                     unsafe { sys::[<gsl_multi $fit _nlinear_niter>](
                         self.unwrap_shared())
                     }
@@ -1740,6 +1826,8 @@ macro_rules! impl_workspace {
                 /// Return the number of function evaluations.
                 pub fn nevalf(&self) -> usize {
                     unsafe {
+                        // `fdf` is not null because `Workspace` is
+                        // not accessible before `init` is called.
                         let w = &* self.unwrap_shared();
                         (*w.fdf).nevalf
                     }
@@ -1748,6 +1836,8 @@ macro_rules! impl_workspace {
                 /// Return the number of directional derivatives evaluations.
                 pub fn nevalfvv(&self) -> usize {
                     unsafe {
+                        // `fdf` is not null because `Workspace` is
+                        // not accessible before `init` is called.
                         let w = &* self.unwrap_shared();
                         (*w.fdf).nevalfvv
                     }
@@ -1901,14 +1991,14 @@ macro_rules! impl_workspace {
                 /// ```
                 /// use rgsl::{Error, multifit::{Workspace, Parameters}, VecF64};
                 /// let p = Parameters::default();
-                /// let mut w = Workspace::trust(&p, 2, 1);
                 /// let x: VecF64 = [10.].into();
                 /// let f = |x: &VecF64, fx: &mut VecF64| {
                 ///     fx[0] = x[0];
                 ///     fx[1] = x[0] - 2.;
                 ///     Ok(())
                 /// };
-                /// w.init(&x, f);
+                /// let mut w = Workspace::trust(&p, 2, 1)
+                ///     .init(&x, f)?;
                 /// w.driver(10)
                 ///     .cb(|_, iter| println!("iter: {iter}"))
                 ///     .run()?;
@@ -2003,10 +2093,11 @@ macro_rules! impl_workspace {
                     let mut info = 0;
                     let ret = if let Some(cb) = self.cb {
                         let mut panicked = false;
+                        let mut params = (cb, &mut panicked);
                         let ret = unsafe { sys::[<gsl_multi $fit _nlinear_driver>](
                             self.maxiter, self.xtol, self.gtol, self.ftol,
                             Some(trampoline_cb::<V>),
-                            &mut (cb, &mut panicked) as *mut (F<'a, 'b, V>, P) as *mut _,
+                            &mut params as *mut (F<'a, 'b, V>, P) as *mut _,
                             &mut info,
                             self.w.unwrap_unique(),
                         )};
@@ -2035,6 +2126,26 @@ macro_rules! impl_workspace {
 }
 
 impl_workspace!(fit, "rgsl::multifit");
+
+// Common to `UninitializedWorkspace` and `Workspace` but differs for
+// the "large" version.
+#[doc(alias = "gsl_multifit_nlinear_trs_name")]
+// checker:ignore
+fn trs_name_of_ptr(ptr: *const sys::gsl_multifit_nlinear_workspace) -> TRS {
+    let n = unsafe { sys::gsl_multifit_nlinear_trs_name(ptr) };
+    map_name!(
+        rgsl::multifit::Workspace,
+        [
+            (c"levenberg-marquardt", TRS::LM),
+            (c"levenberg-marquardt+accel", TRS::LMaccel),
+            (c"dogleg", TRS::Dogleg),
+            (c"double-dogleg", TRS::DDogleg),
+            (c"2D-subspace", TRS::Subspace2D),
+        ],
+        n,
+        TRS
+    )
+}
 
 impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
     // checker:ignore
@@ -2116,8 +2227,8 @@ impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
         Error::handle(ret, ())
     }
 
-    /// Initialize, or reinitialize, the workspace to use the function
-    /// `fdf` and the initial guess `x`.
+    /// Reinitialize the workspace to use the function `fdf` and the
+    /// initial guess `x`.
     ///
     /// There are several ways of specifying a function.
     /// - One can simply pass a function `f` such that the call `f(x,
@@ -2142,14 +2253,14 @@ impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
     /// ```
     /// use rgsl::{Error, multifit::{Workspace, Parameters}, VecF64};
     /// let p = Parameters::default();
-    /// let mut w = Workspace::trust(&p, 2, 1);
     /// let x: VecF64 = [10.].into();
     /// let f = |x: &VecF64, fx: &mut VecF64| {
     ///     fx[0] = x[0];
     ///     fx[1] = x[0] - 2.;
     ///     Ok(())
     /// };
-    /// w.init(&x, f);
+    /// let mut w = Workspace::trust(&p, 2, 1)
+    ///     .init(&x, f)?;
     /// while ! matches!(w.iterate(), Err(Error::NoProgress)) {}
     /// assert!((w.position()[0] - 1.) < 1e-8);
     /// let jac = w.jac();
@@ -2168,24 +2279,6 @@ impl<'a, V: VectorSpace + ?Sized> Workspace<'a, V> {
     #[doc(alias = "gsl_multifit_nlinear_winit")]
     pub fn winit<F: Fdf<V> + 'a>(&mut self, x: &V, w: &V, fdf: F) -> Result<(), Error> {
         self.init_wts(x, Some(w), fdf)
-    }
-
-    /// Return the name of the Trust Region Algorithm used.
-    #[doc(alias = "gsl_multifit_nlinear_trs_name")]
-    pub fn trs_name(&self) -> TRS {
-        let n = unsafe { sys::gsl_multifit_nlinear_trs_name(self.unwrap_shared()) };
-        map_name!(
-            rgsl::multifit::Workspace,
-            [
-                (c"levenberg-marquardt", TRS::LM),
-                (c"levenberg-marquardt+accel", TRS::LMaccel),
-                (c"dogleg", TRS::Dogleg),
-                (c"double-dogleg", TRS::DDogleg),
-                (c"2D-subspace", TRS::Subspace2D),
-            ],
-            n,
-            TRS
-        )
     }
 
     /// Return the Jacobian matrix at the current position $J(x)$,
@@ -2529,12 +2622,39 @@ pub mod large {
 
     ffi_wrapper!(
         /// Derivative solver for large problems.
+        #[must_use]
         Workspace<'a, V: VectorSpace + ?Sized>,
         *mut sys::gsl_multilarge_nlinear_workspace,
         gsl_multilarge_nlinear_free
         ;fdf_struct: Option<Box<sys::gsl_multilarge_nlinear_fdf>> => None;
         ;fdf: Option<Box<dyn Fdf<V> + 'a>> => None;
     );
+
+    ffi_wrapper!(
+        /// Uninitialized derivative solver.  Call [`Self::init`] or
+        /// [`Self::winit`] to initialize it.
+        #[must_use]
+        UninitializedWorkspace,
+        *mut sys::gsl_multilarge_nlinear_workspace,
+        gsl_multilarge_nlinear_free
+    );
+
+    fn trs_name_of_ptr(ptr: *const sys::gsl_multilarge_nlinear_workspace) -> TRS {
+        let n = unsafe { sys::gsl_multilarge_nlinear_trs_name(ptr) };
+        map_name!(
+            rgsl::multifit::Workspace,
+            [
+                (c"levenberg-marquardt", TRS::LM),
+                (c"levenberg-marquardt+accel", TRS::LMaccel),
+                (c"dogleg", TRS::Dogleg),
+                (c"double-dogleg", TRS::DDogleg),
+                (c"2D-subspace", TRS::Subspace2D),
+                (c"steihaug-toint", TRS::CgST),
+            ],
+            n,
+            TRS
+        )
+    }
 
     impl_workspace!(large, "rgsl::multilarge");
 
@@ -2689,25 +2809,6 @@ pub mod large {
         #[doc(alias = "gsl_multilarge_nlinear_winit")]
         pub fn winit<F: Fdf<V> + 'a>(&mut self, x: &V, w: &V, fdf: F) -> Result<(), Error> {
             self.init_wts(x, Some(w), fdf)
-        }
-
-        /// Return the name of the Trust Region Algorithm used.
-        #[doc(alias = "gsl_multilarge_nlinear_trs_name")]
-        pub fn trs_name(&self) -> TRS {
-            let n = unsafe { sys::gsl_multilarge_nlinear_trs_name(self.unwrap_shared()) };
-            map_name!(
-                rgsl::multifit::Workspace,
-                [
-                    (c"levenberg-marquardt", TRS::LM),
-                    (c"levenberg-marquardt+accel", TRS::LMaccel),
-                    (c"dogleg", TRS::Dogleg),
-                    (c"double-dogleg", TRS::DDogleg),
-                    (c"2D-subspace", TRS::Subspace2D),
-                    (c"steihaug-toint", TRS::CgST),
-                ],
-                n,
-                TRS
-            )
         }
 
         /// Return the number of matrix-vector $Ju$ evaluations.
@@ -2868,8 +2969,32 @@ pub fn linear_L_decomp(
     Error::handle(ret, ())
 }
 
-#[cfg(test)]
+#[cfg(any(test, doctest))]
 mod test {
+    /// One cannot use `iterate` if the workspace was not initialized.
+    ///
+    /// ```compile_fail
+    /// use rgsl::{Error, multifit::{Parameters, Workspace}};
+    /// let params = Parameters::default();
+    /// let mut w = Workspace::trust(&params, 1, 1);
+    /// w.iterate();
+    /// ```
+    ///
+    /// Also, the result of `w.init` cannot be ignored.
+    ///
+    /// ```compile_fail
+    /// #![deny(unused_must_use)]
+    /// use rgsl::{Error, multifit::{Parameters, Workspace}, VecF64};
+    /// let params = Parameters::default();
+    /// let x0: VecF64 = [1.].into();
+    /// let w = Workspace::trust(&params, 1, x0.len());
+    /// // Return value must not be ignored.
+    /// w.init(&x0, |x: &VecF64, fx: &mut VecF64| {
+    ///     fx[0] = x[0];
+    ///     Ok(())
+    /// })?;
+    /// Ok::<(), Error>(())
+    /// ```
     use super::*;
     use crate::VecF64;
 
@@ -2947,16 +3072,9 @@ mod test {
     }
 
     #[test]
-    fn no_init() {
-        let params = Parameters::default();
-        let mut w = Workspace::<VecF64>::trust(&params, 1, 1);
-        assert!(matches!(w.iterate(), Err(Error::NoProgress)));
-    }
-
-    #[test]
     fn panicking_fn() -> Result<(), Error> {
         let params = Parameters::default();
-        let mut w = Workspace::trust(&params, 1, 1);
+        let w = Workspace::trust(&params, 1, 1);
         let x0: VecF64 = [1.].into();
         let ret = w.init(&x0, |_x: &VecF64, _fx: &mut VecF64| {
             panic!("The function `f` panics.");
